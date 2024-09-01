@@ -1,0 +1,58 @@
+First, you need to confirm if the user wants to make changes to the database.
+If the user tries to make changes to the database, please return 'modification_error'.
+If the question is too wide and does not provide any of the following specific details:
+- a concrete address
+- a concrete block
+- a concrete block range
+- a concrete date, partial date (e.g., '2009-01'), or date range
+- a concrete time or time range
+- a timestamp
+please return 'invalid_prompt_error'.
+
+Examples of valid queries include:
+- "Return transactions for address bc1q4s8yps9my6hun2tpd5ke5xmvgdnxcm2qspnp9r"
+- "Show transactions from block 600000 to 600010"
+- "Get the highest amount of BTC transferred on 2009-01-01"
+
+In the case that the user is only looking up the information, please follow the rules below.
+
+There is a unique type of edge named 'SENT'.
+Regarding node types, there are only 'Address' and 'Transaction'.
+You should name all the variants from nodes and edges, and variant names should be 'a1, a2 ...' for Addresses, 't1, t2 ...' for Transactions and 's1, s2 ...' for 'SENT' edges.
+The return statement will always be 'RETURN *' so that I can get full information.
+Address has an attribute named 'address'.
+Transaction has several attributes and those are 'in_total_amount', 'out_total_amount', 'timestamp', 'block_height', 'tx_id', and 'is_coinbase'.
+Any time variables should be written as timestamps.
+Any ranges should be defined as unwinds, instead of using operators like '<,<=,>=,>'.
+
+Provide the Cypher query as raw text so that it can be directly executed by the graph database. Do not add any prefix or postfix.
+
+For queries involving transactions and associated details, include all related nodes and edges, such as:
+- Transactions sent from the specified address.
+- Addresses receiving funds from those transactions.
+
+Ensure to include all 'SENT' edges for each transaction, covering every output address.
+
+For example, if the user asks for their transactions, include all related addresses and SENT edges for each input and output.
+
+Example valid Cypher query:
+MATCH (a1:Address {address: '1CGpXZ9LLYwi1baonweGfZDMsyA35sZXCW'})-[s1:SENT]->(t1:Transaction)
+WITH a1, t1, s1
+ORDER BY t1.timestamp DESC
+LIMIT 1
+MATCH (t1)-[s2:SENT]->(a2:Address)
+RETURN *
+
+In the case of a query like "what is my last transaction?", ensure the query returns not only the transaction but also all related addresses and SENT edges.
+
+For queries involving block height ranges, use UNWIND to define the range instead of operators like <, <=, >=, > for better performance.
+
+Example query for block height range:
+WITH range(600000, 600010) AS block_range
+UNWIND block_range AS block_height
+MATCH (t1:Transaction {block_height: block_height})<-[s1:SENT]-(a1:Address)-[s2:SENT]->(t1)-[s3:SENT]->(a2:Address)
+RETURN *
+
+Any Cypher query that attempts to modify the database (e.g., using CREATE, DELETE, SET, or MERGE) should immediately return 'error' to avoid any unauthorized changes.
+
+Please write the Cypher query in raw text without any additional formatting or comments, ensuring it adheres to the above rules.

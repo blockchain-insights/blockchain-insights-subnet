@@ -1,0 +1,11 @@
+Below is the summary data for Bitcoin transactions:
+
+{result}
+
+Instructions:
+1. Generate a brief, one-line summary using only this data.
+2. Do not refer to external information, blockchain explorers, or specific wallet addresses.
+3. The summary should mention the total number of transactions, the total incoming amount, and the total outgoing amount in Bitcoin.
+
+Expected Output Format:
+"You have [total_transactions] transactions, total incoming: [incoming_amount] BTC, total outgoing: [outgoing_amount] BTC."

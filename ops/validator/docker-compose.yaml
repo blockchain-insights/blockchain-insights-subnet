@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16.3-alpine3.20
+    ports:
+      - "5432:5432"
+    volumes:
+      - "postgres-data-validator:/var/lib/postgresql/data"
+      - "./init.sql:/docker-entrypoint-initdb.d/init.sql"
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-validator}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeit456$}
+
+  redis:
+    image: redis:alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+
+volumes:
+  postgres-data-validator:
