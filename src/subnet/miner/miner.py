@@ -332,6 +332,5 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, shutdown_handler)
     signal.signal(signal.SIGTERM, shutdown_handler)
 
-    uvicorn_server = uvicorn.Server(config=uvicorn.Config(app, host="0.0.0.0", port=9962, workers=4))
+    uvicorn_server = uvicorn.Server(config=uvicorn.Config(app, host="0.0.0.0", port=settings.PORT, workers=settings.WORKERS))
     uvicorn_server.run()
-

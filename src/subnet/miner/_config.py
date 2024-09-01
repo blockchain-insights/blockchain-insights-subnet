@@ -17,6 +17,9 @@ class MinerSettings(BaseSettings):
     MINER_NAME: str
     NETWORK: str
 
+    PORT: int = 9962
+    WORKERS: int = 4
+
     LLM_TYPE: str
 
     POSTGRES_DB: str

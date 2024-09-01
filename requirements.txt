@@ -10,8 +10,6 @@ psycopg2-binary
 asyncpg
 redis
 neo4j
-GPT2Tokenizer
-gqlalchemy
 langchain
 langchain-openai
 langchain_community

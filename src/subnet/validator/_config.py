@@ -17,6 +17,9 @@ class ValidatorSettings(BaseSettings):
     NET_UID: int
     VALIDATOR_KEY: str
 
+    PORT: int = 9900
+    WORKERS: int = 4
+
     WEIGHTS_FILE_NAME: str = 'weights.pkl'
     DATABASE_URL: str
     API_RATE_LIMIT: int
