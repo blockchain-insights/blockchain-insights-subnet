@@ -46,11 +46,11 @@ class ValidatorApi:
     def __init__(self, validator: Validator):
         self.validator = validator
         self.router = APIRouter()
-        self.router.add_api_route("/miner/metadata", self.get_miner_metadata, methods=["GET"])
-        self.router.add_api_route("/miner/query", self.query_miner, methods=["POST"])
-        self.router.add_api_route("/miner/receipts", self.get_receipts, methods=["GET"])
-        self.router.add_api_route("/miner/receipts", self.accept_receipt, methods=["POST"])
-        self.router.add_api_route("/miner/receipts/stats", self.get_receipt_miner_multiplier, methods=["GET"])
+        self.router.add_api_route("/api/v1/miner/metadata", self.get_miner_metadata, methods=["GET"])
+        self.router.add_api_route("/api/v1/miner/query", self.query_miner, methods=["POST"])
+        self.router.add_api_route("/api/v1/miner/receipts", self.get_receipts, methods=["GET"])
+        self.router.add_api_route("/api/v1/miner/receipts", self.accept_receipt, methods=["POST"])
+        self.router.add_api_route("/api/v1/miner/receipts/stats", self.get_receipt_miner_multiplier, methods=["GET"])
 
     async def get_miner_metadata(self, network: Optional[str] = None, api_key: str = Depends(api_key_auth)):
         results = await self.validator.miner_discovery_manager.get_miners_by_network(network)
