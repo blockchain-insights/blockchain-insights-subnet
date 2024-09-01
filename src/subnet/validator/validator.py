@@ -346,6 +346,7 @@ class Validator(Module):
         timestamp = datetime.utcnow()
         prompt_dict = [message.model_dump() for message in request.prompt]
         prompt_hash = generate_hash(json.dumps(prompt_dict))
+        llm_message_list = LlmMessageList(messages=request.prompt)
 
         if request.miner_key:
             miner = await self.miner_discovery_manager.get_miner_by_key(request.miner_key, request.network)
@@ -357,7 +358,7 @@ class Validator(Module):
                     "prompt_hash": prompt_hash,
                     "response": []}
 
-            result = await self._query_miner(miner, request)
+            result = await self._query_miner(miner, llm_message_list)
 
             await self.miner_receipt_manager.store_miner_receipt(request_id, request.miner_key, prompt_hash, timestamp)
 
@@ -380,7 +381,7 @@ class Validator(Module):
 
             query_tasks = []
             for miner in top_miners:
-                query_tasks.append(self._query_miner(miner, request.prompt))
+                query_tasks.append(self._query_miner(miner, llm_message_list))
 
             responses = await asyncio.gather(*query_tasks)
 

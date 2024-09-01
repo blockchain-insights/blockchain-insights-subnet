@@ -151,6 +151,7 @@ class Miner(Module):
             logger.error(traceback.format_exc())
             error_code = e.args[0] if len(e.args) > 0 and isinstance(e.args[0], int) else LLM_UNKNOWN_ERROR
             output = LlmMessageOutputList(outputs=[LlmMessageOutput(error=error_code, result=LLM_ERROR_MESSAGES.get(error_code, 'An error occurred'))])
+            return output
 
         logger.debug(f"Serving miner llm query output: {output} (Total time taken: {time.time() - start_time} seconds)")
 
