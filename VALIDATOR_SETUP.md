@@ -13,13 +13,8 @@
 
 ## Setup
 
-TODO: describe that miner needs a specific blockchain indexer, for now we have bitcoin-indexer implementation ready which can be found here: https://github.com/blockchain-insights/blockchain-insights-indexer-bitcoin
 
-
-
-
-
-### Miner Setup
+### Validator Setup
 
 Prerequisites:
 - Ubuntu 22.04 LTS
@@ -35,6 +30,18 @@ sudo apt upgrade -y
 sudo apt install python3-pip
 sudo apt install git
 sudo apt install build-essential libssl-dev libffi-dev python3-dev
+
+sudo install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+sudo chmod a+r /etc/apt/keyrings/docker.gpg
+
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update
+
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
 pip install communex
 
@@ -54,7 +61,6 @@ pm2 save
 git clone https://github.com/blockchain-insights/blockchain-insights-subnet.git miner1
 cd miner1
 cp /env/.env.miner.example .env.miner.mainnet
-./scripts/run_miner.sh
 ```
 
 #### Env configuration
@@ -62,63 +68,55 @@ cp /env/.env.miner.example .env.miner.mainnet
 Navigate to miner directory and copy the `.env.miner.example` file to `.env.miner.mainnet`.
 ```
 cd miner1
-cp /env/.env.miner.example .env.miner.mainnet
+cp /env/.env.validator.example .env.validator.mainnet
 ```
 
-Now edit the `.env.miner.mainnet` file to set the appropriate configurations.
+Now edit the `.env.validator.mainnet` file to set the appropriate configurations.
 ```
+ITERATION_INTERVAL=100
+MAX_ALLOWED_WEIGHTS=420
 NET_UID=20
-MINER_KEY=miner1
-MINER_NAME=miner1
-NETWORK=bitcoin
+VALIDATOR_KEY=valdiator
+LLM_QUERY_TIMEOUT=120
+QUERY_TIMEOUT=120
+CHALLENGE_TIMEOUT=120
 
-POSTGRES_USER=bitcoin
-POSTGRES_PASSWORD={put_proper_value_here}
-POSTGRES_HOST={put_proper_value_here}
-POSTGRES_PORT={put_proper_value_here}
-POSTGRES_DB={put_proper_value_here}
-
-DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
-
-GRAPH_DATABASE_URL={put_proper_value_here}
-GRAPH_DATABASE_USER={put_proper_value_here}
-GRAPH_DATABASE_PASSWORD={put_proper_value_here}
+POSTGRES_DB=validator
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=changeit456$
 
 BITCOIN_NODE_RPC_URL=http://{put_proper_value_here}:{put_proper_value_here}@{put_proper_value_here}:8332
+DATABASE_URL=postgresql+asyncpg://postgres:changeit456$@localhost:5432/validator
+
+API_RATE_LIMIT=1000
+REDIS_URL=redis://localhost:6379/0
 LLM_API_KEY={put_proper_value_here}
 LLM_TYPE=openai
+PORT=9900
+WORKERS=4
 
 ```
  
-#### Miner wallet creation
+#### Validator wallet creation
 
 ```
 comx comx key create miner1
 comx key list
 # transfer COMAI to your miner wallet ( aprox 10 COMAI)
-comx module register miner1 miner1 --port XXXX
+comx module register miner1 miner1 20 --port XXXX
 ```
 
-### Running the miner and monitoring
+
+
+### Running the validator and monitoring
+start required infrastructure by running navigate to ops directory and run the following command
+```docker compose up -d```
+
+then run the validator
+
 ```
 # use pm2 to run the miner
 pm2 start ./scripts/run_miner.sh --name miner1
 pm2 save
 ```
-
-
-### Run Multiple Miners
-
-To run multiple miners on a single machine, our proposal is following:
-
-1. Clone the repository into different directories (e.g., `miner1`, `miner2`, `minerN`).
-2. Set proper ports in the `.env` files for each miner.
-
-```sh
-git clone https://github.com/blockchain-insights/blockchain-insights-subnet.git miner1
-git clone https://github.com/blockchain-insights/blockchain-insights-subnet.git miner2
-# Repeat for minerN
-```
-
-- Edit the `.env` files in each directory to set unique ports and other necessary configurations.
  

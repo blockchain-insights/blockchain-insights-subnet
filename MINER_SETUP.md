@@ -48,7 +48,6 @@ pm2 save
 git clone https://github.com/blockchain-insights/blockchain-insights-subnet.git miner1
 cd miner1
 cp /env/.env.miner.example .env.miner.mainnet
-./scripts/run_miner.sh
 ```
 
 #### Env configuration
@@ -90,7 +89,7 @@ LLM_TYPE=openai
 comx comx key create miner1
 comx key list
 # transfer COMAI to your miner wallet ( aprox 10 COMAI)
-comx module register miner1 miner1 --port XXXX
+comx module register miner1 miner1 20 --port XXXX
 ```
 
 ### Running the miner and monitoring
