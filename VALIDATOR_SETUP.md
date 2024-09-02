@@ -1,15 +1,15 @@
-# Chain Insights Subnet - The Miner Setup
+# Chain Insights Subnet - The validator Setup
 
 ## Table of Contents
 - [Setup](#setup)
-  - [Miner Setup](#miner-setup)
+  - [Validator Setup](#validator-setup)
     - [Install Python and Communex](#install-python-and-communex)
     - [Create Wallet](#create-wallet)
     - [Clone Repository](#clone-repository)
-    - [Configure Miner Environment](#configure-miner-environment)
-    - [Run Multiple Miners](#run-multiple-miners)
+    - [Configure Validator Environment](#configure-validator-environment)
+    - [Run Multiple validators](#run-multiple-validators)
     - [Install PM2](#install-pm2)
-    - [Continuously Run the Miner](#continuously-run-the-miner)
+    - [Continuously Run the Validator](#continuously-run-the-validator)
 
 ## Setup
 
@@ -43,14 +43,20 @@ sudo apt-get update
 
 sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
+If you don't have already installed communex 
 pip install communex
+
+If you already have communex:
+pip install communex --upgrade
 
 curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
 sudo apt-get install -y nodejs
 sudo npm install pm2@latest -g
 pm2 --version
 
-pm2 link {private} {public}
+# NOT MANDARORY
+# If you already have pm2 dashboard
+# pm2 link {private} {public}
 
 pm2 startup systemd
 pm2 save
@@ -58,17 +64,16 @@ pm2 save
 
 #### Clone Repository
 ```
-git clone https://github.com/blockchain-insights/blockchain-insights-subnet.git miner1
-cd miner1
-cp /env/.env.miner.example .env.miner.mainnet
+git clone https://github.com/blockchain-insights/blockchain-insights-subnet.git ~/validator1
+
 ```
 
 #### Env configuration
 
-Navigate to miner directory and copy the `.env.miner.example` file to `.env.miner.mainnet`.
+Navigate to validator directory and copy the `.env.validator.example` file to `.env.validator.mainnet`.
 ```
-cd miner1
-cp /env/.env.validator.example .env.validator.mainnet
+cd validator1
+cp ./env/.env.validator.example .env.validator.mainnet
 ```
 
 Now edit the `.env.validator.mainnet` file to set the appropriate configurations.
@@ -100,13 +105,14 @@ WORKERS=4
 #### Validator wallet creation
 
 ```
-comx comx key create miner1
+comx comx key create <your_validator_key>
 comx key list
-# transfer COMAI to your miner wallet ( aprox 10 COMAI)
-comx module register miner1 miner1 20 --port XXXX
+# transfer COMAI to your validator wallet ( aprox 10 COMAI)
+# stake COMAI to your validator wallet
+
+# register your validator module with your validator's key
+comx module register <your_validator_name> <your_validator_key> 20 --port XXXX
 ```
-
-
 
 ### Running the validator and monitoring
 start required infrastructure by running navigate to ops directory and run the following command
@@ -115,8 +121,8 @@ start required infrastructure by running navigate to ops directory and run the f
 then run the validator
 
 ```
-# use pm2 to run the miner
-pm2 start ./scripts/run_miner.sh --name miner1
+# use pm2 to run the validator
+pm2 start ./scripts/run_validator.sh --name <your_validator_name>
 pm2 save
 ```
  
