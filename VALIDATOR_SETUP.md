@@ -29,7 +29,7 @@ sudo apt update
 sudo apt upgrade -y
 sudo apt install python3-pip
 sudo apt install git
-sudo apt install build-essential libssl-dev libffi-dev python3-dev
+sudo apt install build-essential libssl-dev libffi-dev python3-dev python3.10-venv
 sudo apt update
 sudo apt upgrade -y
 
