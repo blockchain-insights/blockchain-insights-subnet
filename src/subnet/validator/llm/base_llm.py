@@ -10,7 +10,7 @@ class BaseLLM(ABC):
         """
 
     @abstractmethod
-    def build_prompt_from_wallet_address(self, wallet_address: list, network: str):
+    def build_prompt_from_txid_and_block(self, txid: str, block: str, network: str, prompt_template: str):
         """
-        Build a validation prompt from a given wallet address
+        Build a validation prompt from a given txid and block
         """

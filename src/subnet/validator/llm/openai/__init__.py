@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 import json
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
@@ -17,24 +17,41 @@ class OpenAILLM(BaseLLM):
         self.chat_gpt4o = ChatOpenAI(api_key=settings.LLM_API_KEY, model="gpt-4o", temperature=0)
         self.MAX_TOKENS = 128000
 
-    def build_prompt_from_wallet_address(self, wallet_address: str, network: str) -> str:
+    def build_prompt_from_txid_and_block(self, txid: str, block: str, network: str, prompt_template: str) -> str:
+        # Read the main prompt template from disk
         local_file_path = f"openai/prompts/{network}/prompt_generation/prompt_generation_prompt.txt"
         prompt = read_local_file(local_file_path)
         if not prompt:
             raise Exception("Failed to read prompt content")
 
-        if not wallet_address:
-            logger.warning("The wallet address is empty. Cannot generate a prompt without a valid wallet address.")
-            return "Prompt generation failed: Wallet address is required but not provided."
+        if not prompt_template:
+            logger.warning("The prompt template is empty. Cannot generate a prompt without a valid template.")
+            return "Prompt generation failed: Template is required but not provided."
+
+        # Ensure txid and block are strings
+        txid_str = str(txid)
+        block_str = str(block)
+
+        # Start with the original template
+        substituted_template = prompt_template
+
+        # Safely replace placeholders with actual values if they exist in the template
+        if '{txid}' in substituted_template:
+            substituted_template = substituted_template.replace('{txid}', txid_str)
+        if '{block}' in substituted_template:
+            substituted_template = substituted_template.replace('{block}', block_str)
 
         try:
-            full_prompt = prompt.format(wallet_address=wallet_address)
-            logger.error(f"Full prompt: {full_prompt}")
-        except KeyError as e:
-            logger.error(f"KeyError during prompt formatting: {e}")
+            logger.info(f"Substituted template: {substituted_template}")
+
+            # Substitute the resulting prompt template into the main prompt
+            full_prompt = prompt.replace('{prompt_template}', substituted_template)
+            logger.info(f"Full prompt after template substitution: {full_prompt}")
+        except Exception as e:
+            logger.error(f"Error during prompt formatting: {e}")
             logger.error(f"Prompt: {prompt}")
-            logger.error(f"Wallet Address: {wallet_address}")
-            raise Exception("Error formatting prompt with wallet address") from e
+            logger.error(f"Substituted Template: {substituted_template}")
+            raise Exception("Error formatting prompt with txid and block") from e
 
         # Prepare the messages
         messages = [SystemMessage(content=full_prompt)]
@@ -51,4 +68,3 @@ class OpenAILLM(BaseLLM):
         except Exception as e:
             logger.error(f"LlmQuery prompt generation error: {e}")
             raise Exception(LLM_ERROR_PROMPT_GENERATION_FAILED)
-
