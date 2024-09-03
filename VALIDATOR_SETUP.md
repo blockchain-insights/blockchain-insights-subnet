@@ -68,8 +68,8 @@ comx key list
 # stake COMAI to your validator wallet
 
 # register your validator module with your validator's key
-comx module register <your_validator_comx_name> <your_validator_comx_key> 20 --port <your_validator_port>
-### example: comx module register my_validator_name  my_validator_key 20 --port 9900
+comx module register <your_validator_comx_name> <your_validator_comx_key> 20
+### example: comx module register my_validator_name  my_validator_key 20
 
 ```
 
@@ -110,7 +110,7 @@ API_RATE_LIMIT=1000
 REDIS_URL=redis://localhost:6379/0
 LLM_API_KEY={put_proper_value_here}
 LLM_TYPE=openai
-PORT=<your_validator_port>
+PORT=9900
 WORKERS=4
 
 ```
