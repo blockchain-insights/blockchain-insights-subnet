@@ -30,6 +30,10 @@ sudo apt upgrade -y
 sudo apt install python3-pip
 sudo apt install git
 sudo apt install build-essential libssl-dev libffi-dev python3-dev
+sudo apt update
+sudo apt upgrade -y
+
+sudo apt autoremove
 
 sudo install -m 0755 -d /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
@@ -41,26 +45,34 @@ echo \
   sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 sudo apt-get update
 
-sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-
-If you don't have already installed communex 
 pip install communex
-
-If you already have communex:
-pip install communex --upgrade
 
 curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
 sudo apt-get install -y nodejs
 sudo npm install pm2@latest -g
 pm2 --version
 
-# NOT MANDARORY
-# If you already have pm2 dashboard
-# pm2 link {private} {public}
-
 pm2 startup systemd
 pm2 save
+
 ```
+
+#### Validator wallet creation
+
+```
+comx key create <your_validator_comx_key>
+### example: comx key create my_validator_key
+comx key list
+
+# transfer COMAI to your validator wallet ( aprox 10 COMAI)
+# stake COMAI to your validator wallet
+
+# register your validator module with your validator's key
+comx module register <your_validator_comx_name> <your_validator_comx_key> 20 --port <your_validator_port>
+### example: comx module register my_validator_name  my_validator_key 20 --port 9900
+
+```
+
 
 #### Clone Repository
 ```
@@ -72,8 +84,9 @@ git clone https://github.com/blockchain-insights/blockchain-insights-subnet.git 
 
 Navigate to validator directory and copy the `.env.validator.example` file to `.env.validator.mainnet`.
 ```
-cd validator1
-cp ./env/.env.validator.example .env.validator.mainnet
+cd ~/validator1
+cp ./env/.env.validator.example ./env/.env.validator.mainnet
+
 ```
 
 Now edit the `.env.validator.mainnet` file to set the appropriate configurations.
@@ -81,48 +94,43 @@ Now edit the `.env.validator.mainnet` file to set the appropriate configurations
 ITERATION_INTERVAL=100
 MAX_ALLOWED_WEIGHTS=420
 NET_UID=20
-VALIDATOR_KEY=valdiator
+VALIDATOR_KEY=<your_validator_comx_key>
 LLM_QUERY_TIMEOUT=120
 QUERY_TIMEOUT=120
 CHALLENGE_TIMEOUT=120
 
-POSTGRES_DB=validator
+POSTGRES_DB=validator1
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=changeit456$
 
 BITCOIN_NODE_RPC_URL=http://{put_proper_value_here}:{put_proper_value_here}@{put_proper_value_here}:8332
-DATABASE_URL=postgresql+asyncpg://postgres:changeit456$@localhost:5432/validator
+DATABASE_URL=postgresql+asyncpg://postgres:changeit456$@localhost:5432/validator1
 
 API_RATE_LIMIT=1000
 REDIS_URL=redis://localhost:6379/0
 LLM_API_KEY={put_proper_value_here}
 LLM_TYPE=openai
-PORT=9900
+PORT=<your_validator_port>
 WORKERS=4
 
 ```
  
-#### Validator wallet creation
-
-```
-comx comx key create <your_validator_key>
-comx key list
-# transfer COMAI to your validator wallet ( aprox 10 COMAI)
-# stake COMAI to your validator wallet
-
-# register your validator module with your validator's key
-comx module register <your_validator_name> <your_validator_key> 20 --port XXXX
-```
 
 ### Running the validator and monitoring
 start required infrastructure by running navigate to ops directory and run the following command
-```docker compose up -d```
+```
+
+cd ./ops/validator
+docker compose up -d
+```
 
 then run the validator
 
 ```
 # use pm2 to run the validator
+cd ~/validator1
 pm2 start ./scripts/run_validator.sh --name <your_validator_name>
+### example: pm2 start ./scripts/run_validator.sh --name my_validator_name
 pm2 save
 ```
  
