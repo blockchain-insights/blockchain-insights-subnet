@@ -62,7 +62,7 @@ Miners have transitioned from passive participants to key contributors in the ne
 6. **Model Training**:
    - Miners are responsible for training their Large Language Models (LLMs). They have the flexibility to choose the most suitable tools and approaches for their needs, whether using the default OpenAI integration or any other model they prefer.
 
-#### Subnet: A Collaborative Ecosystem
+#### A Collaborative Ecosystem
 
 The subnet has evolved into a collaborative ecosystem where development is a shared responsibility among all participants:
 
