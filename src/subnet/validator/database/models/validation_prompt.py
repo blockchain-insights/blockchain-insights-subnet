@@ -2,6 +2,7 @@ from typing import Optional
 import json
 from decimal import Decimal
 
+from loguru import logger
 from sqlalchemy import Column, Integer, String, Float, DateTime, update, insert
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.future import select
@@ -106,4 +107,4 @@ class ValidationPromptManager:
                     await session.execute(
                         delete(ValidationPrompt).where(ValidationPrompt.id == oldest_prompt.id)
                     )
-                    print(f"Deleted oldest prompt with ID: {oldest_prompt.id}")
+                    logger.info(f"Deleted oldest prompt with ID: {oldest_prompt.id}")
