@@ -1,14 +1,9 @@
-You are given a Bitcoin wallet address in the form of {wallet_address} and a selected template from the following examples:
+You are given a Bitcoin transaction ID `{txid}`, a block number `{block}`, and a prompt template `{prompt_template}`.
 
-1. Return [number] transactions outgoing from my address {wallet_address}.
-2. Return [number] transactions incoming to my address {wallet_address}.
-3. Give me the table of recent transactions from my wallet {wallet_address}, where the columns are [address, recipient, balance, timestamp, Block Height].
-4. Return [number] transactions outgoing from my address {wallet_address}.
-5. Show me [number] transactions incoming to my address {wallet_address}.
-6. Show where funds were transferred from address {wallet_address}.
-7. My address is {wallet_address}, show me my last transactions.
-8. Show me the block height of my last [number] transactions from my wallet {wallet_address}.
-9. Provide a summary of transactions involving {wallet_address} including details such as timestamp, balance, and recipient.
+**Instructions:**
 
-Generate a prompt using the pre-selected template and the wallet address `{wallet_address}`, replacing `[number]` with a random integer and `{wallet_address}` with the provided address.
-Avoid any extra noise and only generate the prompt.
+1. Substitute `{txid}` and `{block}` with the provided transaction ID and block number within `{prompt_template}`.
+2. Use `{prompt_template}` as the baseline, but render the final prompt with slight variations to make it more natural and varied.
+3. Output only the prompt itself, ensuring it remains concise and aligned with the original template's intent.
+
+Your goal is to produce a unique, varied prompt based on the provided template.
