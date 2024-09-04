@@ -32,6 +32,9 @@ class ValidatorSettings(BaseSettings):
     LLM_API_KEY: str
     LLM_TYPE: str
 
+    PROMPT_FREQUENCY: int
+    PROMPT_THRESHOLD: int
+
     class Config:
         env_file = '../env/.env.validator.testnet'  # Default .env file
         extra = 'ignore'
