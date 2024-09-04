@@ -2,10 +2,14 @@ import asyncio
 import signal
 import sys
 import threading
+from abc import ABC, abstractmethod
+
 from loguru import logger
 from communex._common import get_node_url
 from communex.client import CommuneClient
 from communex.compat.key import classic_load_key
+
+from src.subnet.protocol.blockchain import get_networks
 from src.subnet.validator.database.models.miner_discovery import MinerDiscoveryManager
 from src.subnet.validator.database.models.miner_receipts import MinerReceiptManager
 from src.subnet.validator.database.models.validation_prompt import ValidationPromptManager
@@ -13,27 +17,26 @@ from src.subnet.validator.database.session_manager import DatabaseSessionManager
 from src.subnet.validator.weights_storage import WeightsStorage
 from validator._config import ValidatorSettings, load_environment
 from validator.validator import Validator
-
-# Import the LLM utility thread
 from src.subnet.validator.llm_prompt_utility import main as llm_main
 
+
 class PromptGeneratorThread(threading.Thread):
-    def __init__(self, environment, network, frequency, threshold, stop_event, *args, **kwargs):
+    def __init__(self, environment, network, frequency, threshold, terminate_event, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.environment = environment
         self.network = network
         self.frequency = frequency
         self.threshold = threshold
-        self.stop_event = stop_event
+        self.terminate_event = terminate_event
 
     def run(self):
-        # Start the LLM prompt generator asynchronously in a separate thread
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
-            loop.run_until_complete(llm_main(self.network, self.frequency, self.threshold, self.stop_event))
+            loop.run_until_complete(llm_main(self.network, self.frequency, self.threshold, self.terminate_event))
         finally:
             loop.close()
+
 
 if __name__ == "__main__":
     logger.remove()
@@ -49,12 +52,11 @@ if __name__ == "__main__":
         level="DEBUG"
     )
 
-    if len(sys.argv) != 3:
-        logger.error("Usage: python -m subnet.cli <environment> <network>")
+    if len(sys.argv) != 2:
+        logger.error("Usage: python -m subnet.cli <environment>")
         sys.exit(1)
 
     environment = sys.argv[1]
-    network = sys.argv[2]
     load_environment(environment)
 
     # Setup configurations
@@ -82,34 +84,34 @@ if __name__ == "__main__":
         llm_query_timeout=settings.LLM_QUERY_TIMEOUT
     )
 
-    stop_event = asyncio.Event()
 
     def shutdown_handler(signal_num, frame):
         logger.info("Received shutdown signal, stopping...")
         validator.terminate_event.set()
-        stop_event.set()  # Set the stop event for the LLM prompt generator
         logger.debug("Shutdown handler finished")
 
     # Signal handling for graceful shutdown
     signal.signal(signal.SIGINT, shutdown_handler)
     signal.signal(signal.SIGTERM, shutdown_handler)
 
-    # Start the background LLM prompt generator thread
+    networks = get_networks()
+    for network in networks:
+        #TODO: run prompt geneerators for various networks / prompt generators
+        pass
+
     prompt_generator_thread = PromptGeneratorThread(
         environment=environment,
-        network=network,
+        network='bitcoin',
         frequency=settings.PROMPT_FREQUENCY,
         threshold=settings.PROMPT_THRESHOLD,
-        stop_event=stop_event
+        terminate_event=validator.terminate_event
     )
     prompt_generator_thread.start()
 
-    # Run the validator loop
     try:
         asyncio.run(validator.validation_loop(settings))
     except KeyboardInterrupt:
         logger.info("Validator loop interrupted")
 
-    # Wait for the LLM prompt generator to finish
     prompt_generator_thread.join()
     logger.info("Validator and LLM prompt generator stopped successfully.")
