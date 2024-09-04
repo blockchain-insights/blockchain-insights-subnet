@@ -1,5 +1,6 @@
 import random
 import asyncio
+import threading
 from datetime import datetime, timedelta
 from loguru import logger
 from src.subnet.validator.llm.factory import LLMFactory
@@ -55,8 +56,7 @@ async def generate_prompt_and_store(network: str, validation_prompt_manager, llm
     await validation_prompt_manager.store_prompt(prompt, random_txid['block_data'])
     logger.info(f"Prompt stored in the database successfully.")
 
-
-async def main(network: str, frequency: int, threshold: int, stop_event: asyncio.Event):
+async def main(network: str, frequency: int, threshold: int, terminate_event: threading.Event):
     # Ensure environment is loaded
     settings = ValidatorSettings()
     llm = LLMFactory.create_llm(settings)
@@ -67,14 +67,12 @@ async def main(network: str, frequency: int, threshold: int, stop_event: asyncio
     validation_prompt_manager = ValidationPromptManager(session_manager)
 
     try:
-        while not stop_event.is_set():
-            await generate_prompt_and_store(network, validation_prompt_manager, llm, threshold)
+        while not terminate_event.is_set():
             try:
-                # Wait for the stop_event to be set, with a timeout for the frequency interval
-                await asyncio.wait_for(stop_event.wait(), timeout=frequency * 60)
+                await generate_prompt_and_store(network, validation_prompt_manager, llm, threshold)
+                terminate_event.wait(frequency * 60)
             except asyncio.TimeoutError:
-                # Continue the loop if the timeout occurs and stop_event is not set
-                pass
+                logger.error("Timeout occurred while generating or storing the prompt.")
     except Exception as e:
         logger.error(f"An error occurred while generating or storing the prompt: {e}")
 
@@ -105,15 +103,17 @@ if __name__ == "__main__":
         level="DEBUG"
     )
 
-    stop_event = asyncio.Event()
+    terminate_event = threading.Event()
 
     load_environment(environment)
 
     def signal_handler(signal_num, frame):
         logger.info("Received termination signal, stopping...")
-        stop_event.set()
+        terminate_event.set()
 
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
-    asyncio.run(main(network, frequency, threshold, stop_event))
+    asyncio.run(main(network, frequency, threshold, terminate_event))
+
+    logger.info("LLM Prompt Utility stopped.")
