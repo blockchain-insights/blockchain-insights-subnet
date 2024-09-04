@@ -42,11 +42,7 @@ class OpenAILLM(BaseLLM):
             substituted_template = substituted_template.replace('{block}', block_str)
 
         try:
-            logger.info(f"Substituted template: {substituted_template}")
-
-            # Substitute the resulting prompt template into the main prompt
             full_prompt = prompt.replace('{prompt_template}', substituted_template)
-            logger.info(f"Full prompt after template substitution: {full_prompt}")
         except Exception as e:
             logger.error(f"Error during prompt formatting: {e}")
             logger.error(f"Prompt: {prompt}")

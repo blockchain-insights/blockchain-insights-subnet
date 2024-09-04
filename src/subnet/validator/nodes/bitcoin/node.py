@@ -313,4 +313,4 @@ class BitcoinNode(Node):
 
         logger.info(f"Selected transaction ID: {txid} from block {block_height}")
 
-        return {"txid": txid, "block_data": block_data}
+        return txid, block_data

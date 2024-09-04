@@ -26,17 +26,17 @@ async def generate_prompt_and_store(network: str, validation_prompt_manager, llm
     last_block_height = btc.get_current_block_height() - 6
     lowest_block_height = 0
     random_block_height = select_block(lowest_block_height, last_block_height)
-    random_txid = btc.get_random_txid_from_block(random_block_height)
-    logger.debug(f"Random Txid: {random_txid}")
+    tx_id, block_data = btc.get_random_txid_from_block(random_block_height)
+    logger.debug(f"Random Txid: {tx_id}")
 
     selected_template = random.choice(PROMPT_TEMPLATES)
-    prompt = llm.build_prompt_from_txid_and_block(random_txid['txid'], random_block_height, network, prompt_template=selected_template)
+    prompt = llm.build_prompt_from_txid_and_block(tx_id, random_block_height, network, prompt_template=selected_template)
     logger.debug(f"Generated Challenge Prompt: {prompt}")
     current_prompt_count = await validation_prompt_manager.get_prompt_count()
     if current_prompt_count >= threshold:
         await validation_prompt_manager.try_delete_oldest_prompt()
 
-    await validation_prompt_manager.store_prompt(prompt, random_txid['block_data'])
+    await validation_prompt_manager.store_prompt(prompt, block_data)
     logger.info(f"Prompt stored in the database successfully.")
 
 
