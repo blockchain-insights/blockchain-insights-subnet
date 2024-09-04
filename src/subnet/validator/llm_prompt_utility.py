@@ -18,6 +18,7 @@ PROMPT_TEMPLATES = [
     "Identify all addresses involved in the transaction with txid {txid} in block {block}."
 ]
 
+
 async def generate_prompt_and_store(network: str, validation_prompt_manager, llm, threshold: int):
     btc = BitcoinNode()
 
@@ -56,9 +57,6 @@ async def generate_prompt_and_store(network: str, validation_prompt_manager, llm
 
 async def main(network: str, frequency: int, threshold: int, stop_event: asyncio.Event):
     # Ensure environment is loaded
-    env = 'testnet'  # or 'mainnet' depending on your test
-    load_environment(env)
-
     settings = ValidatorSettings()
     llm = LLMFactory.create_llm(settings)
 
@@ -80,28 +78,41 @@ async def main(network: str, frequency: int, threshold: int, stop_event: asyncio
         logger.error(f"An error occurred while generating or storing the prompt: {e}")
 
 
-
 if __name__ == "__main__":
     import sys
     import signal
 
-    if len(sys.argv) != 4:
-        logger.info("Usage: python llm_prompt_utility.py <network> <frequency_in_minutes> <threshold>")
+    if len(sys.argv) != 5:
+        logger.info("Usage: python llm_prompt_utility.py <environment> <network> <frequency_in_minutes> <threshold>")
         sys.exit(1)
 
-    network = sys.argv[1]
-    frequency = int(sys.argv[2])
-    threshold = int(sys.argv[3])
+    environment = sys.argv[1]
+    network = sys.argv[2]
+    frequency = int(sys.argv[3])
+    threshold = int(sys.argv[4])
+
+    logger.remove()
+    logger.add(
+        f"../logs/llm_prompt_utility_{network}.log",
+        rotation="500 MB",
+        format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}"
+    )
+
+    logger.add(
+        sys.stdout,
+        format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}",
+        level="DEBUG"
+    )
 
     stop_event = asyncio.Event()
+
+    load_environment(environment)
 
     def signal_handler(signal_num, frame):
         logger.info("Received termination signal, stopping...")
         stop_event.set()
 
-    # Set up signal handlers to gracefully handle termination signals (e.g., SIGINT, SIGTERM)
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
-    # Run the async main function
     asyncio.run(main(network, frequency, threshold, stop_event))
