@@ -7,6 +7,7 @@ from src.subnet.validator._config import ValidatorSettings, load_environment
 from src.subnet.validator.nodes.bitcoin.node import BitcoinNode
 from src.subnet.validator.database.session_manager import DatabaseSessionManager
 from src.subnet.validator.database.models.validation_prompt import ValidationPromptManager
+from src.subnet.validator.nodes.random_block import select_block
 
 PROMPT_TEMPLATES = [
     "Give me the total amount of the transaction with txid {txid} in block {block}.",
@@ -22,14 +23,14 @@ PROMPT_TEMPLATES = [
 async def generate_prompt_and_store(network: str, validation_prompt_manager, llm, threshold: int):
     btc = BitcoinNode()
 
-    # Get the current highest block height
-    highest_block_height = btc.get_current_block_height()
+    # Get the current highest block height with some tolerance (6)
+    last_block_height = btc.get_current_block_height() - 6
 
     # Set the lowest block height (typically block 0 is the genesis block)
     lowest_block_height = 0
 
     # Calculate a random block height between the lowest and highest
-    random_block_height = random.randint(lowest_block_height, highest_block_height)
+    random_block_height = select_block(lowest_block_height, last_block_height)
 
     # Get a random txid from the random block and also get block data
     random_txid = btc.get_random_txid_from_block(random_block_height)
