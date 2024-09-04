@@ -19,14 +19,13 @@ import random
 
 Base = declarative_base()
 
-
 class ValidationPrompt(OrmBase):
     __tablename__ = 'validation_prompt'
     id = Column(Integer, primary_key=True, autoincrement=True)
     prompt = Column(String, nullable=False)
     block = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-
+    network = Column(String, nullable=False)
 
 class ValidationPromptManager:
     def __init__(self, session_manager: DatabaseSessionManager):
@@ -41,7 +40,7 @@ class ValidationPromptManager:
             return str(data)
         return data
 
-    async def store_prompt(self, prompt: str, block: dict):
+    async def store_prompt(self, prompt: str, block: dict, network: str):
         # Convert the block dictionary to a JSON string, converting Decimal to strings
         block_json = json.dumps(self._convert_decimals_to_strings(block))
 
@@ -50,6 +49,7 @@ class ValidationPromptManager:
                 stmt = insert(ValidationPrompt).values(
                     prompt=prompt,
                     block=block_json,
+                    network=network,  # Add the network to the insert statement
                     created_at=datetime.utcnow()  # Automatically set the created_at field
                 )
                 await session.execute(stmt)
@@ -61,16 +61,20 @@ class ValidationPromptManager:
             )
             return to_dict(result.scalars().first())
 
-    async def get_random_prompt(self) -> str:
+    async def get_random_prompt(self, network: str) -> str:
         async with self.session_manager.session() as session:
-            # First, get the min and max ID in the table
+            # First, get the min and max ID in the table filtered by network
             min_id_result = await session.execute(
-                select(ValidationPrompt.id).order_by(ValidationPrompt.id.asc()).limit(1)
+                select(ValidationPrompt.id)
+                .where(ValidationPrompt.network == network)
+                .order_by(ValidationPrompt.id.asc()).limit(1)
             )
             min_id = min_id_result.scalar()
 
             max_id_result = await session.execute(
-                select(ValidationPrompt.id).order_by(ValidationPrompt.id.desc()).limit(1)
+                select(ValidationPrompt.id)
+                .where(ValidationPrompt.network == network)
+                .order_by(ValidationPrompt.id.desc()).limit(1)
             )
             max_id = max_id_result.scalar()
 
@@ -80,25 +84,29 @@ class ValidationPromptManager:
             # Generate a random ID within the range
             random_id = random.randint(min_id, max_id)
 
-            # Retrieve the prompt with the random ID
+            # Retrieve the prompt with the random ID filtered by network
             result = await session.execute(
-                select(ValidationPrompt).where(ValidationPrompt.id == random_id)
+                select(ValidationPrompt)
+                .where(ValidationPrompt.id == random_id)
+                .where(ValidationPrompt.network == network)
             )
             return to_dict(result.scalars().first())['prompt']
 
-    async def get_prompt_count(self):
+    async def get_prompt_count(self, network: str):
         async with self.session_manager.session() as session:
             result = await session.execute(
-                select(func.count(ValidationPrompt.id))
+                select(func.count(ValidationPrompt.id)).where(ValidationPrompt.network == network)
             )
             return result.scalar()
 
-    async def delete_oldest_prompt(self):
+    async def delete_oldest_prompt(self, network: str):
         async with self.session_manager.session() as session:
             async with session.begin():
-                # Get the oldest prompt (with the lowest ID or oldest created_at timestamp)
+                # Get the oldest prompt filtered by network
                 oldest_prompt_result = await session.execute(
-                    select(ValidationPrompt).order_by(ValidationPrompt.created_at.asc()).limit(1)
+                    select(ValidationPrompt)
+                    .where(ValidationPrompt.network == network)
+                    .order_by(ValidationPrompt.created_at.asc()).limit(1)
                 )
                 oldest_prompt = oldest_prompt_result.scalars().first()
 
@@ -108,3 +116,4 @@ class ValidationPromptManager:
                         delete(ValidationPrompt).where(ValidationPrompt.id == oldest_prompt.id)
                     )
                     logger.info(f"Deleted oldest prompt with ID: {oldest_prompt.id}")
+
