@@ -31,9 +31,14 @@ class BitcoinPromptGenerator(BasePromptGenerator):
 
         # Randomly select a prompt template
         selected_template = random.choice(self.PROMPT_TEMPLATES)
+        prompt = self.llm.build_prompt_from_txid_and_block(tx_id, random_block_height, self.network, prompt_template=selected_template)
+        logger.debug(f"Generated Challenge Prompt: {prompt}")
 
-        # Use LLM to build the final prompt
-        prompt = self.llm.build_prompt_from_txid_and_block(tx_id, random_block_height, self.network, selected_template)
-        logger.debug(f"Generated Bitcoin Prompt: {prompt}")
+        # Check if the current prompt count has exceeded the threshold
+        current_prompt_count = await validation_prompt_manager.get_prompt_count(self.network)
+        if current_prompt_count >= threshold:
+            await validation_prompt_manager.try_delete_oldest_prompt(self.network)
 
-        # Check if the current prompt count
+        # Store the prompt and block data in the database
+        await validation_prompt_manager.store_prompt(prompt, block_data, self.network)
+        logger.info(f"Prompt stored in the database successfully.")

@@ -2,10 +2,7 @@ from src.subnet.validator._config import ValidatorSettings
 from src.subnet.validator.blockchain.base_prompt_generator import BasePromptGenerator
 from src.subnet.validator.blockchain.bitcoin.bitcoin_prompt_generator import BitcoinPromptGenerator
 from src.subnet.validator.blockchain.ethereum.ethereum_prompt_generator import EthereumPromptGenerator
-
-
-NETWORK_TYPE_BITCOIN = "bitcoin"
-NETWORK_TYPE_ETHEREUM = "ethereum"
+from src.subnet.protocol.blockchain import NETWORK_BITCOIN, NETWORK_ETHEREUM
 
 
 class PromptGeneratorFactory:
@@ -13,8 +10,8 @@ class PromptGeneratorFactory:
     def create_prompt_generator(cls, network: str, settings, llm) -> BasePromptGenerator:
         # Dictionary mapping network types to their corresponding prompt generator classes
         prompt_generator_class = {
-            NETWORK_TYPE_BITCOIN: BitcoinPromptGenerator,
-            NETWORK_TYPE_ETHEREUM: EthereumPromptGenerator,
+            NETWORK_BITCOIN: BitcoinPromptGenerator,
+            NETWORK_ETHEREUM: EthereumPromptGenerator,
         }.get(network)
 
         # Raise an error if the network type is not supported

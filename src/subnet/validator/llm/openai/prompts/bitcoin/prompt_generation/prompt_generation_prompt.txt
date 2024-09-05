@@ -1,9 +1,8 @@
-You are given a Bitcoin transaction ID `{txid}`, a block number `{block}`, and a prompt template `{prompt_template}`.
+You are given a prompt `{prompt_template}`.
 
 **Instructions:**
 
-1. Substitute `{txid}` and `{block}` with the provided transaction ID and block number within `{prompt_template}`.
-2. Use `{prompt_template}` as the baseline, but render the final prompt with slight variations to make it more natural and varied.
-3. Output only the prompt itself, ensuring it remains concise and aligned with the original template's intent.
+1. Use `{prompt_template}` as the baseline, but render the final prompt with slight variations to make it more natural and varied.
+2. Output only the prompt itself, ensuring it remains concise and aligned with the original template's intent.
 
 Your goal is to produce a unique, varied prompt based on the provided template.
