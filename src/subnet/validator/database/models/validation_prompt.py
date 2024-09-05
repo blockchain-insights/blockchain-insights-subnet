@@ -100,6 +100,7 @@ class ValidationPromptManager:
             return result.scalar()
 
     async def try_delete_oldest_prompt(self, network: str):
+
         async with self.session_manager.session() as session:
             async with session.begin():
                 # Get the oldest prompt filtered by network

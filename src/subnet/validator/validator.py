@@ -239,7 +239,7 @@ class Validator(Module):
             module_meta_data = modules[key]
             uid = module_meta_data['uid']
             stake = module_meta_data['stake']
-            if stake > 100:
+            if stake > 5000:
                 logger.debug(f"Skipping module {uid} with stake {stake} as it probably is not a miner")
                 continue
             if uid not in ip_ports:

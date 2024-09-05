@@ -1,6 +1,7 @@
 import contextlib
+import datetime
 from typing import AsyncIterator, Optional
-
+from loguru import logger
 from sqlalchemy.ext.asyncio import (
     AsyncConnection,
     AsyncEngine,
@@ -8,6 +9,8 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
+
+from src.subnet.validator._config import ValidatorSettings
 
 
 class DatabaseSessionManager:
@@ -77,4 +80,20 @@ async def get_session() -> AsyncIterator[AsyncSession]:
     # session: AsyncSession = Depends(get_session)
     async with db_manager.session() as session:
         yield session
-        
+
+
+def run_migrations(execution_path = '../', settings=ValidatorSettings()):
+    import subprocess
+    backup_result = subprocess.run(['docker', 'start', 'postgres_backup'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    if backup_result.stdout:
+        logger.warning(backup_result.stdout)
+
+    command = 'alembic upgrade head'
+    migration_result = subprocess.run(command, shell=True, capture_output=True, text=True, cwd=execution_path)
+    if migration_result.stdout:
+        logger.warning(migration_result.stdout)
+
+
+
+
+
