@@ -13,7 +13,7 @@ from src.subnet.protocol.blockchain import get_networks
 from src.subnet.validator.database.models.miner_discovery import MinerDiscoveryManager
 from src.subnet.validator.database.models.miner_receipts import MinerReceiptManager
 from src.subnet.validator.database.models.validation_prompt import ValidationPromptManager
-from src.subnet.validator.database.session_manager import DatabaseSessionManager
+from src.subnet.validator.database.session_manager import DatabaseSessionManager, run_migrations
 from src.subnet.validator.weights_storage import WeightsStorage
 from validator._config import ValidatorSettings, load_environment
 from validator.validator import Validator
@@ -67,6 +67,9 @@ if __name__ == "__main__":
 
     session_manager = DatabaseSessionManager()
     session_manager.init(settings.DATABASE_URL)
+
+    run_migrations(settings=settings)
+
     miner_discovery_manager = MinerDiscoveryManager(session_manager)
     miner_receipt_manager = MinerReceiptManager(session_manager)
     validation_prompt_manager = ValidationPromptManager(session_manager)
