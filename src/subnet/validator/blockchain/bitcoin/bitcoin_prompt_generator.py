@@ -5,7 +5,6 @@ from src.subnet.validator.blockchain.base_prompt_generator import BasePromptGene
 from src.subnet.validator.database.models.validation_prompt import ValidationPromptManager
 from src.subnet.validator.llm.base_llm import BaseLLM
 
-
 class BitcoinPromptGenerator(BasePromptGenerator):
     PROMPT_TEMPLATES = [
         "Give me the total amount of the transaction with txid {txid} in block {block}.",
@@ -21,6 +20,7 @@ class BitcoinPromptGenerator(BasePromptGenerator):
         super().__init__(settings)
         self.node = BitcoinNode()  # Bitcoin-specific node
         self.llm = llm  # LLM instance passed to use for prompt generation
+        self.network = "bitcoin"  # Store network as a class member
 
     async def generate_and_store(self, validation_prompt_manager: ValidationPromptManager, threshold: int):
         # Retrieve block details
@@ -33,14 +33,7 @@ class BitcoinPromptGenerator(BasePromptGenerator):
         selected_template = random.choice(self.PROMPT_TEMPLATES)
 
         # Use LLM to build the final prompt
-        prompt = self.llm.build_prompt_from_txid_and_block(tx_id, random_block_height, 'bitcoin', selected_template)
+        prompt = self.llm.build_prompt_from_txid_and_block(tx_id, random_block_height, self.network, selected_template)
         logger.debug(f"Generated Bitcoin Prompt: {prompt}")
 
-        # Check if the current prompt count has exceeded the threshold
-        current_prompt_count = await validation_prompt_manager.get_prompt_count()
-        if current_prompt_count >= threshold:
-            await validation_prompt_manager.try_delete_oldest_prompt()
-
-        # Store the prompt and block data in the database
-        await validation_prompt_manager.store_prompt(prompt, block_data)
-        logger.info(f"Bitcoin prompt stored in the database successfully.")
+        # Check if the current prompt count

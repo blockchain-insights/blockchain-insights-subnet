@@ -95,23 +95,26 @@ if __name__ == "__main__":
     signal.signal(signal.SIGTERM, shutdown_handler)
 
     networks = get_networks()
-    for network in networks:
-        #TODO: run prompt geneerators for various networks / prompt generators
-        pass
+    prompt_generator_threads=[]
 
-    prompt_generator_thread = PromptGeneratorThread(
+    for network in networks:
+        prompt_generator_thread = PromptGeneratorThread(
         environment=environment,
-        network='bitcoin',
+        network=network,
         frequency=settings.PROMPT_FREQUENCY,
         threshold=settings.PROMPT_THRESHOLD,
         terminate_event=validator.terminate_event
-    )
-    prompt_generator_thread.start()
+        )
+        prompt_generator_threads.append(prompt_generator_thread)
+        prompt_generator_thread.start()
 
     try:
         asyncio.run(validator.validation_loop(settings))
     except KeyboardInterrupt:
         logger.info("Validator loop interrupted")
 
-    prompt_generator_thread.join()
+    for thread in prompt_generator_threads:
+        thread.join()
+        logger.info(f"Prompt generator for {thread.network} stopped successfully.")
+
     logger.info("Validator and LLM prompt generator stopped successfully.")

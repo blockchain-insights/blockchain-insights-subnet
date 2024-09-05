@@ -1,20 +1,15 @@
 from abc import ABC, abstractmethod
 from src.subnet.validator._config import ValidatorSettings
+from src.subnet.validator.database.models.validation_prompt import ValidationPromptManager
+from src.subnet.validator.llm.base_llm import BaseLLM
 
 class BasePromptGenerator(ABC):
     def __init__(self, settings: ValidatorSettings):
         self.settings = settings
 
     @abstractmethod
-    def generate_prompt(self, tx_id: str, block: str) -> str:
+    async def generate_and_store(self, validation_prompt_manager: ValidationPromptManager, threshold: int):
         """
         This method should be implemented by all subclasses to generate prompts specific to a network.
-        """
-        pass
-
-    @abstractmethod
-    def get_random_txid_and_block(self):
-        """
-        Method to get a random transaction ID and block from the network.
         """
         pass
