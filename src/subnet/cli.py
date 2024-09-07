@@ -15,8 +15,8 @@ from src.subnet.validator.database.models.miner_receipts import MinerReceiptMana
 from src.subnet.validator.database.models.validation_prompt import ValidationPromptManager
 from src.subnet.validator.database.session_manager import DatabaseSessionManager, run_migrations
 from src.subnet.validator.weights_storage import WeightsStorage
-from validator._config import ValidatorSettings, load_environment
-from validator.validator import Validator
+from src.subnet.validator._config import ValidatorSettings, load_environment
+from src.subnet.validator.validator import Validator
 from src.subnet.validator.llm_prompt_utility import main as llm_main
 
 
