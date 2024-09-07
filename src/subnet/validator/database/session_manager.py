@@ -82,7 +82,7 @@ async def get_session() -> AsyncIterator[AsyncSession]:
         yield session
 
 
-def run_migrations(execution_path = '../', settings=ValidatorSettings()):
+def run_migrations(execution_path='../'):
     import subprocess
     backup_result = subprocess.run(['docker', 'start', 'postgres_backup'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     if backup_result.stdout:
