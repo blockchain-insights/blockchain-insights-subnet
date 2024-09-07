@@ -43,7 +43,8 @@ if __name__ == "__main__":
     logger.add(
         "../logs/validator.log",
         rotation="500 MB",
-        format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}"
+        format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}",
+        level="DEBUG"
     )
 
     logger.add(
