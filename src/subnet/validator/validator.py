@@ -92,7 +92,7 @@ class Validator(Module):
                 return None
 
             # Prompt Phase
-            random_validation_prompt = await self.validation_prompt_manager.get_random_prompt()
+            random_validation_prompt = await self.validation_prompt_manager.get_random_prompt(discovery.network)
             if not random_validation_prompt:
                 logger.error("Failed to get a random validation prompt")
                 return None
