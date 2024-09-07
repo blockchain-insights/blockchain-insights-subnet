@@ -7,17 +7,16 @@ import sys
 
 def load_environment(env: str):
     logger.debug(f"Current python interpreter execution path: {sys.executable}")
-    dotenv_path = os.path.abspath('../env/.env.validator.mainnet')
-    logger.debug(f"Loading environment from: {dotenv_path}")
-    env_file_found = os.path.exists(dotenv_path)
-    logger.debug(f"Environment file found: {env_file_found}")
-
     if env == 'mainnet':
         dotenv_path = os.path.abspath('../env/.env.validator.mainnet')
     elif env == 'testnet':
         dotenv_path = os.path.abspath('../env/.env.validator.testnet')
     else:
         raise ValueError(f"Unknown environment: {env}")
+
+    logger.debug(f"Loading environment from: {dotenv_path}")
+    env_file_found = os.path.exists(dotenv_path)
+    logger.debug(f"Environment file found: {env_file_found}")
 
     load_dotenv(dotenv_path=dotenv_path)
 

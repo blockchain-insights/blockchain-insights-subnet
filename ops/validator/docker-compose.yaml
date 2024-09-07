@@ -35,7 +35,3 @@ services:
 
 volumes:
   postgres-data-validator:
-
-
-
-    #add btcnode here

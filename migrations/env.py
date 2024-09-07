@@ -4,12 +4,13 @@ from contextvars import ContextVar
 from logging.config import fileConfig
 from typing import Any
 from alembic.runtime.environment import EnvironmentContext
+from dotenv import load_dotenv
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 
-from migrations.settings import migration_settings
+from migrations.settings import MigrationSettings
 from src.subnet.validator.database import OrmBase
 
 # this is the Alembic Config object, which provides
@@ -17,15 +18,13 @@ from src.subnet.validator.database import OrmBase
 config = context.config
 
 section = config.config_ini_section
-config.set_section_option(section, "POSTGRES_USER", os.environ.get("POSTGRES_USER"))
-config.set_section_option(section, "POSTGRES_PASSWORD", os.environ.get("POSTGRES_PASSWORD"))
-config.set_section_option(section, "POSTGRES_HOST", os.environ.get("POSTGRES_HOST"))
-config.set_section_option(section, "POSTGRES_PORT", os.environ.get("POSTGRES_PORT"))
-config.set_section_option(section, "POSTGRES_DB", os.environ.get("POSTGRES_DB"))
 current_url = config.get_main_option("sqlalchemy.url", None)
 
-if not current_url:
-    config.set_main_option("sqlalchemy.url", migration_settings.DATABASE_URL)
+if not os.environ.get("DATABASE_URL"):
+    load_dotenv()
+
+migration_settings = MigrationSettings()
+config.set_main_option("sqlalchemy.url", migration_settings.DATABASE_URL)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

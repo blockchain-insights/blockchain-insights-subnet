@@ -92,11 +92,3 @@ def run_migrations(execution_path='../'):
     migration_result = subprocess.run(command, shell=True, capture_output=True, text=True, cwd=execution_path)
     if migration_result.stdout:
         logger.warning(migration_result.stdout)
-    if migration_result.stderr:
-        logger.error(migration_result.stderr)
-        exit(-1)
-
-
-
-
-
