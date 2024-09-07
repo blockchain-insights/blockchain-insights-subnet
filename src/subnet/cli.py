@@ -69,7 +69,7 @@ if __name__ == "__main__":
     session_manager = DatabaseSessionManager()
     session_manager.init(settings.DATABASE_URL)
 
-    run_migrations(settings=settings)
+    run_migrations()
 
     miner_discovery_manager = MinerDiscoveryManager(session_manager)
     miner_receipt_manager = MinerReceiptManager(session_manager)
