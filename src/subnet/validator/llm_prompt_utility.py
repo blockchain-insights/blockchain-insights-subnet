@@ -1,4 +1,3 @@
-import random
 import asyncio
 import threading
 from loguru import logger
@@ -6,7 +5,7 @@ from src.subnet.validator.llm.factory import LLMFactory
 from src.subnet.validator._config import ValidatorSettings, load_environment
 from src.subnet.validator.database.session_manager import DatabaseSessionManager
 from src.subnet.validator.database.models.validation_prompt import ValidationPromptManager
-from src.subnet.validator.blockchain.prompt_generator_factory import PromptGeneratorFactory
+from src.subnet.validator.blockchain.common.prompt_generator_factory import PromptGeneratorFactory
 
 
 async def generate_prompt_and_store(network: str, validation_prompt_manager, llm, threshold: int):
