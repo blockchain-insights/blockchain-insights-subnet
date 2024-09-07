@@ -13,11 +13,13 @@ def load_environment(env: str):
     logger.debug(f"Environment file found: {env_file_found}")
 
     if env == 'mainnet':
-        load_dotenv(dotenv_path='../env/.env.validator.mainnet')
+        dotenv_path = os.path.abspath('../env/.env.validator.mainnet')
     elif env == 'testnet':
-        load_dotenv(dotenv_path='../env/.env.validator.testnet')
+        dotenv_path = os.path.abspath('../env/.env.validator.testnet')
     else:
         raise ValueError(f"Unknown environment: {env}")
+
+    load_dotenv(dotenv_path=dotenv_path)
 
 
 class ValidatorSettings(BaseSettings):
