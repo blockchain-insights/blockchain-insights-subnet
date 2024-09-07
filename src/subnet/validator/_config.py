@@ -45,5 +45,4 @@ class ValidatorSettings(BaseSettings):
     PROMPT_THRESHOLD: int
 
     class Config:
-        env_file = '../env/.env.validator.testnet'  # Default .env file
         extra = 'ignore'
