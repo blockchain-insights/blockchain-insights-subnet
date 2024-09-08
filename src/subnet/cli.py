@@ -15,8 +15,8 @@ from src.subnet.validator.database.models.miner_receipts import MinerReceiptMana
 from src.subnet.validator.database.models.validation_prompt import ValidationPromptManager
 from src.subnet.validator.database.session_manager import DatabaseSessionManager, run_migrations
 from src.subnet.validator.weights_storage import WeightsStorage
-from validator._config import ValidatorSettings, load_environment
-from validator.validator import Validator
+from src.subnet.validator._config import ValidatorSettings, load_environment
+from src.subnet.validator.validator import Validator
 from src.subnet.validator.llm_prompt_utility import main as llm_main
 
 
@@ -43,7 +43,8 @@ if __name__ == "__main__":
     logger.add(
         "../logs/validator.log",
         rotation="500 MB",
-        format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}"
+        format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}",
+        level="DEBUG"
     )
 
     logger.add(
@@ -68,7 +69,7 @@ if __name__ == "__main__":
     session_manager = DatabaseSessionManager()
     session_manager.init(settings.DATABASE_URL)
 
-    run_migrations(settings=settings)
+    run_migrations()
 
     miner_discovery_manager = MinerDiscoveryManager(session_manager)
     miner_receipt_manager = MinerReceiptManager(session_manager)

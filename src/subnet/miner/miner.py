@@ -145,12 +145,12 @@ class Miner(Module):
             elif model_type == 'balance_tracking':
                 output = await self._handle_balance_tracking_query(llm_messages_list)
             else:
-                output = LlmMessageOutputList(outputs=[LlmMessageOutput(error='Unsupported model type')])
+                output = LlmMessageOutputList(outputs=[LlmMessageOutput(type="error", error="Unsupported model type", result=["Unsupported model type"])])
 
         except Exception as e:
             logger.error(traceback.format_exc())
             error_code = e.args[0] if len(e.args) > 0 and isinstance(e.args[0], int) else LLM_UNKNOWN_ERROR
-            output = LlmMessageOutputList(outputs=[LlmMessageOutput(error=error_code, result=LLM_ERROR_MESSAGES.get(error_code, 'An error occurred'))])
+            output = LlmMessageOutputList(outputs=[LlmMessageOutput(type='error', error=error_code, result=[LLM_ERROR_MESSAGES.get(error_code, 'An error occurred')])])
             return output
 
         logger.debug(f"Serving miner llm query output: {output} (Total time taken: {time.time() - start_time} seconds)")
@@ -170,13 +170,13 @@ class Miner(Module):
                 error_code = LLM_ERROR_MODIFICATION_NOT_ALLOWED
                 error_message = LLM_ERROR_MESSAGES[error_code]
                 logger.error(f"Error {error_code}: {error_message}")
-                return LlmMessageOutputList(outputs=[LlmMessageOutput(type="error", error=error_code, result=error_message)])
+                return LlmMessageOutputList(outputs=[LlmMessageOutput(type="error", error=error_code, result=[error_message])])
 
             if query == 'invalid_prompt_error':
                 error_code = LLM_ERROR_INVALID_SEARCH_PROMPT
                 error_message = LLM_ERROR_MESSAGES[error_code]
                 logger.error(f"Error {error_code}: {error_message}")
-                return LlmMessageOutputList(outputs=[LlmMessageOutput(type="error", error=error_code, result=error_message)])
+                return LlmMessageOutputList(outputs=[LlmMessageOutput(type="error", error=error_code, result=[error_message])])
 
             execute_query_start_time = time.time()
             result = graph_search.execute_query(query)
@@ -216,7 +216,7 @@ class Miner(Module):
             logger.error(traceback.format_exc())
             error_code = e.args[0] if len(e.args) > 0 and isinstance(e.args[0], int) else LLM_UNKNOWN_ERROR
             error_message = LLM_ERROR_MESSAGES.get(error_code, 'An unknown error occurred')
-            output = LlmMessageOutputList(outputs=[LlmMessageOutput(type="error", error=error_code, result=error_message)])
+            output = LlmMessageOutputList(outputs=[LlmMessageOutput(type="error", error=error_code, result=[error_message])])
             return output
 
     async def _handle_balance_tracking_query(self, llm_messages: LlmMessageList) -> LlmMessageOutputList:
@@ -229,7 +229,7 @@ class Miner(Module):
                 error_code = LLM_ERROR_MODIFICATION_NOT_ALLOWED if query == 'modification_error' else LLM_ERROR_INVALID_SEARCH_PROMPT
                 error_message = LLM_ERROR_MESSAGES.get(error_code)
                 logger.error(f"Error {error_code}: {error_message}")
-                output = LlmMessageOutputList(outputs=[LlmMessageOutput(type="error", error=error_code, result=error_message)])
+                output = LlmMessageOutputList(outputs=[LlmMessageOutput(type="error", error=error_code, result=[error_message])])
                 return output
 
             execute_query_start_time = time.time()
@@ -265,7 +265,7 @@ class Miner(Module):
             logger.error(traceback.format_exc())
             error_code = e.args[0] if len(e.args) > 0 and isinstance(e.args[0], int) else LLM_UNKNOWN_ERROR
             error_message = LLM_ERROR_MESSAGES.get(error_code, 'An error occurred')
-            output = LlmMessageOutputList(outputs=[LlmMessageOutput(type="error", error=error_code, result=error_message)])
+            output = LlmMessageOutputList(outputs=[LlmMessageOutput(type="error", error=error_code, result=[error_message])])
             return output
 
 

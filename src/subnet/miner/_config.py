@@ -1,14 +1,24 @@
+from loguru import logger
 from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
+import sys
+import os
 
 
 def load_environment(env: str):
+    logger.debug(f"Current python interpreter execution path: {sys.executable}")
     if env == 'mainnet':
-        load_dotenv(dotenv_path='../env/.env.miner.mainnet')
+        dotenv_path = os.path.abspath('../env/.env.miner.mainnet')
     elif env == 'testnet':
-        load_dotenv(dotenv_path='../env/.env.miner.testnet')
+        dotenv_path = os.path.abspath('../env/.env.miner.testnet')
     else:
         raise ValueError(f"Unknown environment: {env}")
+
+    logger.debug(f"Loading environment from: {dotenv_path}")
+    env_file_found = os.path.exists(dotenv_path)
+    logger.debug(f"Environment file found: {env_file_found}")
+
+    load_dotenv(dotenv_path=dotenv_path)
 
 
 class MinerSettings(BaseSettings):
@@ -34,5 +44,4 @@ class MinerSettings(BaseSettings):
     LLM_API_KEY: str
 
     class Config:
-        env_file = '../env/.env.miner.testnet'  # Default .env file
         extra = 'ignore'
