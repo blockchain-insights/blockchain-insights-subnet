@@ -5,7 +5,7 @@ from src.subnet.validator.blockchain.common.base_prompt_generator import BasePro
 from src.subnet.validator.database.models.validation_prompt import ValidationPromptManager
 from src.subnet.validator.llm.base_llm import BaseLLM
 
-class BitcoinPromptGenerator(BasePromptGenerator):
+class PromptGenerator(BasePromptGenerator):
     PROMPT_TEMPLATES = [
         "Give me the total amount of the transaction with txid {txid} in block {block}.",
         "List all transactions in block {block} and their respective amounts.",

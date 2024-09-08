@@ -6,7 +6,7 @@ from src.subnet.validator.database.models.validation_prompt import ValidationPro
 from src.subnet.validator.llm.base_llm import BaseLLM
 
 
-class EthereumPromptGenerator(BasePromptGenerator):
+class PromptGenerator(BasePromptGenerator):
     PROMPT_TEMPLATES = [
         "What is the total amount of the transaction with txid {txid} in block {block}?",
         "List all transactions in block {block} and their respective amounts.",
