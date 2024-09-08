@@ -3,95 +3,64 @@
 ## Table of Contents
 - [Setup](#setup)
   - [Validator Setup](#validator-setup)
-    - [Install Python and Communex](#install-python-and-communex)
-    - [Create Wallet](#create-wallet)
+    - [Prerequisites](#prerequisites)
     - [Clone Repository](#clone-repository)
-    - [Configure Validator Environment](#configure-validator-environment)
-    - [Run Multiple validators](#run-multiple-validators)
-    - [Install PM2](#install-pm2)
-    - [Continuously Run the Validator](#continuously-run-the-validator)
+    - [Env configuration](#env-configuration)
+    - [Validator wallet creation](#validator-wallet-creation)
+    - [Running the validator and monitoring](#running-the-validator-and-monitoring)
 
 ## Setup
 
-
 ### Validator Setup
 
-Prerequisites:
-- Ubuntu 22.04 LTS
+#### Prerequisites
+
+- Ubuntu 22.04 LTS (or similar)
 - Python 3.10+
-- Node.js 18.x
+- Node.js 18.x+
 - PM2
 - Communex
 - Git
 
-```
+```shell
 sudo apt update
 sudo apt upgrade -y
-sudo apt install python3-pip
-sudo apt install git
-sudo apt install build-essential libssl-dev libffi-dev python3-dev python3.10-venv
-sudo apt update
-sudo apt upgrade -y
-
-sudo apt autoremove
+sudo apt install python3-pip python3-venv python3-dev git build-essential libssl-dev libffi-dev ca-certificates curl
 
 sudo install -m 0755 -d /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
 sudo chmod a+r /etc/apt/keyrings/docker.gpg
-
 echo \
   "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
   $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
   sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-sudo apt-get update
-sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo apt update
+sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
 pip install communex
 
 curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-sudo apt-get install -y nodejs
-sudo npm install pm2@latest -g
-pm2 --version
-
-pm2 startup systemd
-pm2 save
-
+sudo apt install -y nodejs
+sudo npm install pm2 -g
+pm2 startup
 ```
-
-#### Validator wallet creation
-
-```
-comx key create <your_validator_comx_key>
-### example: comx key create my_validator_key
-comx key list
-
-# transfer COMAI to your validator wallet ( aprox 10 COMAI)
-# stake COMAI to your validator wallet
-
-# register your validator module with your validator's key
-comx module register <your_validator_comx_name> <your_validator_comx_key> 20
-### example: comx module register my_validator_name  my_validator_key 20
-
-```
-
 
 #### Clone Repository
-```
-git clone https://github.com/blockchain-insights/blockchain-insights-subnet.git ~/validator1
 
+```shell
+git clone https://github.com/blockchain-insights/blockchain-insights-subnet.git ~/validator1
 ```
 
 #### Env configuration
 
 Navigate to validator directory and copy the `.env.validator.example` file to `.env.validator.mainnet`.
-```
+```shell
 cd ~/validator1
 cp ./env/.env.validator.example ./env/.env.validator.mainnet
-
 ```
 
 Now edit the `.env.validator.mainnet` file to set the appropriate configurations.
-```
+```shell
 ITERATION_INTERVAL=100
 MAX_ALLOWED_WEIGHTS=420
 NET_UID=20
@@ -113,25 +82,31 @@ LLM_API_KEY={put_proper_value_here}
 LLM_TYPE=openai
 PORT=9900
 WORKERS=4
+```
 
+#### Validator wallet creation
+
+```shell
+comx key create validator1
+comx key list
+# transfer COMAI to your validator wallet for registration (aprox 10 COMAI are needed)
+comx module register validator validator 20 --port 9900
+# stake COMAI to your validator wallet
 ```
  
 
 ### Running the validator and monitoring
-start required infrastructure by running navigate to ops directory and run the following command
-```
 
+Start required infrastructure by navigating to ops directory and running the following commands:
+```shell
 cd ./ops/validator
 docker compose up -d
 ```
 
-then run the validator
-
-```
+Then run the validator:
+```shell
 # use pm2 to run the validator
 cd ~/validator1
-pm2 start ./scripts/run_validator.sh --name <your_validator_name>
-### example: pm2 start ./scripts/run_validator.sh --name my_validator_name
+pm2 start ./scripts/run_validator.sh --name validator1
 pm2 save
 ```
- 
