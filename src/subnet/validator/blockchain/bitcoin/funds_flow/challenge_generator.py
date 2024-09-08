@@ -1,3 +1,4 @@
+import json
 import random
 from loguru import logger
 from src.subnet.validator.nodes.bitcoin.node import BitcoinNode  # This can be substituted for EthereumNode if needed
@@ -19,7 +20,7 @@ class ChallengeGenerator(BaseChallengeGenerator):
         funds_flow_challenge, tx_id = self.node.create_funds_flow_challenge(0, last_block_height)
 
         # Convert the challenge object to JSON string
-        challenge_json = funds_flow_challenge.dumps()
+        challenge_json = funds_flow_challenge.json()
         logger.debug(f"Generated Funds Flow Challenge: {challenge_json}")
 
         # Check if the current challenge count has exceeded the threshold

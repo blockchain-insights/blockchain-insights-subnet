@@ -22,7 +22,7 @@ class ChallengeBalanceTracking(OrmBase):
     __tablename__ = 'challenge_balance_tracking'
     id = Column(Integer, primary_key=True, autoincrement=True)
     challenge = Column(String, nullable=False)
-    block_height = Column(String, nullable=False)
+    total_balance_change = Column(String, nullable=False, unique=True)
     network = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
@@ -31,16 +31,16 @@ class ChallengeBalanceTrackingManager:
     def __init__(self, session_manager: DatabaseSessionManager):
         self.session_manager = session_manager
 
-    async def store_challenge(self, challenge: str, block_height: str, network: str):
+    async def store_challenge(self, challenge: str, total_balance_change: int, network: str):
         async with self.session_manager.session() as session:
             async with session.begin():
                 stmt = insert(ChallengeBalanceTracking).values(
                     challenge=challenge,
-                    block_height=block_height,
+                    total_balance_change=str(total_balance_change),  # Convert to string
                     network=network,
                     created_at=datetime.utcnow()  # Automatically set the created_at field
                 ).on_conflict_do_update(
-                    index_elements=['block_height'],  # Conflict on block_height
+                    index_elements=['total_balance_change'],  # Conflict on total_balance_change
                     set_=dict(
                         challenge=challenge,
                         network=network,

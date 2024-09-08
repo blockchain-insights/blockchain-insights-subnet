@@ -2,7 +2,7 @@
 
 Revision ID: 006
 Revises: 005
-Create Date: 2024-09-06 13:10:56.040927
+Create Date: 2024-09-08 20:27:00.756311
 
 """
 from typing import Sequence, Union
@@ -23,10 +23,11 @@ def upgrade() -> None:
     op.create_table('challenge_balance_tracking',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('challenge', sa.String(), nullable=False),
-    sa.Column('block_height', sa.String(), nullable=False),
+    sa.Column('total_balance_change', sa.String(), nullable=False),
     sa.Column('network', sa.String(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.PrimaryKeyConstraint('id', name=op.f('pk__challenge_balance_tracking'))
+    sa.PrimaryKeyConstraint('id', name=op.f('pk__challenge_balance_tracking')),
+    sa.UniqueConstraint('total_balance_change', name=op.f('uq__challenge_balance_tracking__total_balance_change'))
     )
     op.create_table('challenge_funds_flow',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
@@ -34,7 +35,8 @@ def upgrade() -> None:
     sa.Column('tx_id', sa.String(), nullable=False),
     sa.Column('network', sa.String(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.PrimaryKeyConstraint('id', name=op.f('pk__challenge_funds_flow'))
+    sa.PrimaryKeyConstraint('id', name=op.f('pk__challenge_funds_flow')),
+    sa.UniqueConstraint('tx_id', name=op.f('uq__challenge_funds_flow__tx_id'))
     )
     # ### end Alembic commands ###
 

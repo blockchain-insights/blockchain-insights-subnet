@@ -22,10 +22,9 @@ class ChallengeFundsFlow(OrmBase):
     __tablename__ = 'challenge_funds_flow'
     id = Column(Integer, primary_key=True, autoincrement=True)
     challenge = Column(String, nullable=False)
-    tx_id = Column(String, nullable=False)
+    tx_id = Column(String, nullable=False, unique=True)
     network = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-
 
 class ChallengeFundsFlowManager:
     def __init__(self, session_manager: DatabaseSessionManager):
