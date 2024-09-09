@@ -4,19 +4,20 @@ import threading
 import time
 import uuid
 from datetime import datetime
-from random import sample, randint
-from typing import cast, List, Dict
+from random import sample
+from typing import cast, Dict
 
 from communex.client import CommuneClient  # type: ignore
 from communex.misc import get_map_modules
 from communex.module.client import ModuleClient  # type: ignore
 from communex.module.module import Module  # type: ignore
 from communex.types import Ss58Address  # type: ignore
-from pydantic import BaseModel
 from substrateinterface import Keypair  # type: ignore
 from ._config import ValidatorSettings
 from loguru import logger
 
+from .database.models.challenge_balance_tracking import ChallengeBalanceTrackingManager
+from .database.models.challenge_funds_flow import ChallengeFundsFlowManager
 from .encryption import generate_hash
 from .helpers import raise_exception_if_not_registered, get_ip_port, cut_to_max_allowed_weights
 from .nodes.factory import NodeFactory
@@ -39,6 +40,8 @@ class Validator(Module):
             weights_storage: WeightsStorage,
             miner_discovery_manager: MinerDiscoveryManager,
             validation_prompt_manager: ValidationPromptManager,
+            challenge_funds_flow_manager: ChallengeFundsFlowManager,
+            challenge_balance_tracking_manager: ChallengeBalanceTrackingManager,
             miner_receipt_manager: MinerReceiptManager,
             query_timeout: int = 60,
             llm_query_timeout: int = 60,
@@ -58,6 +61,8 @@ class Validator(Module):
         self.miner_discovery_manager = miner_discovery_manager
         self.terminate_event = threading.Event()
         self.validation_prompt_manager = validation_prompt_manager
+        self.challenge_funds_flow_manager = challenge_funds_flow_manager
+        self.challenge_balance_tracking_manager = challenge_balance_tracking_manager
 
     @staticmethod
     def get_addresses(client: CommuneClient, netuid: int) -> dict[int, str]:
@@ -142,26 +147,25 @@ class Validator(Module):
 
     async def _perform_challenges(self, client, miner_key, discovery, node) -> ChallengesResponse | None:
         try:
-            last_block_height = node.get_current_block_height() - 6
-
             # Funds flow challenge
-            funds_flow_challenge, tx_id = node.create_funds_flow_challenge(0, last_block_height)
+            funds_flow_challenge, tx_id = await self.challenge_funds_flow_manager.get_random_challenge(discovery.network)
+            funds_flow_challenge = Challenge.model_validate_json(funds_flow_challenge)
             funds_flow_challenge = await client.call(
                 "challenge",
                 miner_key,
-                {"challenge": funds_flow_challenge.dict()},
+                {"challenge": funds_flow_challenge.model_dump()},
                 timeout=self.challenge_timeout,
             )
             funds_flow_challenge = Challenge(**funds_flow_challenge)
             logger.debug(f"Funds flow challenge result for {miner_key}: {funds_flow_challenge.output}")
 
             # Balance tracking challenge
-            random_balance_tracking_block = randint(1, 1000)  # this is for fast testing only, remove on production
-            balance_tracking_challenge, balance_tracking_expected_response = node.create_balance_tracking_challenge(random_balance_tracking_block)
+            balance_tracking_challenge, balance_tracking_expected_response = await self.challenge_balance_tracking_manager.get_random_challenge(discovery.network)
+            balance_tracking_challenge = Challenge.model_validate_json(balance_tracking_challenge)
             balance_tracking_challenge = await client.call(
                 "challenge",
                 miner_key,
-                {"challenge": balance_tracking_challenge.dict()},
+                {"challenge": balance_tracking_challenge.model_dump()},
                 timeout=self.challenge_timeout,
             )
             balance_tracking_challenge = Challenge(**balance_tracking_challenge)

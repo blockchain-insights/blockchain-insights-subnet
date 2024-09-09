@@ -45,5 +45,10 @@ class ValidatorSettings(BaseSettings):
     PROMPT_FREQUENCY: int
     PROMPT_THRESHOLD: int
 
+    FUNDS_FLOW_CHALLENGE_FREQUENCY: int
+    FUNDS_FLOW_CHALLENGE_THRESHOLD: int
+    BALANCE_TRACKING_CHALLENGE_FREQUENCY: int
+    BALANCE_TRACKING_CHALLENGE_THRESHOLD: int
+
     class Config:
         extra = 'ignore'
