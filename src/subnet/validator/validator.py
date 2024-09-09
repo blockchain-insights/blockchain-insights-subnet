@@ -4,15 +4,14 @@ import threading
 import time
 import uuid
 from datetime import datetime
-from random import sample, randint
-from typing import cast, List, Dict
+from random import sample
+from typing import cast, Dict
 
 from communex.client import CommuneClient  # type: ignore
 from communex.misc import get_map_modules
 from communex.module.client import ModuleClient  # type: ignore
 from communex.module.module import Module  # type: ignore
 from communex.types import Ss58Address  # type: ignore
-from pydantic import BaseModel
 from substrateinterface import Keypair  # type: ignore
 from ._config import ValidatorSettings
 from loguru import logger
@@ -148,10 +147,7 @@ class Validator(Module):
 
     async def _perform_challenges(self, client, miner_key, discovery, node) -> ChallengesResponse | None:
         try:
-            last_block_height = node.get_current_block_height() - 6
-
             # Funds flow challenge
-            #funds_flow_challenge, tx_id = node.create_funds_flow_challenge(0, last_block_height)
             funds_flow_challenge, tx_id = await self.challenge_funds_flow_manager.get_random_challenge(discovery.network)
             funds_flow_challenge = Challenge.model_validate_json(funds_flow_challenge)
             funds_flow_challenge = await client.call(
@@ -164,7 +160,6 @@ class Validator(Module):
             logger.debug(f"Funds flow challenge result for {miner_key}: {funds_flow_challenge.output}")
 
             # Balance tracking challenge
-            #balance_tracking_challenge, balance_tracking_expected_response = node.create_balance_tracking_challenge(random_balance_tracking_block)
             balance_tracking_challenge, balance_tracking_expected_response = await self.challenge_balance_tracking_manager.get_random_challenge(discovery.network)
             balance_tracking_challenge = Challenge.model_validate_json(balance_tracking_challenge)
             balance_tracking_challenge = await client.call(
