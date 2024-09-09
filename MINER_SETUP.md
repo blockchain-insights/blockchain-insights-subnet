@@ -95,13 +95,10 @@ pm2 save
 
 ### Run Multiple Miners
 
-To run multiple miners on a single machine, our proposal is following:
-
-1. Start by [Clone repository](#clone-repository) into different directories (e.g., `miner1`, `miner2`, `minerN`).
-2. Continue with the instructions again for the new miner, but remember to set unique ports in the `.env.miner.mainnet` files and when registering each miner.
+To run multiple miners on a single machine, you can create additional `.env.miner.mainnet` files, set unique ports and registered keys in them, then pass it to pm2 like this for example:
 
 ```shell
-git clone https://github.com/blockchain-insights/blockchain-insights-subnet.git miner1
-git clone https://github.com/blockchain-insights/blockchain-insights-subnet.git miner2
-# Repeat for minerN, then continue with the instructions for each of them
+pm2 start ./scripts/run_miner.sh --name miner2 --env .env.miner2.mainnet
+pm2 save
+# Repeat for minerN
 ```
