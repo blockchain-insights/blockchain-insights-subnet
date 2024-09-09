@@ -8,6 +8,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.future import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy import func
+from sqlalchemy import text
 from datetime import datetime
 
 from src.subnet.validator.database import OrmBase
@@ -48,45 +49,21 @@ class ChallengeFundsFlowManager:
                 )
                 await session.execute(stmt)
 
-    async def get_challenge_by_id(self, challenge_id: int) -> Tuple[str, str]:
-        async with self.session_manager.session() as session:
-            result = await session.execute(
-                select(ChallengeFundsFlow).where(ChallengeFundsFlow.id == challenge_id)
-            )
-            challenge_data = result.scalars().first()
-            if challenge_data:
-                return to_dict(challenge_data)['challenge'], to_dict(challenge_data)['tx_id']
-            return None, None
-
     async def get_random_challenge(self, network: str) -> Tuple[str, str]:
         async with self.session_manager.session() as session:
-            min_id_result = await session.execute(
-                select(ChallengeFundsFlow.id)
-                .where(ChallengeFundsFlow.network == network)
-                .order_by(ChallengeFundsFlow.id.asc()).limit(1)
-            )
-            min_id = min_id_result.scalar()
+            query = text("""
+                SELECT challenge, tx_id 
+                FROM challenge_funds_flow 
+                WHERE network = :network 
+                ORDER BY RANDOM() 
+                LIMIT 1
+            """)
+            result = await session.execute(query, {"network": network})
+            row = result.fetchone()
 
-            max_id_result = await session.execute(
-                select(ChallengeFundsFlow.id)
-                .where(ChallengeFundsFlow.network == network)
-                .order_by(ChallengeFundsFlow.id.desc()).limit(1)
-            )
-            max_id = max_id_result.scalar()
-
-            if min_id is None or max_id is None:
-                return None, None  # No records found
-
-            random_id = random.randint(min_id, max_id)
-
-            result = await session.execute(
-                select(ChallengeFundsFlow)
-                .where(ChallengeFundsFlow.id == random_id)
-                .where(ChallengeFundsFlow.network == network)
-            )
-            challenge_data = result.scalars().first()
-            if challenge_data:
-                return to_dict(challenge_data)['challenge'], to_dict(challenge_data)['tx_id']
+            if row:
+                # Access tuple values by index
+                return row[0], row[1]
             return None, None
 
     async def get_challenge_count(self, network: str):
@@ -99,15 +76,19 @@ class ChallengeFundsFlowManager:
     async def try_delete_oldest_challenge(self, network: str):
         async with self.session_manager.session() as session:
             async with session.begin():
-                oldest_challenge_result = await session.execute(
-                    select(ChallengeFundsFlow)
-                    .where(ChallengeFundsFlow.network == network)
-                    .order_by(ChallengeFundsFlow.created_at.asc()).limit(1)
-                )
-                oldest_challenge = oldest_challenge_result.scalars().first()
-
-                if oldest_challenge:
-                    await session.execute(
-                        delete(ChallengeFundsFlow).where(ChallengeFundsFlow.id == oldest_challenge.id)
+                # Raw SQL query to delete the oldest challenge and return the deleted ID
+                query = text("""
+                    DELETE FROM challenge_funds_flow
+                    WHERE id = (
+                        SELECT id FROM challenge_funds_flow
+                        WHERE network = :network
+                        ORDER BY created_at ASC
+                        LIMIT 1
                     )
-                    logger.info(f"Deleted oldest challenge with ID: {oldest_challenge.id}")
+                    RETURNING id
+                """)
+                result = await session.execute(query, {"network": network})
+                deleted_id = result.fetchone()
+
+                if deleted_id:
+                    logger.info(f"Deleted oldest challenge with ID: {deleted_id[0]}")

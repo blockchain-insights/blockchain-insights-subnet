@@ -8,16 +8,12 @@ from src.subnet.validator.database.models.validation_prompt import ValidationPro
 from src.subnet.validator.blockchain.common.prompt_generator_factory import PromptGeneratorFactory
 
 
-async def generate_prompt_and_store(network: str, validation_prompt_manager, llm, threshold: int):
-    # Use the factory to create the appropriate prompt generator for the network
-    settings = ValidatorSettings()
+async def generate_prompt_and_store(settings: ValidatorSettings, network: str, validation_prompt_manager, llm, threshold: int):
     prompt_generator = PromptGeneratorFactory.create_prompt_generator(network, settings, llm)
     await prompt_generator.generate_and_store(validation_prompt_manager, threshold)
 
 
-async def main(network: str, frequency: int, threshold: int, terminate_event: threading.Event):
-    # Load environment and settings
-    settings = ValidatorSettings()
+async def main(settings: ValidatorSettings, network: str, frequency: int, threshold: int, terminate_event: threading.Event):
     llm = LLMFactory.create_llm(settings)  # LLM setup
 
     # Initialize the session manager and the validation prompt manager
@@ -29,7 +25,7 @@ async def main(network: str, frequency: int, threshold: int, terminate_event: th
         while not terminate_event.is_set():
             try:
                 # Generate and store prompts
-                await generate_prompt_and_store(network, validation_prompt_manager, llm, threshold)
+                await generate_prompt_and_store(settings, network, validation_prompt_manager, llm, threshold)
                 terminate_event.wait(frequency * 60)  # Wait for the specified frequency
             except asyncio.TimeoutError:
                 logger.error("Timeout occurred while generating or storing the prompt.")
@@ -66,7 +62,7 @@ if __name__ == "__main__":
 
     terminate_event = threading.Event()
     load_environment(environment)
-
+    settings = ValidatorSettings()
 
     def signal_handler(signal_num, frame):
         logger.info("Received termination signal, stopping...")
@@ -78,6 +74,6 @@ if __name__ == "__main__":
     signal.signal(signal.SIGTERM, signal_handler)
 
     # Run the main function
-    asyncio.run(main(network, frequency, threshold, terminate_event))
+    asyncio.run(main(settings, network, frequency, threshold, terminate_event))
 
     logger.info("LLM Prompt Utility stopped.")

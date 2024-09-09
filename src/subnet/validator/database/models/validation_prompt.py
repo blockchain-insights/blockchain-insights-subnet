@@ -9,6 +9,7 @@ from sqlalchemy.future import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy import delete
 from sqlalchemy import func
+from sqlalchemy import text
 from datetime import datetime
 
 from src.subnet.validator.database import OrmBase
@@ -54,43 +55,21 @@ class ValidationPromptManager:
                 )
                 await session.execute(stmt)
 
-    async def get_prompt_by_id(self, prompt_id: int):
-        async with self.session_manager.session() as session:
-            result = await session.execute(
-                select(ValidationPrompt).where(ValidationPrompt.id == prompt_id)
-            )
-            return to_dict(result.scalars().first())
-
     async def get_random_prompt(self, network: str) -> str:
         async with self.session_manager.session() as session:
-            # First, get the min and max ID in the table filtered by network
-            min_id_result = await session.execute(
-                select(ValidationPrompt.id)
-                .where(ValidationPrompt.network == network)
-                .order_by(ValidationPrompt.id.asc()).limit(1)
-            )
-            min_id = min_id_result.scalar()
+            query = text("""
+                   SELECT prompt 
+                   FROM validation_prompt
+                   WHERE network = :network
+                   ORDER BY RANDOM() 
+                   LIMIT 1
+               """)
+            result = await session.execute(query, {"network": network})
+            prompt_data = result.fetchone()
 
-            max_id_result = await session.execute(
-                select(ValidationPrompt.id)
-                .where(ValidationPrompt.network == network)
-                .order_by(ValidationPrompt.id.desc()).limit(1)
-            )
-            max_id = max_id_result.scalar()
-
-            if min_id is None or max_id is None:
-                return None  # No records found
-
-            # Generate a random ID within the range
-            random_id = random.randint(min_id, max_id)
-
-            # Retrieve the prompt with the random ID filtered by network
-            result = await session.execute(
-                select(ValidationPrompt)
-                .where(ValidationPrompt.id == random_id)
-                .where(ValidationPrompt.network == network)
-            )
-            return to_dict(result.scalars().first())['prompt']
+            if prompt_data:
+                return prompt_data[0]
+            return None
 
     async def get_prompt_count(self, network: str):
         async with self.session_manager.session() as session:
@@ -100,21 +79,20 @@ class ValidationPromptManager:
             return result.scalar()
 
     async def try_delete_oldest_prompt(self, network: str):
-
         async with self.session_manager.session() as session:
-            async with session.begin():
-                # Get the oldest prompt filtered by network
-                oldest_prompt_result = await session.execute(
-                    select(ValidationPrompt)
-                    .where(ValidationPrompt.network == network)
-                    .order_by(ValidationPrompt.created_at.asc()).limit(1)
+            query = text("""
+                DELETE FROM validation_prompt
+                WHERE id = (
+                    SELECT id 
+                    FROM validation_prompt
+                    WHERE network = :network
+                    ORDER BY created_at ASC
+                    LIMIT 1
                 )
-                oldest_prompt = oldest_prompt_result.scalars().first()
+                RETURNING id
+            """)
+            result = await session.execute(query, {"network": network})
+            deleted_id = result.fetchone()
 
-                if oldest_prompt:
-                    # Delete the oldest prompt
-                    await session.execute(
-                        delete(ValidationPrompt).where(ValidationPrompt.id == oldest_prompt.id)
-                    )
-                    logger.info(f"Deleted oldest prompt with ID: {oldest_prompt.id}")
-
+            if deleted_id:
+                logger.info(f"Deleted oldest prompt with ID: {deleted_id[0]}")

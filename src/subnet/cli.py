@@ -24,8 +24,9 @@ from src.subnet.validator.challenge_utility import main as funds_flow_main, main
 
 
 class PromptGeneratorThread(threading.Thread):
-    def __init__(self, environment, network, frequency, threshold, terminate_event, *args, **kwargs):
+    def __init__(self, settings, environment, network, frequency, threshold, terminate_event, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.settings = settings
         self.environment = environment
         self.network = network
         self.frequency = frequency
@@ -36,14 +37,15 @@ class PromptGeneratorThread(threading.Thread):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
-            loop.run_until_complete(llm_main(self.network, self.frequency, self.threshold, self.terminate_event))
+            loop.run_until_complete(llm_main(self.settings, self.network, self.frequency, self.threshold, self.terminate_event))
         finally:
             loop.close()
 
 
 class FundsFlowChallengeGeneratorThread(threading.Thread):
-    def __init__(self, environment, network, frequency, threshold, terminate_event, *args, **kwargs):
+    def __init__(self, settings, environment, network, frequency, threshold, terminate_event, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.settings = settings
         self.environment = environment
         self.network = network
         self.model = 'funds_flow'
@@ -55,14 +57,15 @@ class FundsFlowChallengeGeneratorThread(threading.Thread):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
-            loop.run_until_complete(funds_flow_main(self.network, self.model, self.frequency, self.threshold, self.terminate_event))
+            loop.run_until_complete(funds_flow_main(self.settings, self.network, self.model, self.frequency, self.threshold, self.terminate_event))
         finally:
             loop.close()
 
 
 class BalanceTrackingChallengeGeneratorThread(threading.Thread):
-    def __init__(self, environment, network, frequency, threshold, terminate_event, *args, **kwargs):
+    def __init__(self, settings, environment, network, frequency, threshold, terminate_event, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.settings = settings
         self.environment = environment
         self.network = network
         self.model = 'balance_tracking'
@@ -74,7 +77,7 @@ class BalanceTrackingChallengeGeneratorThread(threading.Thread):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
-            loop.run_until_complete(balance_tracking_main(self.network, self.model, self.frequency, self.threshold, self.terminate_event))
+            loop.run_until_complete(balance_tracking_main(self.settings, self.network, self.model, self.frequency, self.threshold, self.terminate_event))
         finally:
             loop.close()
 
@@ -151,6 +154,7 @@ if __name__ == "__main__":
     # Launch Prompt Generator Threads
     for network in networks:
         prompt_generator_thread = PromptGeneratorThread(
+            settings=settings,
             environment=environment,
             network=network,
             frequency=settings.PROMPT_FREQUENCY,
@@ -163,6 +167,7 @@ if __name__ == "__main__":
     # Launch Funds Flow Challenge Generator Threads
     for network in networks:
         funds_flow_thread = FundsFlowChallengeGeneratorThread(
+            settings=settings,
             environment=environment,
             network=network,
             frequency=settings.FUNDS_FLOW_CHALLENGE_FREQUENCY,
@@ -175,6 +180,7 @@ if __name__ == "__main__":
     # Launch Balance Tracking Challenge Generator Threads
     for network in networks:
         balance_tracking_thread = BalanceTrackingChallengeGeneratorThread(
+            settings=settings,
             environment=environment,
             network=network,
             frequency=settings.BALANCE_TRACKING_CHALLENGE_FREQUENCY,
