@@ -43,7 +43,7 @@ class ValidationPromptManager:
 
     async def store_prompt(self, prompt: str, block: dict, network: str):
         # Convert the block dictionary to a JSON string, converting Decimal to strings
-        block_json = json.dumps(self._convert_decimals_to_strings(block))
+        block_json = json.dumps(block)
 
         async with self.session_manager.session() as session:
             async with session.begin():

@@ -4,7 +4,7 @@ from loguru import logger
 from src.subnet.validator.nodes.bitcoin.node import BitcoinNode  # This can be substituted for EthereumNode if needed
 from src.subnet.validator.blockchain.common.balance_tracking.base_challenge_generator import BaseChallengeGenerator
 from src.subnet.validator.database.models.challenge_balance_tracking import ChallengeBalanceTrackingManager
-from random import randint
+from src.subnet.validator.nodes.random_block import select_block
 
 
 class ChallengeGenerator(BaseChallengeGenerator):
@@ -16,6 +16,8 @@ class ChallengeGenerator(BaseChallengeGenerator):
     async def generate_and_store(self, challenge_manager: ChallengeBalanceTrackingManager, threshold: int):
         # Retrieve block details
         random_balance_tracking_block = randint(1, 1000)  # this is for fast testing only, remove on production
+        last_block = self.node.get_current_block_height() - 6
+        random_balance_tracking_block = select_block(0, last_block)
 
         # Generate a balance tracking challenge
         balance_tracking_challenge, balance_tracking_expected_response = self.node.create_balance_tracking_challenge(random_balance_tracking_block)
