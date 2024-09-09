@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Tuple
 import json
 from decimal import Decimal
 
@@ -22,7 +22,8 @@ class ChallengeBalanceTracking(OrmBase):
     __tablename__ = 'challenge_balance_tracking'
     id = Column(Integer, primary_key=True, autoincrement=True)
     challenge = Column(String, nullable=False)
-    total_balance_change = Column(String, nullable=False, unique=True)
+    block_height = Column(String, nullable=False, unique=True)
+    balance_tracking_expected_response = Column(String, nullable=False)  # Added expected response field
     network = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
@@ -31,32 +32,37 @@ class ChallengeBalanceTrackingManager:
     def __init__(self, session_manager: DatabaseSessionManager):
         self.session_manager = session_manager
 
-    async def store_challenge(self, challenge: str, total_balance_change: int, network: str):
+    async def store_challenge(self, challenge: str, block_height: int, expected_response: str, network: str):
         async with self.session_manager.session() as session:
             async with session.begin():
                 stmt = insert(ChallengeBalanceTracking).values(
                     challenge=challenge,
-                    total_balance_change=str(total_balance_change),  # Convert to string
+                    block_height=str(block_height),
+                    balance_tracking_expected_response=str(expected_response),
                     network=network,
                     created_at=datetime.utcnow()  # Automatically set the created_at field
                 ).on_conflict_do_update(
-                    index_elements=['total_balance_change'],  # Conflict on total_balance_change
+                    index_elements=['block_height'],  # Conflict on block_height
                     set_=dict(
                         challenge=challenge,
+                        balance_tracking_expected_response=str(expected_response),
                         network=network,
                         created_at=datetime.utcnow()  # Update these fields on conflict
                     )
                 )
                 await session.execute(stmt)
 
-    async def get_challenge_by_id(self, challenge_id: int):
+    async def get_challenge_by_id(self, challenge_id: int) -> Tuple[str, str]:
         async with self.session_manager.session() as session:
             result = await session.execute(
                 select(ChallengeBalanceTracking).where(ChallengeBalanceTracking.id == challenge_id)
             )
-            return to_dict(result.scalars().first())
+            challenge_data = result.scalars().first()
+            if challenge_data:
+                return to_dict(challenge_data)['challenge'], to_dict(challenge_data)['balance_tracking_expected_response']
+            return None, None
 
-    async def get_random_challenge(self, network: str) -> str:
+    async def get_random_challenge(self, network: str) -> Tuple[str, str]:
         async with self.session_manager.session() as session:
             min_id_result = await session.execute(
                 select(ChallengeBalanceTracking.id)
@@ -73,7 +79,7 @@ class ChallengeBalanceTrackingManager:
             max_id = max_id_result.scalar()
 
             if min_id is None or max_id is None:
-                return None  # No records found
+                return None, None  # No records found
 
             random_id = random.randint(min_id, max_id)
 
@@ -82,7 +88,10 @@ class ChallengeBalanceTrackingManager:
                 .where(ChallengeBalanceTracking.id == random_id)
                 .where(ChallengeBalanceTracking.network == network)
             )
-            return to_dict(result.scalars().first())['challenge']
+            challenge_data = result.scalars().first()
+            if challenge_data:
+                return to_dict(challenge_data)['challenge'], to_dict(challenge_data)['balance_tracking_expected_response']
+            return None, None
 
     async def get_challenge_count(self, network: str):
         async with self.session_manager.session() as session:

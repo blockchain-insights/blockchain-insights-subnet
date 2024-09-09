@@ -2,7 +2,7 @@
 
 Revision ID: 006
 Revises: 005
-Create Date: 2024-09-08 20:27:00.756311
+Create Date: 2024-09-09 15:26:26.198267
 
 """
 from typing import Sequence, Union
@@ -23,11 +23,12 @@ def upgrade() -> None:
     op.create_table('challenge_balance_tracking',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('challenge', sa.String(), nullable=False),
-    sa.Column('total_balance_change', sa.String(), nullable=False),
+    sa.Column('block_height', sa.String(), nullable=False),
+    sa.Column('balance_tracking_expected_response', sa.String(), nullable=False),
     sa.Column('network', sa.String(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=False),
     sa.PrimaryKeyConstraint('id', name=op.f('pk__challenge_balance_tracking')),
-    sa.UniqueConstraint('total_balance_change', name=op.f('uq__challenge_balance_tracking__total_balance_change'))
+    sa.UniqueConstraint('block_height', name=op.f('uq__challenge_balance_tracking__block_height'))
     )
     op.create_table('challenge_funds_flow',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),

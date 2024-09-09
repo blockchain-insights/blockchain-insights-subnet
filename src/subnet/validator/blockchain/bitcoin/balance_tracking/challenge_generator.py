@@ -29,5 +29,5 @@ class ChallengeGenerator(BaseChallengeGenerator):
             await challenge_manager.try_delete_oldest_challenge(self.network)
 
         # Store the challenge JSON and transaction ID in the database
-        await challenge_manager.store_challenge(challenge_json, balance_tracking_expected_response, self.network)
+        await challenge_manager.store_challenge(challenge_json, random_balance_tracking_block, balance_tracking_expected_response, self.network)
         logger.info(f"Challenge stored in the database successfully.")

@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Tuple
 import json
 from decimal import Decimal
 
@@ -48,14 +48,17 @@ class ChallengeFundsFlowManager:
                 )
                 await session.execute(stmt)
 
-    async def get_challenge_by_id(self, challenge_id: int):
+    async def get_challenge_by_id(self, challenge_id: int) -> Tuple[str, str]:
         async with self.session_manager.session() as session:
             result = await session.execute(
                 select(ChallengeFundsFlow).where(ChallengeFundsFlow.id == challenge_id)
             )
-            return to_dict(result.scalars().first())
+            challenge_data = result.scalars().first()
+            if challenge_data:
+                return to_dict(challenge_data)['challenge'], to_dict(challenge_data)['tx_id']
+            return None, None
 
-    async def get_random_challenge(self, network: str) -> str:
+    async def get_random_challenge(self, network: str) -> Tuple[str, str]:
         async with self.session_manager.session() as session:
             min_id_result = await session.execute(
                 select(ChallengeFundsFlow.id)
@@ -72,7 +75,7 @@ class ChallengeFundsFlowManager:
             max_id = max_id_result.scalar()
 
             if min_id is None or max_id is None:
-                return None  # No records found
+                return None, None  # No records found
 
             random_id = random.randint(min_id, max_id)
 
@@ -81,7 +84,10 @@ class ChallengeFundsFlowManager:
                 .where(ChallengeFundsFlow.id == random_id)
                 .where(ChallengeFundsFlow.network == network)
             )
-            return to_dict(result.scalars().first())['challenge']
+            challenge_data = result.scalars().first()
+            if challenge_data:
+                return to_dict(challenge_data)['challenge'], to_dict(challenge_data)['tx_id']
+            return None, None
 
     async def get_challenge_count(self, network: str):
         async with self.session_manager.session() as session:
