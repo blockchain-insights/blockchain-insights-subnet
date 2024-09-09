@@ -15,7 +15,6 @@ class ChallengeGenerator(BaseChallengeGenerator):
 
     async def generate_and_store(self, challenge_manager: ChallengeBalanceTrackingManager, threshold: int):
         # Retrieve block details
-        random_balance_tracking_block = randint(1, 1000)  # this is for fast testing only, remove on production
         last_block = self.node.get_current_block_height() - 6
         random_balance_tracking_block = select_block(0, last_block)
 
