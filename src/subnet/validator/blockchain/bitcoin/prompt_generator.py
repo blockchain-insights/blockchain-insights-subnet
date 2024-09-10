@@ -24,13 +24,11 @@ class PromptGenerator(BasePromptGenerator):
         self.llm = llm  # LLM instance passed to use for prompt generation
         self.network = "bitcoin"  # Store network as a class member
 
-    def create_graph_focused_on_money_flow(self, block_data, batch_size=8):
+    def create_graph_funds_flow_graph(self, block_data, batch_size=8):
         transactions = block_data.transactions
 
-        # Initialize an empty dictionary to hold the data
-        money_flow_data = {
-            "transactions": [],
-            "inputs": [],
+        # Initialize an empty dictionary to hold the graph data
+        graph_data = {
             "outputs": []
         }
 
@@ -38,45 +36,49 @@ class PromptGenerator(BasePromptGenerator):
             for i in range(0, len(transactions), batch_size):
                 batch_transactions = transactions[i: i + batch_size]
 
-                # Process all transactions, inputs, and outputs in the current batch
-                batch_txns = []
-                batch_inputs = []
-                batch_outputs = []
-
                 for tx in batch_transactions:
+                    # Process the transaction and get all input and output data
                     in_amount_by_address, out_amount_by_address, input_addresses, output_addresses, in_total_amount, out_total_amount = self.node.process_in_memory_txn_for_indexing(
                         tx)
 
-                    # Format inputs and outputs as dictionaries
-                    inputs = [{"address": address, "amount": in_amount_by_address[address], "tx_id": tx.tx_id} for
-                              address in input_addresses]
-                    outputs = [{"address": address, "amount": out_amount_by_address[address], "tx_id": tx.tx_id} for
-                               address in output_addresses]
+                    # Create nodes for all input addresses
+                    for address in input_addresses:
+                        graph_data["outputs"].append({
+                            "type": "node",
+                            "id": address,
+                            "label": f"Address: {address}",
+                            "balance": in_amount_by_address[address],  # Balance for this transaction's input
+                            "timestamp": tx.timestamp,
+                            "block_height": tx.block_height
+                        })
 
-                    # Add transaction data
-                    batch_txns.append({
-                        "tx_id": tx.tx_id,
-                        "in_total_amount": in_total_amount,
-                        "out_total_amount": out_total_amount,
-                        "timestamp": tx.timestamp,
-                        "block_height": tx.block_height,
-                        "is_coinbase": tx.is_coinbase,
-                    })
+                    # Create nodes for all output addresses
+                    for address in output_addresses:
+                        graph_data["outputs"].append({
+                            "type": "node",
+                            "id": address,
+                            "label": f"Address: {address}",
+                            "balance": out_amount_by_address[address],  # Balance for this transaction's output
+                            "timestamp": tx.timestamp,
+                            "block_height": tx.block_height
+                        })
 
-                    # Append the inputs and outputs to batch lists
-                    batch_inputs += inputs
-                    batch_outputs += outputs
+                    # Create edges between input and output addresses
+                    for in_address in input_addresses:
+                        for out_address in output_addresses:
+                            graph_data["outputs"].append({
+                                "type": "edge",
+                                "id": f"{tx.tx_id}-{in_address}->{out_address}",
+                                "label": f"Transaction: {tx.tx_id}",
+                                "from_id": in_address,
+                                "to_id": out_address
+                            })
 
-                # Store the batch data in the dictionary
-                money_flow_data["transactions"].extend(batch_txns)
-                money_flow_data["inputs"].extend(batch_inputs)
-                money_flow_data["outputs"].extend(batch_outputs)
-
-            # Return or save the collected data
-            return money_flow_data
+            # Return the graph data conforming to the schema
+            return graph_data
 
         except Exception as e:
-            logger.error(f"An exception occurred")
+            logger.error(f"An exception occurred: {str(e)}")
             return None
 
     async def generate_and_store(self, validation_prompt_manager: ValidationPromptManager, threshold: int):
@@ -85,7 +87,7 @@ class PromptGenerator(BasePromptGenerator):
         random_block_height = random.randint(0, last_block_height)
         tx_id, block_data = self.node.get_random_txid_from_block(random_block_height)
         parsed_block_data = parse_block_data(block_data)
-        normalized_block_data = self.create_graph_focused_on_money_flow(parsed_block_data)
+        normalized_block_data = self.create_graph_funds_flow_graph(parsed_block_data)
 
         logger.debug(f"Random Txid: {tx_id}")
 

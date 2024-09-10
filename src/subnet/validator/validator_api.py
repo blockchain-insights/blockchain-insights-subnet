@@ -13,6 +13,8 @@ from starlette.responses import Response
 
 from src.subnet.protocol.llm_engine import LlmQueryRequest
 from src.subnet.validator.database.models.api_key import ApiKeyManager
+from src.subnet.validator.database.models.challenge_balance_tracking import ChallengeBalanceTrackingManager
+from src.subnet.validator.database.models.challenge_funds_flow import ChallengeFundsFlowManager
 from src.subnet.validator.database.models.miner_discovery import MinerDiscoveryManager
 from src.subnet.validator.database.models.miner_receipts import MinerReceiptManager
 
@@ -132,6 +134,8 @@ if __name__ == "__main__":
     miner_discovery_manager = MinerDiscoveryManager(session_manager)
     miner_receipt_manager = MinerReceiptManager(session_manager)
     validation_prompt_manager = ValidationPromptManager(session_manager)
+    challenge_funds_flow_manager = ChallengeFundsFlowManager(session_manager)
+    challenge_balance_tracking_manager = ChallengeBalanceTrackingManager(session_manager)
 
     global api_key_manager
     api_key_manager = ApiKeyManager(session_manager)
@@ -143,6 +147,8 @@ if __name__ == "__main__":
         weights_storage,
         miner_discovery_manager,
         validation_prompt_manager,
+        challenge_funds_flow_manager,
+        challenge_balance_tracking_manager,
         miner_receipt_manager,
         query_timeout=settings.QUERY_TIMEOUT,
         challenge_timeout=settings.CHALLENGE_TIMEOUT,
