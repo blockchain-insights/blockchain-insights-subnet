@@ -23,7 +23,6 @@ class ChatMessageResponse(BaseModel):
 
 
 class ContentType(str, Enum):
-    text = "text"
     graph = "graph"
     table = "table"
 
