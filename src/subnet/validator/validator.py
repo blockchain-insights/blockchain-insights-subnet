@@ -19,13 +19,14 @@ from loguru import logger
 from .database.models.challenge_balance_tracking import ChallengeBalanceTrackingManager
 from .database.models.challenge_funds_flow import ChallengeFundsFlowManager
 from .encryption import generate_hash
+from .fuzzy_compare import fuzzy_json_similarity
 from .helpers import raise_exception_if_not_registered, get_ip_port, cut_to_max_allowed_weights
 from .nodes.factory import NodeFactory
 from .weights_storage import WeightsStorage
 from src.subnet.validator.database.models.miner_discovery import MinerDiscoveryManager
 from src.subnet.validator.database.models.miner_receipts import MinerReceiptManager, ReceiptMinerRank
 from src.subnet.protocol.llm_engine import LlmQueryRequest, LlmMessage, Challenge, LlmMessageList, ChallengesResponse, \
-    ChallengeMinerResponse, LlmMessageOutputList
+    ChallengeMinerResponse, LlmMessageOutputList, MODEL_TYPE_FUNDS_FLOW
 from src.subnet.protocol.blockchain import Discovery
 from src.subnet.validator.database.models.validation_prompt import ValidationPromptManager
 
@@ -97,22 +98,20 @@ class Validator(Module):
                 return None
 
             # Prompt Phase
-            random_validation_prompt = await self.validation_prompt_manager.get_random_prompt(discovery.network)
+            random_validation_prompt, prompt_model_type, prompt_result_expected = await self.validation_prompt_manager.get_random_prompt(discovery.network)
             if not random_validation_prompt:
                 logger.error("Failed to get a random validation prompt")
                 return None
 
             llm_message_list = LlmMessageList(messages=[LlmMessage(type=0, content=random_validation_prompt)])
-            llm_query_result = await self._send_prompt(client, miner_key, llm_message_list)
-            if not llm_query_result:
+            prompt_result_actual = await self._send_prompt(client, miner_key, llm_message_list)
+            if not prompt_result_actual:
                 return None
 
-            prompt_cross_check_miner_keys = await self.miner_discovery_manager.get_miners_for_cross_check(discovery.network)
-            prompt_cross_check_tasks = []
-            for _miner_key in prompt_cross_check_miner_keys:
-                prompt_cross_check_tasks.append(self._send_prompt(client, _miner_key, llm_message_list))
+            filter = 'graph' if prompt_model_type == MODEL_TYPE_FUNDS_FLOW else 'table'
 
-            prompt_result_cross_checks: LlmMessageOutputList = await asyncio.gather(*prompt_cross_check_tasks)
+            filtered_prompt_result_actual = [result['result'] for result in prompt_result_actual.model_dump()['outputs'] if result['type'] == filter][0]
+            filtered_prompt_result_expected = [result['result'] for result in json.loads(prompt_result_expected)['outputs'] if result['type'] == filter][0]
 
             return ChallengeMinerResponse(
                 network=discovery.network,
@@ -120,8 +119,8 @@ class Validator(Module):
                 funds_flow_challenge_expected=challenge_response.funds_flow_challenge_expected,
                 balance_tracking_challenge_actual=challenge_response.balance_tracking_challenge_actual,
                 balance_tracking_challenge_expected=challenge_response.balance_tracking_challenge_expected,
-                prompt_result_cross_checks=prompt_result_cross_checks,
-                prompt_result=llm_query_result,
+                prompt_result_actual=filtered_prompt_result_actual,
+                prompt_result_expected=filtered_prompt_result_expected
             )
         except Exception as e:
             logger.error(f"Failed to challenge miner {miner_key}, {e}")
@@ -213,14 +212,17 @@ class Validator(Module):
         # all challenges are passed, setting base score to 0.36
         score = 0.3
 
-        if response.prompt_result is None:
+        if response.prompt_result_actual is None:
+            return score
+        if response.prompt_result_expected is None:
             return score
 
-        if response.prompt_result_cross_checks is None:
-            return score
+        similarity_score = fuzzy_json_similarity(
+            response.prompt_result_actual,
+            response.prompt_result_expected,
+            numeric_tolerance=0.05, string_threshold=80)
 
-        # TODO: implement prompt cross checks
-        # max to +30
+        score = +0.3 * similarity_score
 
         multiplier = min(1, receipt_miner_multiplier)
         score += 0.4 * multiplier

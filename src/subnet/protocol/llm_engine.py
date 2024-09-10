@@ -115,8 +115,8 @@ class ChallengeMinerResponse(BaseModel):
     funds_flow_challenge_actual: Optional[str]
     balance_tracking_challenge_actual: Optional[int]
 
-    prompt_result_cross_checks: Optional[List[LlmMessageOutputList]]
-    prompt_result: Optional[LlmMessageOutputList]
+    prompt_result_expected: Optional[List[dict]]
+    prompt_result_actual: Optional[List[dict]]
 
     def get_failed_challenges(self):
         funds_flow_challenge_passed = self.funds_flow_challenge_expected == self.funds_flow_challenge_actual

@@ -1,5 +1,7 @@
 import random
 from loguru import logger
+
+from src.subnet.protocol.llm_engine import MODEL_TYPE_FUNDS_FLOW, MODEL_TYPE_BALANCE_TRACKING
 from src.subnet.validator.nodes.bitcoin.node import BitcoinNode
 from src.subnet.validator.blockchain.common.base_prompt_generator import BasePromptGenerator
 from src.subnet.validator.database.models.validation_prompt import ValidationPromptManager
@@ -29,7 +31,12 @@ class PromptGenerator(BasePromptGenerator):
 
         # Initialize an empty dictionary to hold the graph data
         graph_data = {
-            "outputs": []
+            "outputs": [
+                {
+                    "type": "graph",
+                    "result": []
+                }
+            ]
         }
 
         try:
@@ -37,44 +44,55 @@ class PromptGenerator(BasePromptGenerator):
                 batch_transactions = transactions[i: i + batch_size]
 
                 for tx in batch_transactions:
-                    # Process the transaction and get all input and output data
-                    in_amount_by_address, out_amount_by_address, input_addresses, output_addresses, in_total_amount, out_total_amount = self.node.process_in_memory_txn_for_indexing(
-                        tx)
+                    in_amount_by_address, out_amount_by_address, input_addresses, output_addresses, in_total_amount, out_total_amount = self.node.process_in_memory_txn_for_indexing(tx)
 
                     # Create nodes for all input addresses
                     for address in input_addresses:
-                        graph_data["outputs"].append({
+                        graph_data["outputs"][0]["result"].append({
                             "type": "node",
                             "id": address,
-                            "label": f"Address: {address}",
-                            "balance": in_amount_by_address[address],  # Balance for this transaction's input
-                            "timestamp": tx.timestamp,
-                            "block_height": tx.block_height
+                            "label": "address"
                         })
 
                     # Create nodes for all output addresses
                     for address in output_addresses:
-                        graph_data["outputs"].append({
+                        graph_data["outputs"][0]["result"].append({
                             "type": "node",
                             "id": address,
-                            "label": f"Address: {address}",
-                            "balance": out_amount_by_address[address],  # Balance for this transaction's output
-                            "timestamp": tx.timestamp,
-                            "block_height": tx.block_height
+                            "label": "address"
                         })
 
-                    # Create edges between input and output addresses
-                    for in_address in input_addresses:
-                        for out_address in output_addresses:
-                            graph_data["outputs"].append({
-                                "type": "edge",
-                                "id": f"{tx.tx_id}-{in_address}->{out_address}",
-                                "label": f"Transaction: {tx.tx_id}",
-                                "from_id": in_address,
-                                "to_id": out_address
-                            })
+                    # Create a node for the transaction
+                    graph_data["outputs"][0]["result"].append({
+                        "type": "node",
+                        "id": tx.tx_id,
+                        "label": "transaction",
+                        "balance": out_total_amount,  # Balance output by the transaction
+                        "timestamp": tx.timestamp,
+                        "block_height": tx.block_height
+                    })
 
-            # Return the graph data conforming to the schema
+                    # Create edges from input addresses to the transaction node
+                    for in_address in input_addresses:
+                        edge_id = f"{in_address}-{tx.tx_id}"
+                        graph_data["outputs"][0]["result"].append({
+                            "type": "edge",
+                            "id": edge_id,
+                            "label": f"{in_amount_by_address[in_address]:.8f} BTC",
+                            "from_id": in_address,
+                            "to_id": tx.tx_id
+                        })
+
+                    # Create edges from the transaction node to output addresses
+                    for out_address in output_addresses:
+                        edge_id = f"{tx.tx_id}-{out_address}"
+                        graph_data["outputs"][0]["result"].append({
+                            "type": "edge",
+                            "id": edge_id,
+                            "label": f"{out_amount_by_address[out_address]:.8f} BTC",
+                            "from_id": tx.tx_id,
+                            "to_id": out_address
+                        })
             return graph_data
 
         except Exception as e:
@@ -86,18 +104,24 @@ class PromptGenerator(BasePromptGenerator):
         last_block_height = self.node.get_current_block_height() - 6
         random_block_height = random.randint(0, last_block_height)
         tx_id, block_data = self.node.get_random_txid_from_block(random_block_height)
-        parsed_block_data = parse_block_data(block_data)
-        normalized_block_data = self.create_graph_funds_flow_graph(parsed_block_data)
-
         logger.debug(f"Random Txid: {tx_id}")
 
         selected_template = random.choice(self.PROMPT_TEMPLATES)
         prompt = self.llm.build_prompt_from_txid_and_block(tx_id, random_block_height, self.network, prompt_template=selected_template)
         logger.debug(f"Generated Challenge Prompt: {prompt}")
+        prompt_model_type = self.llm.determine_model_type(prompt, self.network)
+
+        parsed_block_data = parse_block_data(block_data)
+        transformed_block_data = None
+        if prompt_model_type == MODEL_TYPE_FUNDS_FLOW:
+            transformed_block_data = self.create_graph_funds_flow_graph(parsed_block_data)
+        if prompt_model_type == MODEL_TYPE_BALANCE_TRACKING:
+            transformed_block_data = None
+            # TODO: Implement balance tracking graph generation
 
         current_prompt_count = await validation_prompt_manager.get_prompt_count(self.network)
         if current_prompt_count >= threshold:
             await validation_prompt_manager.try_delete_oldest_prompt(self.network)
 
-        await validation_prompt_manager.store_prompt(prompt, normalized_block_data, self.network)
+        await validation_prompt_manager.store_prompt(prompt, prompt_model_type, transformed_block_data, self.network)
         logger.info(f"Prompt stored in the database successfully.")

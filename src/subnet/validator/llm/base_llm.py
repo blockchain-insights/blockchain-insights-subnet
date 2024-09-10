@@ -10,7 +10,13 @@ class BaseLLM(ABC):
         """
 
     @abstractmethod
-    def build_prompt_from_txid_and_block(self, txid: str, block: str, network: str, prompt_template: str):
+    def build_prompt_from_txid_and_block(self, txid: str, block_height: int, network: str, prompt_template: str):
         """
         Build a validation prompt from a given txid and block
+        """
+
+    @abstractmethod
+    def determine_model_type(self, prompt: str, network: str):
+        """
+        Determine model type based on messages
         """

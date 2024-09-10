@@ -8,7 +8,8 @@ from src.subnet.validator._config import ValidatorSettings
 from src.subnet.validator.llm.base_llm import BaseLLM
 from src.subnet.validator.llm.prompt_reader import read_local_file
 from src.subnet.validator.llm.utils import split_messages_into_chunks
-from src.subnet.protocol.llm_engine import LLM_ERROR_PROMPT_GENERATION_FAILED
+from src.subnet.protocol.llm_engine import LLM_ERROR_PROMPT_GENERATION_FAILED, MODEL_TYPE_FUNDS_FLOW, \
+    MODEL_TYPE_BALANCE_TRACKING
 
 
 class OpenAILLM(BaseLLM):
@@ -17,7 +18,35 @@ class OpenAILLM(BaseLLM):
         self.chat_gpt4o = ChatOpenAI(api_key=settings.LLM_API_KEY, model="gpt-4o", temperature=0)
         self.MAX_TOKENS = 128000
 
-    def build_prompt_from_txid_and_block(self, txid: str, block: str, network: str, prompt_template: str) -> str:
+    def determine_model_type(self, prompt: str, network: str) -> str:
+        local_file_path = f"openai/prompts/{network}/prompt_generation/classification_prompt.txt"
+        template = read_local_file(local_file_path)
+        if not prompt:
+            raise Exception("Failed to read prompt content")
+
+        messages = [
+            SystemMessage(
+                content=template
+            ),
+            HumanMessage(content=prompt)
+        ]
+
+        try:
+            ai_message = self.chat_gpt4o.invoke(messages)
+            logger.info(f"AI-generated message: {ai_message.content}")
+            content = ai_message.content
+            if "Funds Flow" in content:
+                return MODEL_TYPE_FUNDS_FLOW
+            elif "Balance Tracking" in content:
+                return MODEL_TYPE_BALANCE_TRACKING
+            else:
+                logger.error("Received invalid classification from AI response")
+                raise Exception("LLM_ERROR_CLASSIFICATION_FAILED")
+        except Exception as e:
+            logger.error(f"Error during classification: {e}")
+            raise
+
+    def build_prompt_from_txid_and_block(self, txid: str, block_height: int, network: str, prompt_template: str) -> str:
         # Read the main prompt template from disk
         local_file_path = f"openai/prompts/{network}/prompt_generation/prompt_generation_prompt.txt"
         prompt = read_local_file(local_file_path)
@@ -30,7 +59,7 @@ class OpenAILLM(BaseLLM):
 
         # Ensure txid and block are strings
         txid_str = str(txid)
-        block_str = str(block)
+        block_str = str(block_height)
 
         # Start with the original template
         substituted_template = prompt_template
