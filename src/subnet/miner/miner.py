@@ -187,10 +187,7 @@ class Miner(Module):
 
             # Use transformer for graph result
             graph_transformer = self.graph_transformer_factory.create_graph_transformer(self.settings.NETWORK)
-            graph_summary_transformer = self.graph_summary_transformer_factory.create_graph_summary_transformer(self.settings.NETWORK)
             graph_transformed_result = graph_transformer.transform_result(result)
-            graph_summary_result = graph_summary_transformer.transform_result(result)
-            logger.info(f"Summary Result: {graph_summary_result}")
 
             # Use transformer for chart result
             chart_transformer = self.chart_transformer_factory.create_chart_transformer(self.settings.NETWORK)
@@ -198,17 +195,8 @@ class Miner(Module):
             if chart_transformer.is_chart_applicable(result):
                 chart_transformed_result = chart_transformer.convert_funds_flow_to_chart(result)
 
-            interpret_result_start_time = time.time()
-            interpreted_result = self.llm.interpret_result_funds_flow(
-                llm_messages=llm_messages_list.messages,
-                result=graph_summary_result,
-                network=self.settings.NETWORK
-            )
-
-            logger.info(f"Result interpretation time: {time.time() - interpret_result_start_time} seconds")
             output = LlmMessageOutputList(outputs=[
-                LlmMessageOutput(type="graph", result=graph_transformed_result),
-                LlmMessageOutput(type="text", result=[interpreted_result])
+                LlmMessageOutput(type="graph", result=graph_transformed_result)
             ])
             return output
 
@@ -247,17 +235,9 @@ class Miner(Module):
             if chart_transformer.is_chart_applicable(result):
                 chart_transformed_result = chart_transformer.convert_balance_tracking_to_chart(result)
 
-            interpret_result_start_time = time.time()
-            interpreted_result = self.llm.interpret_result_balance_tracker(
-                llm_messages=llm_messages.messages,
-                result=tabular_transformed_result,
-                network=self.settings.NETWORK
-            )
-
-            logger.info(f"Result interpretation time: {time.time() - interpret_result_start_time} seconds")
             output = LlmMessageOutputList(outputs=[
-                LlmMessageOutput(type="table", result=tabular_transformed_result),
-                LlmMessageOutput(type="text", result=[interpreted_result])])
+                LlmMessageOutput(type="table", result=tabular_transformed_result)
+            ])
 
             return output
 

@@ -67,22 +67,26 @@ class BitcoinGraphSearch(BaseGraphSearch):
             if not result:
                 return None
 
-            # TODO: remove hardcodes
+            # Fetch result data and log it
+            result_data = result.data()
+
+            # Prepare to store results in a list
             results_data = []
-            for record in result:
-                # Extract nodes and relationships from the record
-                a1 = record['a1']
-                t1 = record['t1']
-                a2 = record['a2']
-                s1 = record['s1']
-                s2 = record['s2']
 
-                results_data.append({
-                    'a1': a1,
-                    't1': t1,
-                    'a2': a2,
-                    's1': dict(s1),
-                    's2': dict(s2)
-                })
+            for record in result_data:
+                # For each record, convert the entire record to a dictionary
+                processed_record = {}
 
+                # Iterate through all key-value pairs in the record
+                for key, value in record.items():
+                    # If the value is a relationship or node, convert it to a dict
+                    if hasattr(value, 'items'):
+                        processed_record[key] = dict(value)
+                    else:
+                        processed_record[key] = value
+
+                # Append the processed record to the result list
+                results_data.append(processed_record)
+            logger.info(f"Results data: {results_data}")
             return results_data
+
