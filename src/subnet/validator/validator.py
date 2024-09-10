@@ -217,11 +217,12 @@ class Validator(Module):
         if response.prompt_result_expected is None:
             return score
 
-        similarity_score = fuzzy_json_similarity(
-            response.prompt_result_actual,
-            response.prompt_result_expected,
-            numeric_tolerance=0.05, string_threshold=80)
+        #similarity_score = fuzzy_json_similarity(
+        #    response.prompt_result_actual,
+        #    response.prompt_result_expected,
+        #    numeric_tolerance=0.05, string_threshold=80)
 
+        similarity_score = 0
         score = +0.3 * similarity_score
 
         multiplier = min(1, receipt_miner_multiplier)
