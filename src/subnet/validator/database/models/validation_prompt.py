@@ -3,7 +3,7 @@ import json
 from decimal import Decimal
 
 from loguru import logger
-from sqlalchemy import Column, Integer, String, Float, DateTime, update, insert
+from sqlalchemy import Column, Integer, String, Float, DateTime, update, insert, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.future import select
 from sqlalchemy.dialects.postgresql import insert
@@ -23,8 +23,9 @@ Base = declarative_base()
 class ValidationPrompt(OrmBase):
     __tablename__ = 'validation_prompt'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    prompt = Column(String, nullable=False)
-    block = Column(String, nullable=False)
+    prompt = Column(Text, nullable=False)
+    prompt_model_type = Column(String, nullable=False)
+    data = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     network = Column(String, nullable=False)
 
@@ -41,24 +42,23 @@ class ValidationPromptManager:
             return str(data)
         return data
 
-    async def store_prompt(self, prompt: str, block: dict, network: str):
-        # Convert the block dictionary to a JSON string, converting Decimal to strings
-        block_json = json.dumps(block)
-
+    async def store_prompt(self, prompt: str, prompt_model_type: str, data: dict, network: str):
+        data_json = json.dumps(data)
         async with self.session_manager.session() as session:
             async with session.begin():
                 stmt = insert(ValidationPrompt).values(
                     prompt=prompt,
-                    block=block_json,
-                    network=network,  # Add the network to the insert statement
-                    created_at=datetime.utcnow()  # Automatically set the created_at field
+                    prompt_model_type=prompt_model_type,
+                    data=data_json,
+                    network=network,
+                    created_at=datetime.utcnow()
                 )
                 await session.execute(stmt)
 
     async def get_random_prompt(self, network: str) -> str:
         async with self.session_manager.session() as session:
             query = text("""
-                   SELECT prompt 
+                   SELECT prompt, prompt_model_type, data 
                    FROM validation_prompt
                    WHERE network = :network
                    ORDER BY RANDOM() 
@@ -68,8 +68,8 @@ class ValidationPromptManager:
             prompt_data = result.fetchone()
 
             if prompt_data:
-                return prompt_data[0]
-            return None
+                return prompt_data[0], prompt_data[1], prompt_data[2]
+            return None, None
 
     async def get_prompt_count(self, network: str):
         async with self.session_manager.session() as session:
