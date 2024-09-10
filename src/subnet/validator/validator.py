@@ -208,10 +208,10 @@ class Validator(Module):
             if failed_challenges == 2:
                 return 0
             else:
-                return 15
+                return 0.15
 
         # all challenges are passed, setting base score to 0.36
-        score = 30
+        score = 0.3
 
         if response.prompt_result is None:
             return score
@@ -222,8 +222,8 @@ class Validator(Module):
         # TODO: implement prompt cross checks
         # max to +30
 
-        multiplier = min(100, receipt_miner_multiplier)
-        score += 40 * multiplier
+        multiplier = min(1, receipt_miner_multiplier)
+        score += 0.4 * multiplier
 
         return score
 
