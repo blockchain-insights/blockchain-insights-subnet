@@ -223,10 +223,10 @@ class Validator(Module):
         #    numeric_tolerance=0.05, string_threshold=80)
 
         similarity_score = 0
-        score += 0.3 * similarity_score
+        score = score + (0.3 * similarity_score)
 
         multiplier = min(1, receipt_miner_multiplier)
-        score += 0.4 * multiplier
+        score = score + (0.4 * multiplier)
 
         return score
 
