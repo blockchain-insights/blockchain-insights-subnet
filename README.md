@@ -1,6 +1,6 @@
 <div style="display: flex; align-items: center;">
   <img src="docs/subnet_logo.png" alt="subnet_logo" style="width: 60px; height: 60px; margin-right: 10px;">
-  <h1>Chain Insights</h1>
+  <h1 style="margin: 0;">Chain Insights</h1>
 </div>
 
 ## Table of Contents
@@ -49,7 +49,7 @@ This subnet continues the legacy of the blockchain data insights subnet from the
 
 **2. Validators**:
    - **Role**: Validators are crucial for maintaining the integrity and security of the network. They provide essential APIs to miners and ensure that all transactions and validation processes meet the required standards.
-   - **Responsibilities**: Validators support miners by enabling their participation in various network activities, such as Chain Chat, and play a key role in verifying and validating transactions within the network.
+   - **Responsibilities**: Validators support miners by enabling their participation in various network activities, such as Chain Chat, and play a key role in verifying miners output.
 
 **3. Miners**:
    - **Role**: Miners are active contributors to the network, responsible for developing blockchain indexers, participating in validation mechanisms, and integrating new technologies into the subnet.
