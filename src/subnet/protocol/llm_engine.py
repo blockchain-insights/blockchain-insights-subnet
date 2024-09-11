@@ -1,6 +1,6 @@
 import hashlib
 import json
-from typing import List, Optional, Dict, Literal
+from typing import List, Optional, Dict, Literal, Any
 from pydantic import BaseModel, Field
 
 from src.subnet.protocol.blockchain import NETWORK_BITCOIN
@@ -67,8 +67,8 @@ class LlmMessage(BaseModel):
 
 
 class LlmMessageOutput(BaseModel):
-    type: Literal["graph", "table", "error"] = Field(..., title="The type of the output")
-    result: Optional[List[object]] = None
+    type: Literal["text", "graph", "table", "error"] = Field(..., title="The type of the output")
+    result: Optional[Any] = None
     error: Optional[ERROR_TYPE] = None
 
     class Config:
@@ -132,7 +132,7 @@ class ChallengeMinerResponse(BaseModel):
 
 
 class QueryOutput(BaseModel):
-    type: Literal["graph", "table", "chart", "error"] = Field(..., title="The type of the output")
+    type: Literal["text", "graph", "table", "chart", "error"] = Field(..., title="The type of the output")
     result: Optional[Dict] = None
     error: Optional[ERROR_TYPE] = None
 

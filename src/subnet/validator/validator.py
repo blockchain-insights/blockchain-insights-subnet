@@ -108,6 +108,8 @@ class Validator(Module):
             if not prompt_result_actual:
                 return None
 
+            logger.info(f"Prompt result actual is {prompt_result_actual}")
+
             filter = 'graph' if prompt_model_type == MODEL_TYPE_FUNDS_FLOW else 'table'
 
             filtered_prompt_result_actual = [result['result'] for result in prompt_result_actual.model_dump()['outputs'] if result['type'] == filter][0]
@@ -183,7 +185,7 @@ class Validator(Module):
     async def _send_prompt(self, client, miner_key, llm_message_list) -> LlmMessageOutputList | None:
         try:
             llm_query_result = await client.call(
-                "llm_query",
+                "llm_query_v2",
                 miner_key,
                 {"llm_messages_list": llm_message_list.model_dump()},
                 timeout=self.llm_query_timeout,

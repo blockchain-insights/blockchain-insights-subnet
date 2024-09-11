@@ -248,6 +248,145 @@ class Miner(Module):
             output = LlmMessageOutputList(outputs=[LlmMessageOutput(type="error", error=error_code, result=[error_message])])
             return output
 
+    @endpoint
+    async def llm_query_v2(self, llm_messages_list: LlmMessageList) -> LlmMessageOutputList:
+        """
+        Args:
+            llm_messages_list:
+            {
+                "llm_messages": [
+                    {
+                        "type": 0,
+                        "content": "string"
+                    }
+                ]
+            }
+
+        Returns:
+            {
+                "output": [
+                    {
+                        "type": "graph",
+                        "result": [
+                            {
+                                "type": "node",
+                                "label": "string",
+                                "properties": {
+                                    "key": "value"
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "type": "text",
+                        "result": "string"
+                    }
+                ],
+
+        """
+
+        llm_messages_list = LlmMessageList(**llm_messages_list)
+        logger.debug(f"Received miner llm query: {llm_messages_list}")
+        start_time = time.time()
+
+        try:
+            model_type = self.llm.determine_model_type(llm_messages_list.messages, self.settings.NETWORK)
+            logger.debug(f"Determined model type: {model_type}")
+
+            if model_type == 'funds_flow':
+                output = await self._handle_funds_flow_query_v2(llm_messages_list)
+            elif model_type == 'balance_tracking':
+                output = await self._handle_balance_tracking_query_v2(llm_messages_list)
+            else:
+                output = LlmMessageOutputList(outputs=[
+                    LlmMessageOutput(type="error", error="Unsupported model type", result=["Unsupported model type"])])
+
+        except Exception as e:
+            logger.error(traceback.format_exc())
+            error_code = e.args[0] if len(e.args) > 0 and isinstance(e.args[0], int) else LLM_UNKNOWN_ERROR
+            output = LlmMessageOutputList(outputs=[LlmMessageOutput(type='error', error=error_code, result=[
+                LLM_ERROR_MESSAGES.get(error_code, 'An error occurred')])])
+            return output
+
+        logger.debug(f"Serving miner llm query output: {output} (Total time taken: {time.time() - start_time} seconds)")
+
+        return output
+
+    async def _handle_funds_flow_query_v2(self, llm_messages_list: LlmMessageList) -> LlmMessageOutputList:
+        try:
+            graph_search = self.graph_search_factory.create_graph_search(self.settings)
+            query_start_time = time.time()
+
+            query = self.llm.build_cypher_query_from_messages(llm_messages_list.messages, self.settings.NETWORK)
+            query = query.strip('`')
+            logger.debug(f"Generated Cypher query: {query} (Time taken: {time.time() - query_start_time} seconds)")
+
+            if query == 'modification_error':
+                error_code = LLM_ERROR_MODIFICATION_NOT_ALLOWED
+                error_message = LLM_ERROR_MESSAGES[error_code]
+                logger.error(f"Error {error_code}: {error_message}")
+                return LlmMessageOutputList(outputs=[LlmMessageOutput(type="error", error=error_code, result=[error_message])])
+
+            if query == 'invalid_prompt_error':
+                error_code = LLM_ERROR_INVALID_SEARCH_PROMPT
+                error_message = LLM_ERROR_MESSAGES[error_code]
+                logger.error(f"Error {error_code}: {error_message}")
+                return LlmMessageOutputList(outputs=[LlmMessageOutput(type="error", error=error_code, result=[error_message])])
+
+            output = LlmMessageOutputList(outputs=[
+                LlmMessageOutput(type="text", result=query)
+            ])
+            return output
+
+        except Exception as e:
+            logger.error(traceback.format_exc())
+            error_code = e.args[0] if len(e.args) > 0 and isinstance(e.args[0], int) else LLM_UNKNOWN_ERROR
+            error_message = LLM_ERROR_MESSAGES.get(error_code, 'An unknown error occurred')
+            output = LlmMessageOutputList(outputs=[LlmMessageOutput(type="error", error=error_code, result=[error_message])])
+            return output
+
+    async def _handle_balance_tracking_query_v2(self, llm_messages: LlmMessageList) -> LlmMessageOutputList:
+        try:
+            query_start_time = time.time()
+            query = self.llm.build_query_from_messages_balance_tracker(llm_messages.messages, settings.NETWORK)
+            logger.info(f"extracted query: {query} (Time taken: {time.time() - query_start_time} seconds)")
+
+            if query in ['modification_error', 'invalid_prompt_error']:
+                error_code = LLM_ERROR_MODIFICATION_NOT_ALLOWED if query == 'modification_error' else LLM_ERROR_INVALID_SEARCH_PROMPT
+                error_message = LLM_ERROR_MESSAGES.get(error_code)
+                logger.error(f"Error {error_code}: {error_message}")
+                output = LlmMessageOutputList(outputs=[LlmMessageOutput(type="error", error=error_code, result=[error_message])])
+                return output
+
+            execute_query_start_time = time.time()
+            balance_search = self.balance_search_factory.create_balance_search(self.settings.NETWORK)
+            result = await balance_search.execute_query(query)
+
+            logger.info(f"Query execution time: {time.time() - execute_query_start_time} seconds")
+
+            # Use transformer for tabular result
+            tabular_transformer = self.tabular_transformer_factory.create_tabular_transformer(self.settings.NETWORK)
+            tabular_transformed_result = tabular_transformer.transform_result_set(result)
+
+            chart_transformer = self.chart_transformer_factory.create_chart_transformer(self.settings.NETWORK)
+            chart_transformed_result = None
+            if chart_transformer.is_chart_applicable(result):
+                chart_transformed_result = chart_transformer.convert_balance_tracking_to_chart(result)
+
+            output = LlmMessageOutputList(outputs=[
+                LlmMessageOutput(type="table", result=tabular_transformed_result)
+            ])
+
+            return output
+
+        except Exception as e:
+            logger.error(traceback.format_exc())
+            error_code = e.args[0] if len(e.args) > 0 and isinstance(e.args[0], int) else LLM_UNKNOWN_ERROR
+            error_message = LLM_ERROR_MESSAGES.get(error_code, 'An error occurred')
+            output = LlmMessageOutputList(outputs=[LlmMessageOutput(type="error", error=error_code, result=[error_message])])
+            return output
+
+
 
 if __name__ == "__main__":
     from communex.module.server import ModuleServer
