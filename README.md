@@ -52,13 +52,13 @@ This subnet continues the legacy of the blockchain data insights subnet from the
 **3. Miners**:
    - **Role & Responsibilities**: Miners are active contributors to the network, responsible for developing blockchain indexers, participating in validation mechanisms, and integrating new technologies into the subnet. They also train and integrate Large Language Models (LLMs) and are responsible for marketing their contributions to increase their miner real world usage and get more incentives.
 
-These components work together in a collaborative ecosystem, with each playing a vital role in the subnet's operation and evolution.
+These components work together in a collaborative ecosystem, with each playing a vital role in the subnets operation and evolution.
 
 ### New Collaborative Model: Decentralized Innovation
 
 ### How It Was in the Past
 
-In the previous centralized development model, the subnet's structure was heavily controlled by the subnet owner:
+In the previous centralized development model, the subnet structure was heavily controlled by the subnet owner:
 
 **Subnet Owner**: The subnet owner had complete control over the network's development, managing everything from design to implementation and maintenance. All critical decisions were made solely by the owner, which meant that innovation was driven by a single perspective. This centralized control created a bottleneck, limiting the diversity of ideas and hindering the network's ability to grow and adapt to new challenges.
 
