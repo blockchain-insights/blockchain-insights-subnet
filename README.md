@@ -1,11 +1,7 @@
-<div align="center">
-
-# **Chain Insights**
-
-<img src="docs/subnet_logo.png" alt="subnet_logo" style="width: 75px; height: 75px; margin-right: 10px;">
-
+<div style="display: flex; align-items: center;">
+  <img src="docs/subnet_logo.png" alt="subnet_logo" style="width: 60px; height: 60px; margin-right: 10px;">
+  <h1 style="margin: 0;">Chain Insights</h1>
 </div>
-
 
 ## Table of Contents
  
