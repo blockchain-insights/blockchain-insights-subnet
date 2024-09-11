@@ -358,23 +358,8 @@ class Miner(Module):
                 output = LlmMessageOutputList(outputs=[LlmMessageOutput(type="error", error=error_code, result=[error_message])])
                 return output
 
-            execute_query_start_time = time.time()
-            balance_search = self.balance_search_factory.create_balance_search(self.settings.NETWORK)
-            result = await balance_search.execute_query(query)
-
-            logger.info(f"Query execution time: {time.time() - execute_query_start_time} seconds")
-
-            # Use transformer for tabular result
-            tabular_transformer = self.tabular_transformer_factory.create_tabular_transformer(self.settings.NETWORK)
-            tabular_transformed_result = tabular_transformer.transform_result_set(result)
-
-            chart_transformer = self.chart_transformer_factory.create_chart_transformer(self.settings.NETWORK)
-            chart_transformed_result = None
-            if chart_transformer.is_chart_applicable(result):
-                chart_transformed_result = chart_transformer.convert_balance_tracking_to_chart(result)
-
             output = LlmMessageOutputList(outputs=[
-                LlmMessageOutput(type="table", result=tabular_transformed_result)
+                LlmMessageOutput(type="text", result=query)
             ])
 
             return output
