@@ -38,7 +38,7 @@ This subnet continues the legacy of the blockchain data insights subnet from the
 - [ ] **Multi-network support**: Implementation of dynamic miner/network weight allocation based on the real network usage.  
 - [ ] **Network Integrations**: Ongoing Miner's developments of blockchain indexers and llm models for various blockchain networks.
   - [ ] **Ethereum Integration**
-  - [ ] **Bittensor In Integrationsdexe**
+  - [ ] **Bittensor In Integration**
   - [ ] **Commune AI Integrations**
   - [ ] **and many more**
   
@@ -48,16 +48,13 @@ This subnet continues the legacy of the blockchain data insights subnet from the
 ### Subnet Architecture Components
 
 **1. Subnet Owner**:
-   - **Role**: The subnet owner acts as the coordinator and facilitator of the network. They are responsible for the overall development and maintenance of the subnet, including critical infrastructure like Chain Chat, a web application that allows users to interact with the graph and LLM models developed by miners.
-   - **Responsibilities**: The subnet owner ensures the alignment of the network with its vision and goals, supports collaboration among participants, and maintains the core infrastructure.
+   - **Role & Responsibilities**: The subnet owner acts as the coordinator and facilitator of the network. He is responsible for the overall development and maintenance of the subnet, collaboration with miners and validators to ensure the network's success.
 
 **2. Validators**:
-   - **Role**: Validators are crucial for maintaining the integrity and security of the network. They provide essential APIs to miners and ensure that all transactions and validation processes meet the required standards.
-   - **Responsibilities**: Validators support miners by enabling their participation in various network activities, such as Chain Chat, and play a key role in verifying miners output.
+   - **Role & Responsibilities**: Validators are crucial for maintaining the integrity and correctness of the miner's work. They can host an API allowing interacting/integration with the subnet.
 
 **3. Miners**:
-   - **Role**: Miners are active contributors to the network, responsible for developing blockchain indexers, participating in validation mechanisms, and integrating new technologies into the subnet.
-   - **Responsibilities**: Miners track fund flows, detect anomalies, and create new blockchain integrations within the main subnet. They also train and integrate Large Language Models (LLMs) and are responsible for marketing their contributions to increase network usage and influence their standing within the indexed blockchain network.
+   - **Role & Responsibilities**: Miners are active contributors to the network, responsible for developing blockchain indexers, participating in validation mechanisms, and integrating new technologies into the subnet. They also train and integrate Large Language Models (LLMs) and are responsible for marketing their contributions to increase their miner real world usage and get more incentives.
 
 These components work together in a collaborative ecosystem, with each playing a vital role in the subnet's operation and evolution.
 
