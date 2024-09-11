@@ -30,8 +30,9 @@ This subnet continues the legacy of the blockchain data insights subnet from the
 ### Roadmap
 
 - [x] **Migration from Bittensor**: Transition the subnet from the Bittensor ecosystem to a commune ai ecosystem.
-- [ ] **Chain Chat Integration**: Integrate Chain Chat, a web application that allows users to interact with the graph and LLM models developed by miners.
-- [ ] **Blockchain Indexer Development**: Ongoing Miners development of blockchain indexers for various networks.
+- [ ] **Chain Chat Integration**: Integrate [Chain Chat](https://chat.chain-insights.ai/), a web application that allows users to interact with the subnet.
+- [ ] **Multinetwork support**: Implementation of dynamic network weight allocation based on the real network usage.  
+- [ ] **Network Integrations**: Ongoing Miner's developments of blockchain indexers and llm models for various blockchain networks.
   - [ ] **Ethereum Indexer**
   - [ ] **Bittensor Indexer**
   - [ ] **Commune AI Indexer**
