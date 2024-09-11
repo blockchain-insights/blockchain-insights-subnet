@@ -311,6 +311,7 @@ class Validator(Module):
         self.weights_storage.setup()
         weighted_scores: dict[int, int] = self.weights_storage.read()
 
+        logger.debug(f"Setting weights: {score_dict}")
         scores = sum(score_dict.values())
 
         if scores == 0:
@@ -329,6 +330,7 @@ class Validator(Module):
         weights = list(weighted_scores.values())
 
         # send the blockchain call
+        logger.debug(f"Sending weights to the blockchain: {uids} {weights}")
         client.vote(key=key, uids=uids, weights=weights, netuid=netuid)
 
     async def validation_loop(self, settings: ValidatorSettings) -> None:
