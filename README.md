@@ -1,3 +1,22 @@
+<div style="display: flex; align-items: center;">
+  <img src="docs/subnet_logo.png" alt="subnet_logo" style="width: 60px; height: 60px; margin-right: 10px;">
+  <h1>Chain Insights</h1>
+</div>
+
+## Table of Contents
+ 
+- [Introduction](#introduction)
+- [Subnet Vision](#subnet-vision)
+- [Roadmap](#roadmap)
+- [Overview](#overview)
+- [Subnet Architecture Components](#subnet-architecture-components)
+- [New Collaborative Model: Decentralized Innovation](#new-collaborative-model-decentralized-innovation)
+  - [How It Was in the Past](#how-it-was-in-the-past)
+  - [How It Is Now: Decentralized Innovation](#how-it-is-now-decentralized-innovation)
+    - [Miners: Empowered Innovators](#miners-empowered-innovators)
+    - [A Collaborative Ecosystem](#a-collaborative-ecosystem)
+    - [Roles & Responsibilities](#roles--responsibilities)
+
 ### Subnet Vision
 
 The Subnet aims to deliver comprehensive insights into cryptocurrency fund flows and balance changes, presented in a user-friendly manner. It is designed to:
@@ -7,6 +26,17 @@ The Subnet aims to deliver comprehensive insights into cryptocurrency fund flows
 - **Combat Financial Crimes**: Assist in the early detection and prevention of financial crimes, including money laundering, fraud, and other illicit activities within the cryptocurrency ecosystem.
 
 This subnet continues the legacy of the blockchain data insights subnet from the Bittensor ecosystem, but with a renewed direction and vision.
+
+### Roadmap
+
+- [x] **Migration from Bittensor**: Transition the subnet from the Bittensor ecosystem to a commune ai ecosystem.
+- [ ] **Chain Chat Integration**: Integrate Chain Chat, a web application that allows users to interact with the graph and LLM models developed by miners.
+- [ ] **Blockchain Indexer Development**: Ongoing Miners development of blockchain indexers for various networks.
+  - [ ] **Ethereum Indexer**
+  - [ ] **Bittensor Indexer**
+  - [ ] **Commune AI Indexer**
+  - [ ] **and many more**
+  
 
 ### Overview
 
