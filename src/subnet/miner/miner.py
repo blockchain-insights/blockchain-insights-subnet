@@ -274,6 +274,7 @@ if __name__ == "__main__":
         record["extra"]["miner_key"] = keypair.ss58_address
         record["extra"]["service"] = 'miner'
         record["extra"]["timestamp"] = datetime.utcnow().isoformat()
+        record["extra"]["level"] = record['level'].name
 
         return True
 

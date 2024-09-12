@@ -98,6 +98,7 @@ if __name__ == "__main__":
         record["extra"]["validator_key"] = keypair.ss58_address
         record["extra"]["service"] = 'validator'
         record["extra"]["timestamp"] = datetime.utcnow().isoformat()
+        record["extra"]["level"] = record['level'].name
 
         return True
 
