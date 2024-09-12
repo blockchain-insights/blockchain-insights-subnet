@@ -16,8 +16,10 @@ from substrateinterface import Keypair  # type: ignore
 from ._config import ValidatorSettings
 from loguru import logger
 
+from .database.models import validation_prompt_response
 from .database.models.challenge_balance_tracking import ChallengeBalanceTrackingManager
 from .database.models.challenge_funds_flow import ChallengeFundsFlowManager
+from .database.models.validation_prompt_response import ValidationPromptResponseManager
 from .encryption import generate_hash
 from .fuzzy_compare import fuzzy_json_similarity
 from .helpers import raise_exception_if_not_registered, get_ip_port, cut_to_max_allowed_weights
@@ -43,6 +45,7 @@ class Validator(Module):
             weights_storage: WeightsStorage,
             miner_discovery_manager: MinerDiscoveryManager,
             validation_prompt_manager: ValidationPromptManager,
+            validation_prompt_response_manager: ValidationPromptResponseManager,
             challenge_funds_flow_manager: ChallengeFundsFlowManager,
             challenge_balance_tracking_manager: ChallengeBalanceTrackingManager,
             miner_receipt_manager: MinerReceiptManager,
@@ -66,6 +69,7 @@ class Validator(Module):
         self.miner_discovery_manager = miner_discovery_manager
         self.terminate_event = threading.Event()
         self.validation_prompt_manager = validation_prompt_manager
+        self.validation_prompt_response_manager = validation_prompt_response_manager
         self.challenge_funds_flow_manager = challenge_funds_flow_manager
         self.challenge_balance_tracking_manager = challenge_balance_tracking_manager
 
@@ -114,8 +118,14 @@ class Validator(Module):
 
             logger.info(f"Prompt result actual is {prompt_result_actual}")
 
-            validation_result = self.llm.validate_query_by_prompt(random_validation_prompt,
-                                                            prompt_result_actual.outputs[0].result, discovery.network)
+            validation_result = await Validator.validate_query_by_prompt(
+                random_validation_prompt=random_validation_prompt,
+                miner_key=miner_key,
+                miner_query=prompt_result_actual.outputs[0].result,
+                network=discovery.network,
+                validation_prompt_response_manager=self.validation_prompt_response_manager,
+                llm=self.llm
+            )
 
             return ChallengeMinerResponse(
                 network=discovery.network,
@@ -232,6 +242,39 @@ class Validator(Module):
         score += 0.4 * multiplier
 
         return score
+
+    @staticmethod
+    async def validate_query_by_prompt(random_validation_prompt: str, miner_key: str, miner_query: str, network: str,
+                                       validation_prompt_response_manager: ValidationPromptResponseManager, llm) -> str:
+        # Retrieve cached query from DB using the miner_key and random_validation_prompt
+        cached_query = await validation_prompt_response_manager.get_response_by_prompt_and_miner(
+            random_validation_prompt, miner_key)
+
+        # If a cached query is found, compare it to the miner's query
+        if cached_query:
+            logger.info(f"Cached query found: {cached_query}")
+
+            # Compare the cached query with the actual query from the miner
+            if cached_query == miner_query:
+                logger.info("Miner's query matches the cached query")
+                return "valid"
+            else:
+                logger.info("Miner's query does not match the cached query")
+                return "invalid"
+
+        # If no cached query is found, store the miner's query in the DB
+        logger.info("No cached query found, storing the new query in the cache")
+        await validation_prompt_response_manager.store_response(
+            random_validation_prompt,
+            miner_key,
+            miner_query
+        )
+
+        # Since no cached query was found, use the LLM to validate the query
+        logger.info("Using LLM for validation")
+        validation_result = llm.validate_query_by_prompt(random_validation_prompt, miner_query, network)
+
+        return validation_result
 
     async def validate_step(self, netuid: int, settings: ValidatorSettings
                             ) -> None:

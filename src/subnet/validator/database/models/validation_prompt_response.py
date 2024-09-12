@@ -19,11 +19,11 @@ class ValidationPromptResponse(OrmBase):
     __tablename__ = 'validation_prompt_response'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    prompt_id = Column(Integer, ForeignKey('validation_prompt.id'), nullable=False)
+    prompt_id = Column(Integer, ForeignKey('validation_prompt.id', ondelete='CASCADE'), nullable=False)  # Added cascade delete
     miner_key = Column(String, nullable=False)
     query = Column(String, nullable=False)
 
-    prompt = relationship("ValidationPrompt", backref="responses")
+    prompt = relationship("ValidationPrompt", backref="responses", cascade="all, delete")
 
 
 class ValidationPromptResponseManager:
