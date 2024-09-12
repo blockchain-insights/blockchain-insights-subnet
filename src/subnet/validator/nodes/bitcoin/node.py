@@ -290,7 +290,7 @@ class BitcoinNode(Node):
         return input_amounts, output_amounts, input_addresses, output_addresses, in_total_amount, out_total_amount
 
     def get_random_txid_from_block(self, block_height):
-        logger.info(f"Fetching random txid from block {block_height}")
+        logger.info(f"Fetching random tx_id from", block_height=block_height)
 
         block_data = self.get_block_by_height(block_height)
         transactions = block_data.get('tx', [])
@@ -311,6 +311,6 @@ class BitcoinNode(Node):
 
         txid = selected_txn['txid']
 
-        logger.info(f"Selected transaction ID: {txid} from block {block_height}")
+        logger.info(f"Selected transaction tx_id: {txid} from block {block_height}", block_height=block_height, tx_id=txid)
 
         return txid, block_data

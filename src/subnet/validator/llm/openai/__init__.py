@@ -33,7 +33,7 @@ class OpenAILLM(BaseLLM):
 
         try:
             ai_message = self.chat_gpt4o.invoke(messages)
-            logger.info(f"AI-generated message: {ai_message.content}")
+            logger.info(f"AI-generated message", content=ai_message.content)
             content = ai_message.content
             if "Funds Flow" in content:
                 return MODEL_TYPE_FUNDS_FLOW
