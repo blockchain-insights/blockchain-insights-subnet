@@ -21,6 +21,8 @@ from .database.models.challenge_funds_flow import ChallengeFundsFlowManager
 from .encryption import generate_hash
 from .fuzzy_compare import fuzzy_json_similarity
 from .helpers import raise_exception_if_not_registered, get_ip_port, cut_to_max_allowed_weights
+from .llm.base_llm import BaseLLM
+from .llm.factory import LLMFactory
 from .nodes.factory import NodeFactory
 from .weights_storage import WeightsStorage
 from src.subnet.validator.database.models.miner_discovery import MinerDiscoveryManager
@@ -44,6 +46,7 @@ class Validator(Module):
             challenge_funds_flow_manager: ChallengeFundsFlowManager,
             challenge_balance_tracking_manager: ChallengeBalanceTrackingManager,
             miner_receipt_manager: MinerReceiptManager,
+            llm: BaseLLM,
             query_timeout: int = 60,
             llm_query_timeout: int = 60,
             challenge_timeout: int = 60,
@@ -55,6 +58,7 @@ class Validator(Module):
         self.client = client
         self.key = key
         self.netuid = netuid
+        self.llm = llm
         self.llm_query_timeout = llm_query_timeout
         self.challenge_timeout = challenge_timeout
         self.query_timeout = query_timeout
@@ -110,10 +114,8 @@ class Validator(Module):
 
             logger.info(f"Prompt result actual is {prompt_result_actual}")
 
-            filter = 'graph' if prompt_model_type == MODEL_TYPE_FUNDS_FLOW else 'table'
-
-            filtered_prompt_result_actual = [result['result'] for result in prompt_result_actual.model_dump()['outputs'] if result['type'] == filter][0]
-            filtered_prompt_result_expected = [result['result'] for result in json.loads(prompt_result_expected)['outputs'] if result['type'] == filter][0]
+            validation_result = self.llm.validate_query_by_prompt(random_validation_prompt,
+                                                            prompt_result_actual.outputs[0].result, discovery.network)
 
             return ChallengeMinerResponse(
                 network=discovery.network,
@@ -121,8 +123,7 @@ class Validator(Module):
                 funds_flow_challenge_expected=challenge_response.funds_flow_challenge_expected,
                 balance_tracking_challenge_actual=challenge_response.balance_tracking_challenge_actual,
                 balance_tracking_challenge_expected=challenge_response.balance_tracking_challenge_expected,
-                prompt_result_actual=filtered_prompt_result_actual,
-                prompt_result_expected=filtered_prompt_result_expected
+                query_validation_result = validation_result
             )
         except Exception as e:
             logger.error(f"Failed to challenge miner {miner_key}, {e}")
@@ -214,19 +215,19 @@ class Validator(Module):
         # all challenges are passed, setting base score to 0.36
         score = 0.3
 
-        if response.prompt_result_actual is None:
-            return score
-        if response.prompt_result_expected is None:
+        if response.query_validation_result is None:
             return score
 
+        similarity_score = 0
+        if response.query_validation_result == 'valid':
+            logger.info("Scoring: Valid")
+            similarity_score = 1
         #similarity_score = fuzzy_json_similarity(
         #    response.prompt_result_actual,
         #    response.prompt_result_expected,
         #    numeric_tolerance=0.05, string_threshold=80)
-
-        similarity_score = 0
-        score = +0.3 * similarity_score
-
+        score += 0.3 * similarity_score
+        logger.info(f"Scoring: Score {score}")
         multiplier = min(1, receipt_miner_multiplier)
         score += 0.4 * multiplier
 

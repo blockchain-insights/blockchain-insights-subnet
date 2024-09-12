@@ -11,8 +11,6 @@ Please follow these instructions:
    - The query should reference the correct data sources (tables, nodes, or collections) and fields.
    - Check if the query returns the appropriate details based on the user's request (e.g., transaction details like IDs, amounts, dates, etc.).
 
-2. If the query correctly reflects the prompt, return 'query_valid'. If the query does not match the intent or structure of the prompt, return 'query_invalid' with an explanation of why the query is incorrect.
-
-3. If there are any errors or missing elements in the generated query that prevent it from fully addressing the prompt, suggest improvements to fix it.
+2. If the query correctly reflects the prompt, return 'query_valid'. If the query does not match the intent or structure of the prompt, return 'query_invalid'.
 
 Please verify the query and provide your conclusion, including any corrections if necessary.
