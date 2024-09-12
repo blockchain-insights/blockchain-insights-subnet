@@ -1,14 +1,10 @@
 import asyncio
-import json
 import signal
 import sys
 import threading
-
-from loguru import logger
 from communex._common import get_node_url
 from communex.client import CommuneClient
 from communex.compat.key import classic_load_key
-
 from src.subnet.validator.database.models.challenge_balance_tracking import ChallengeBalanceTrackingManager
 from src.subnet.validator.database.models.challenge_funds_flow import ChallengeFundsFlowManager
 from src.subnet.protocol.blockchain import get_networks
@@ -16,6 +12,7 @@ from src.subnet.validator.database.models.miner_discovery import MinerDiscoveryM
 from src.subnet.validator.database.models.miner_receipts import MinerReceiptManager
 from src.subnet.validator.database.models.validation_prompt import ValidationPromptManager
 from src.subnet.validator.database.session_manager import DatabaseSessionManager, run_migrations
+from src.subnet.validator.logger import setup_validator_logger, logger
 from src.subnet.validator.weights_storage import WeightsStorage
 from src.subnet.validator._config import ValidatorSettings, load_environment
 from src.subnet.validator.validator import Validator
@@ -108,6 +105,7 @@ if __name__ == "__main__":
     # Setup configurations
     settings = ValidatorSettings()
     keypair = classic_load_key(settings.VALIDATOR_KEY)
+    setup_validator_logger(keypair)
     c_client = CommuneClient(get_node_url(use_testnet=(environment == 'testnet')))
     weights_storage = WeightsStorage(settings.WEIGHTS_FILE_NAME)
 

@@ -1,7 +1,5 @@
 import contextlib
-import datetime
 from typing import AsyncIterator, Optional
-from loguru import logger
 from sqlalchemy.ext.asyncio import (
     AsyncConnection,
     AsyncEngine,
@@ -10,7 +8,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from src.subnet.validator._config import ValidatorSettings
+from src.subnet.validator.logger import logger
 
 
 class DatabaseSessionManager:

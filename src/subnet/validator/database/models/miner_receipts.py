@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from typing import List, Optional, Dict
 
 from pydantic import BaseModel
@@ -6,8 +5,7 @@ from sqlalchemy import Column, String, DateTime, update, insert, BigInteger, Boo
     func, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy.sql import case
-from datetime import datetime, timedelta
+from datetime import datetime
 from src.subnet.validator.database import OrmBase
 from src.subnet.validator.database.session_manager import DatabaseSessionManager
 

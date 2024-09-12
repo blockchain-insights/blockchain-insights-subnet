@@ -1,8 +1,9 @@
 import os
-from loguru import logger
 from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
 import sys
+
+from src.subnet.validator.logger import logger
 
 
 def load_environment(env: str):

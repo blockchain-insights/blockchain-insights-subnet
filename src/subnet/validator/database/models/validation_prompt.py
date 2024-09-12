@@ -1,22 +1,19 @@
-from typing import Optional
 import json
 from decimal import Decimal
-
-from loguru import logger
-from sqlalchemy import Column, Integer, String, Float, DateTime, update, insert, Text
+from sqlalchemy import Column, Integer, String, DateTime, insert, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.future import select
 from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy import delete
 from sqlalchemy import func
 from sqlalchemy import text
 from datetime import datetime
 
 from src.subnet.validator.database import OrmBase
-from src.subnet.validator.database.base_model import to_dict
 from src.subnet.validator.database.session_manager import DatabaseSessionManager
 
 import random
+
+from src.subnet.validator.logger import logger
 
 Base = declarative_base()
 

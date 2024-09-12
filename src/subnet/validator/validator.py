@@ -81,14 +81,14 @@ class Validator(Module):
             miner_key = miner_metadata['key']
             client = ModuleClient(module_ip, int(module_port), self.key)
 
-            logger.info(f"Challenging miner", validator_key=self.key.ss58_address, miner_key=miner_key)
+            logger.info(f"Challenging miner", miner_key=miner_key)
 
             # Discovery Phase
             discovery = await self._get_discovery(client, miner_key)
             if not discovery:
                 return None
 
-            logger.debug(f"Got discovery for miner", validator_key=self.key.ss58_address, miner_key=miner_key)
+            logger.debug(f"Got discovery for miner", miner_key=miner_key)
 
             # Challenge Phase
             node = NodeFactory.create_node(discovery.network)
@@ -99,7 +99,7 @@ class Validator(Module):
             # Prompt Phase
             random_validation_prompt, prompt_model_type, prompt_result_expected = await self.validation_prompt_manager.get_random_prompt(discovery.network)
             if not random_validation_prompt:
-                logger.error("Failed to get a random validation prompt", validator_key=self.key.ss58_address)
+                logger.error("Failed to get a random validation prompt")
                 return None
 
             llm_message_list = LlmMessageList(messages=[LlmMessage(type=0, content=random_validation_prompt)])
@@ -122,12 +122,12 @@ class Validator(Module):
                 prompt_result_expected=filtered_prompt_result_expected
             )
         except Exception as e:
-            logger.error(f"Failed to challenge miner", error=e, validator_key=self.key.ss58_address, miner_key=miner_key)
+            logger.error(f"Failed to challenge miner", error=e, miner_key=miner_key)
             return None
         finally:
             end_time = time.time()
             execution_time = end_time - start_time
-            logger.info(f"Execution time for challenge_miner", execution_time=execution_time, validator_key=self.key.ss58_address, miner_key=miner_key)
+            logger.info(f"Execution time for challenge_miner", execution_time=execution_time, miner_key=miner_key)
 
     async def _get_discovery(self, client, miner_key) -> Discovery:
         try:
@@ -140,7 +140,7 @@ class Validator(Module):
 
             return Discovery(**discovery)
         except Exception as e:
-            logger.info(f"Miner failed to get discovery", validator_key=self.key.ss58_address, miner_key=miner_key)
+            logger.info(f"Miner failed to get discovery", miner_key=miner_key)
             return None
 
     async def _perform_challenges(self, client, miner_key, discovery, node) -> ChallengesResponse | None:
@@ -155,7 +155,7 @@ class Validator(Module):
                 timeout=self.challenge_timeout,
             )
             funds_flow_challenge = Challenge(**funds_flow_challenge)
-            logger.debug(f"Funds flow challenge result",  funds_flow_challenge_output=funds_flow_challenge.output, validator_key=self.key.ss58_address, miner_key=miner_key)
+            logger.debug(f"Funds flow challenge result",  funds_flow_challenge_output=funds_flow_challenge.output, miner_key=miner_key)
 
             # Balance tracking challenge
             balance_tracking_challenge, balance_tracking_expected_response = await self.challenge_balance_tracking_manager.get_random_challenge(discovery.network)
@@ -167,7 +167,7 @@ class Validator(Module):
                 timeout=self.challenge_timeout,
             )
             balance_tracking_challenge = Challenge(**balance_tracking_challenge)
-            logger.debug(f"Balance tracking challenge result", balance_tracking_challenge_output=balance_tracking_challenge.output, validator_key=self.key.ss58_address, miner_key=miner_key)
+            logger.debug(f"Balance tracking challenge result", balance_tracking_challenge_output=balance_tracking_challenge.output, miner_key=miner_key)
 
             return ChallengesResponse(
                 funds_flow_challenge_actual=funds_flow_challenge.output['tx_id'],
@@ -176,7 +176,7 @@ class Validator(Module):
                 balance_tracking_challenge_expected=balance_tracking_expected_response,
             )
         except Exception as e:
-            logger.error(f"Miner failed to perform challenges", error=e, validator_key=self.key.ss58_address, miner_key=miner_key)
+            logger.error(f"Miner failed to perform challenges", error=e, miner_key=miner_key)
             return None
 
     async def _send_prompt(self, client, miner_key, llm_message_list) -> LlmMessageOutputList | None:
@@ -192,7 +192,7 @@ class Validator(Module):
 
             return LlmMessageOutputList(**llm_query_result)
         except Exception as e:
-            logger.info(f"Miner failed to generate an answer", error=e, validator_key=self.key.ss58_address, miner_key=miner_key)
+            logger.info(f"Miner failed to generate an answer", error=e, miner_key=miner_key)
             return None
 
     @staticmethod
@@ -251,7 +251,7 @@ class Validator(Module):
             module_addr = ip_ports[uid]
             miners_module_info[uid] = (module_addr, modules[key])
 
-        logger.info(f"Found miners", miners_module_info=miners_module_info.keys(), validator_key=self.key.ss58_address)
+        logger.info(f"Found miners", miners_module_info=miners_module_info.keys())
 
         for _, miner_metadata in miners_module_info.values():
             await self.miner_discovery_manager.update_miner_rank(miner_metadata['key'], miner_metadata['emission'])
@@ -281,13 +281,13 @@ class Validator(Module):
                 await self.miner_discovery_manager.update_miner_challenges(miner_key, response.get_failed_challenges(), 2)
 
         if not score_dict:
-            logger.info("No miner managed to give a valid answer", validator_key=self.key.ss58_address)
+            logger.info("No miner managed to give a valid answer")
             return None
 
         try:
             self.set_weights(settings, score_dict, self.netuid, self.client, self.key)
         except Exception as e:
-            logger.error(f"Failed to set weights", error=e, validator_key=self.key.ss58_address)
+            logger.error(f"Failed to set weights", error=e)
 
     def set_weights(self,
                     settings: ValidatorSettings,
@@ -303,7 +303,7 @@ class Validator(Module):
         self.weights_storage.setup()
         weighted_scores: dict[int, int] = self.weights_storage.read()
 
-        logger.debug(f"Setting weights for scores", score_dict=score_dict, validator_key=self.key.ss58_address)
+        logger.debug(f"Setting weights for scores", score_dict=score_dict)
         score_sum = sum(score_dict.values())
 
         for uid, score in score_dict.items():
@@ -325,29 +325,23 @@ class Validator(Module):
         if len(weighted_scores) > 0:
             client.vote(key=key, uids=uids, weights=weights, netuid=netuid)
 
-        logger.info("Set weights",
-                    metric={
-                        "name": "set_weight",
-                        "timestamp": datetime.utcnow().isoformat(),
-                        "weighted_scores": weighted_scores,
-                        "validator_key": self.key.ss58_address
-                    })
+        logger.info("Set weights", action="set_weight", timestamp=datetime.utcnow().isoformat(), weighted_scores=weighted_scores)
 
     async def validation_loop(self, settings: ValidatorSettings) -> None:
         while not self.terminate_event.is_set():
             start_time = time.time()
             await self.validate_step(self.netuid, settings)
             if self.terminate_event.is_set():
-                logger.info("Terminating validation loop", validator_key=self.key.ss58_address)
+                logger.info("Terminating validation loop")
                 break
 
             elapsed = time.time() - start_time
             if elapsed < settings.ITERATION_INTERVAL:
                 sleep_time = settings.ITERATION_INTERVAL - elapsed
-                logger.info(f"Sleeping for {sleep_time}", validator_key=self.key.ss58_address)
+                logger.info(f"Sleeping for {sleep_time}")
                 self.terminate_event.wait(sleep_time)
                 if self.terminate_event.is_set():
-                    logger.info("Terminating validation loop", validator_key=self.key.ss58_address)
+                    logger.info("Terminating validation loop")
                     break
 
     """ VALIDATOR API METHODS"""
@@ -425,5 +419,5 @@ class Validator(Module):
 
             return LlmMessageOutputList(**llm_query_result)
         except Exception as e:
-            logger.warning(f"Failed to query miner", error=e, validator_key=self.key.ss58_address, miner_key=miner_key)
+            logger.warning(f"Failed to query miner", error=e, miner_key=miner_key)
             return None

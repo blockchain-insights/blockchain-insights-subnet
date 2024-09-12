@@ -1,9 +1,8 @@
-import random
-from loguru import logger
-#from src.subnet.validator.nodes.ethereum.node import EthereumNode
 from src.subnet.validator.blockchain.common.balance_tracking.base_challenge_generator import BaseChallengeGenerator
 from src.subnet.validator.database.models.challenge_balance_tracking import ChallengeBalanceTrackingManager
 from random import randint
+
+from src.subnet.validator.logger import logger
 
 
 class ChallengeGenerator(BaseChallengeGenerator):
