@@ -18,4 +18,3 @@ python-bitcoinrpc
 bitcoin
 base58
 pycryptodome
-fuzzywuzzy
