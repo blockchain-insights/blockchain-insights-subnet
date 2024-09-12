@@ -209,7 +209,6 @@ class Validator(Module):
             else:
                 return 0.15
 
-        # all challenges are passed, setting base score to 0.36
         score = 0.3
 
         if response.prompt_result_actual is None:
@@ -312,25 +311,27 @@ class Validator(Module):
         weighted_scores: dict[int, int] = self.weights_storage.read()
 
         logger.debug(f"Setting weights: {score_dict}")
-        scores = sum(score_dict.values())
+        score_sum = sum(score_dict.values())
 
-        if scores == 0:
+        if score_sum == 0:
             logger.warning("No scores to distribute")
             return
 
         for uid, score in score_dict.items():
-            weight = int(score * 1000 / scores)
+            weight = int(score * 1000 / score_sum)
             weighted_scores[uid] = weight
 
         # filter out 0 weights
         weighted_scores = {k: v for k, v in weighted_scores.items() if v != 0}
+        weighted_scores = {k: v for k, v in weighted_scores.items() if k in score_dict}
 
         self.weights_storage.store(weighted_scores)
+
         uids = list(weighted_scores.keys())
         weights = list(weighted_scores.values())
 
         # send the blockchain call
-        logger.debug(f"Sending weights to the blockchain: {uids} {weights}")
+        logger.debug(f"Sending weights to the blockchain: {weighted_scores}")
         client.vote(key=key, uids=uids, weights=weights, netuid=netuid)
 
     async def validation_loop(self, settings: ValidatorSettings) -> None:
