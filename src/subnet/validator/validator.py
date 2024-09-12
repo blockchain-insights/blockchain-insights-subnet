@@ -12,6 +12,7 @@ from communex.misc import get_map_modules
 from communex.module.client import ModuleClient  # type: ignore
 from communex.module.module import Module  # type: ignore
 from communex.types import Ss58Address  # type: ignore
+from loguru import logger
 from substrateinterface import Keypair  # type: ignore
 from ._config import ValidatorSettings
 
@@ -19,7 +20,6 @@ from .database.models.challenge_balance_tracking import ChallengeBalanceTracking
 from .database.models.challenge_funds_flow import ChallengeFundsFlowManager
 from .encryption import generate_hash
 from .helpers import raise_exception_if_not_registered, get_ip_port, cut_to_max_allowed_weights
-from .logger import logger
 from .nodes.factory import NodeFactory
 from .weights_storage import WeightsStorage
 from src.subnet.validator.database.models.miner_discovery import MinerDiscoveryManager

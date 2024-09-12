@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from src.subnet.validator.logger import logger
+from loguru import logger
 
 
 class DatabaseSessionManager:

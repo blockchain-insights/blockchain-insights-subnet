@@ -3,7 +3,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from src.subnet.validator.database import db_manager
 from .. import BaseBalanceSearch
-from ...logger import logger
+from loguru import logger
 
 
 class BitcoinBalanceSearch(BaseBalanceSearch):

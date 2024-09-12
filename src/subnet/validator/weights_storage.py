@@ -1,7 +1,6 @@
 import os
 import pickle
-
-from src.subnet.validator.logger import logger
+from loguru import logger
 
 
 class WeightsStorage:

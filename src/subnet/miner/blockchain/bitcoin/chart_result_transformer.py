@@ -1,7 +1,7 @@
 from typing import List, Dict, Any
 
 from src.subnet.miner.blockchain import BaseChartTransformer
-from src.subnet.miner.logger import logger
+from loguru import logger
 
 
 class BitcoinChartTransformer(BaseChartTransformer):

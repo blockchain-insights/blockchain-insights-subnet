@@ -8,12 +8,8 @@ from sqlalchemy import text
 from datetime import datetime
 
 from src.subnet.validator.database import OrmBase
-from src.subnet.validator.database.base_model import to_dict
 from src.subnet.validator.database.session_manager import DatabaseSessionManager
-
-import random
-
-from src.subnet.validator.logger import logger
+from loguru import logger
 
 Base = declarative_base()
 

@@ -1,6 +1,6 @@
 from typing import List, Dict, Any, Set
 from src.subnet.miner.blockchain import BaseGraphTransformer
-from src.subnet.miner.logger import logger
+from loguru import logger
 
 
 class BitcoinGraphTransformer(BaseGraphTransformer):

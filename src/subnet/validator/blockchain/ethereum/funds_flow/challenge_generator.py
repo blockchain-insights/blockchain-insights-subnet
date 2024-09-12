@@ -1,6 +1,6 @@
 from src.subnet.validator.blockchain.common.funds_flow.base_challenge_generator import BaseChallengeGenerator
 from src.subnet.validator.database.models.challenge_funds_flow import ChallengeFundsFlowManager
-from src.subnet.validator.logger import logger
+from loguru import logger
 
 
 class ChallengeGenerator(BaseChallengeGenerator):

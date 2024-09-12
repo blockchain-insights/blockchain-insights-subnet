@@ -10,7 +10,7 @@ import os
 import random
 from ..abstract_node import Node
 from ..random_block import select_block
-from ...logger import logger
+from loguru import logger
 
 
 class BitcoinNode(Node):

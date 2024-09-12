@@ -1,4 +1,4 @@
-from src.subnet.validator.logger import logger
+from loguru import logger
 from src.subnet.validator.nodes.bitcoin.node import BitcoinNode  # This can be substituted for EthereumNode if needed
 from src.subnet.validator.blockchain.common.balance_tracking.base_challenge_generator import BaseChallengeGenerator
 from src.subnet.validator.database.models.challenge_balance_tracking import ChallengeBalanceTrackingManager

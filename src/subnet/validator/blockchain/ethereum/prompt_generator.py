@@ -2,7 +2,7 @@ import random
 from src.subnet.validator.blockchain.common.base_prompt_generator import BasePromptGenerator
 from src.subnet.validator.database.models.validation_prompt import ValidationPromptManager
 from src.subnet.validator.llm.base_llm import BaseLLM
-from src.subnet.validator.logger import logger
+from loguru import logger
 
 
 class PromptGenerator(BasePromptGenerator):

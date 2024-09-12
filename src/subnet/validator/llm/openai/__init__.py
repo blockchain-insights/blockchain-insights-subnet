@@ -6,7 +6,7 @@ from src.subnet.validator.llm.prompt_reader import read_local_file
 from src.subnet.validator.llm.utils import split_messages_into_chunks
 from src.subnet.protocol.llm_engine import LLM_ERROR_PROMPT_GENERATION_FAILED, MODEL_TYPE_FUNDS_FLOW, \
     MODEL_TYPE_BALANCE_TRACKING
-from src.subnet.validator.logger import logger
+from loguru import logger
 
 
 class OpenAILLM(BaseLLM):

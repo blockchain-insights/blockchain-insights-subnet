@@ -1,5 +1,7 @@
 import signal
 import traceback
+from datetime import datetime
+
 from communex._common import get_node_url
 from communex.client import CommuneClient
 from communex.module import Module, endpoint
@@ -267,6 +269,29 @@ if __name__ == "__main__":
 
     settings = MinerSettings()
     keypair = classic_load_key(settings.MINER_KEY)
+
+    def patch_record(record):
+        record["extra"]["miner_key"] = keypair.ss58_address
+        record["extra"]["service"] = 'miner'
+        record["extra"]["timestamp"] = datetime.utcnow().isoformat()
+
+        return True
+
+    logger.remove()
+    logger.add(
+        "../logs/miner.log",
+        rotation="500 MB",
+        format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message} | {extra}",
+        filter=patch_record
+    )
+
+    logger.add(
+        sys.stdout,
+        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | {level} | {message} | {extra}",
+        level="DEBUG",
+        filter = patch_record
+    )
+
     setup_miner_logger(keypair)
     c_client = CommuneClient(get_node_url(use_testnet=use_testnet))
     miner = Miner(settings=settings)
