@@ -5,7 +5,6 @@ from communex.client import CommuneClient
 from communex.module import Module, endpoint
 from communex.module._rate_limiters.limiters import IpLimiterMiddleware, IpLimiterParams
 from keylimiter import TokenBucketLimiter
-from loguru import logger
 from starlette.middleware.cors import CORSMiddleware
 from src.subnet.miner._config import MinerSettings, load_environment
 from src.subnet.miner.blockchain import GraphSearchFactory
@@ -13,12 +12,14 @@ from src.subnet.miner.blockchain import BalanceSearchFactory
 from src.subnet.miner.blockchain import GraphSummaryTransformerFactory
 from src.subnet.miner.blockchain import GraphTransformerFactory, ChartTransformerFactory, TabularTransformerFactory
 from src.subnet.miner.llm.factory import LLMFactory
+from src.subnet.miner.logger import setup_miner_logger, logger
 from src.subnet.protocol.llm_engine import LLM_UNKNOWN_ERROR, LLM_ERROR_MESSAGES, \
     LLM_ERROR_MODIFICATION_NOT_ALLOWED, LLM_ERROR_INVALID_SEARCH_PROMPT, MODEL_TYPE_FUNDS_FLOW, \
     MODEL_TYPE_BALANCE_TRACKING, Challenge, LlmMessage, LlmMessageList, LlmMessageOutputList, \
     LlmMessageOutput
 from src.subnet.validator.database import db_manager
 import time
+
 
 class Miner(Module):
 
@@ -257,28 +258,16 @@ if __name__ == "__main__":
     import sys
 
     if len(sys.argv) != 2:
-        logger.error("Usage: python -m subnet.cli <environment> ; where <environment> is 'testnet' or 'mainnet'")
+        print("Usage: python -m subnet.cli <environment> ; where <environment> is 'testnet' or 'mainnet'")
         sys.exit(1)
 
     env = sys.argv[1]
     use_testnet = env == 'testnet'
     load_environment(env)
 
-    logger.remove()
-    logger.add(
-        "../logs/miner.log",
-        rotation="500 MB",
-        format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}"
-    )
-
-    logger.add(
-        sys.stdout,
-        format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}",
-        level="DEBUG"
-    )
-
     settings = MinerSettings()
     keypair = classic_load_key(settings.MINER_KEY)
+    setup_miner_logger(keypair)
     c_client = CommuneClient(get_node_url(use_testnet=use_testnet))
     miner = Miner(settings=settings)
     refill_rate: float = 1 / 1000

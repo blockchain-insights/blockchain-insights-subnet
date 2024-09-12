@@ -81,22 +81,9 @@ class BalanceTrackingChallengeGeneratorThread(threading.Thread):
 
 
 if __name__ == "__main__":
-    logger.remove()
-    logger.add(
-        "../logs/validator.log",
-        rotation="500 MB",
-        format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message} | {extra}",
-        level="DEBUG"
-    )
-
-    logger.add(
-        sys.stdout,
-        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | {level} | <level>{message}</level> | {extra}",
-        level="DEBUG"
-    )
 
     if len(sys.argv) != 2:
-        logger.error("Usage: python -m subnet.cli <environment>")
+        print("Usage: python -m subnet.cli <environment>")
         sys.exit(1)
 
     environment = sys.argv[1]

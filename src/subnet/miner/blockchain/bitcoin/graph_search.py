@@ -1,11 +1,10 @@
 import time
 
 from neo4j import GraphDatabase
-from loguru import logger
-
 from src.subnet.miner._config import MinerSettings
 from src.subnet.miner.blockchain import BaseGraphSearch
 from src.subnet.miner.blockchain.bitcoin.query_builder import QueryBuilder
+from src.subnet.miner.logger import logger
 from src.subnet.protocol.llm_engine import Query
 
 

@@ -1,12 +1,11 @@
 import signal
-from typing import Optional, List
+from typing import Optional
 import uvicorn
 from communex._common import get_node_url
 from communex.client import CommuneClient
 from communex.compat.key import classic_load_key
 from fastapi import APIRouter, FastAPI, HTTPException, Depends, Security
 from fastapi.security import APIKeyHeader
-from loguru import logger
 from pydantic import BaseModel
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import Response
@@ -21,6 +20,7 @@ from src.subnet.validator.database.models.miner_receipts import MinerReceiptMana
 from src.subnet.validator._config import ValidatorSettings, load_environment
 from src.subnet.validator.database.models.validation_prompt import ValidationPromptManager
 from src.subnet.validator.database.session_manager import DatabaseSessionManager
+from src.subnet.validator.logger import setup_validator_api_logger, logger
 from src.subnet.validator.rate_limiter import RateLimiterMiddleware
 from src.subnet.validator.validator import Validator
 from src.subnet.validator.weights_storage import WeightsStorage
@@ -103,21 +103,8 @@ class ValidatorApi:
 if __name__ == "__main__":
     import sys
 
-    logger.remove()
-    logger.add(
-        "../../logs/validator_api.log",
-        rotation="500 MB",
-        format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}"
-    )
-
-    logger.add(
-        sys.stdout,
-        format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}",
-        level="DEBUG"
-    )
-
     if len(sys.argv) != 2:
-        logger.error("Usage: python -m subnet.validator_api <environment> ; where <environment> is 'testnet' or 'mainnet'")
+        print("Usage: python -m subnet.validator_api <environment> ; where <environment> is 'testnet' or 'mainnet'")
         sys.exit(1)
 
     env = sys.argv[1]
@@ -126,6 +113,7 @@ if __name__ == "__main__":
 
     settings = ValidatorSettings()
     keypair = classic_load_key(settings.VALIDATOR_KEY)
+    setup_validator_api_logger(keypair)
     c_client = CommuneClient(get_node_url(use_testnet=use_testnet))
     weights_storage = WeightsStorage(settings.WEIGHTS_FILE_NAME)
 

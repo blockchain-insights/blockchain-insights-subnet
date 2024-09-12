@@ -1,5 +1,6 @@
-from loguru import logger
 import os
+
+from src.subnet.miner.logger import logger
 
 
 def read_local_file(file_path):

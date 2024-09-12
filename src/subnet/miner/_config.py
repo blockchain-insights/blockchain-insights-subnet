@@ -1,8 +1,9 @@
-from loguru import logger
 from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
 import sys
 import os
+
+from src.subnet.miner.logger import logger
 
 
 def load_environment(env: str):
