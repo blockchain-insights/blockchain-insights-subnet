@@ -16,14 +16,12 @@ from loguru import logger
 from substrateinterface import Keypair  # type: ignore
 from ._config import ValidatorSettings
 
-from .database.models import validation_prompt_response
 from .database.models.challenge_balance_tracking import ChallengeBalanceTrackingManager
 from .database.models.challenge_funds_flow import ChallengeFundsFlowManager
 from .database.models.validation_prompt_response import ValidationPromptResponseManager
 from .encryption import generate_hash
 from .helpers import raise_exception_if_not_registered, get_ip_port, cut_to_max_allowed_weights
 from .llm.base_llm import BaseLLM
-from .llm.factory import LLMFactory
 from .nodes.factory import NodeFactory
 from .weights_storage import WeightsStorage
 from src.subnet.validator.database.models.miner_discovery import MinerDiscoveryManager
@@ -105,15 +103,14 @@ class Validator(Module):
                 return None
 
             # Prompt Phase
-            random_validation_prompt, prompt_model_type, prompt_responses = await self.validation_prompt_manager.get_random_prompt(
-                discovery.network)
+            validation_prompt_id, validation_prompt, validation_prompt_model_type, validation_prompt_responses = await self.validation_prompt_manager.get_random_prompt(discovery.network)
 
-            if not random_validation_prompt:
+            if not validation_prompt:
                 logger.error("Failed to get a random validation prompt")
                 return None
 
             # Assuming you use the prompt in LLM message creation
-            llm_message_list = LlmMessageList(messages=[LlmMessage(type=0, content=random_validation_prompt)])
+            llm_message_list = LlmMessageList(messages=[LlmMessage(type=0, content=validation_prompt)])
 
             # Send the prompt and get the miner's query response
             prompt_result_actual = await self._send_prompt(client, miner_key, llm_message_list)
@@ -123,15 +120,14 @@ class Validator(Module):
 
             logger.info(f"Prompt result actual is {prompt_result_actual}")
 
-            # Validate the miner's query by checking it against cached responses (eager-loaded)
-            validation_result = await Validator.validate_query_by_prompt(
-                random_validation_prompt=random_validation_prompt,
+            validation_result = await self.validate_query_by_prompt(
+                validation_prompt_id=validation_prompt_id,
+                validation_prompt=validation_prompt,
                 miner_key=miner_key,
                 miner_query=prompt_result_actual.outputs[0].query,
-                result = prompt_result_actual.outputs[0].result,
+                result=prompt_result_actual.outputs[0].result,
                 network=discovery.network,
-                validation_prompt_response_manager= self.validation_prompt_response_manager,
-                prompt_responses=prompt_responses,  # Pass the eagerly loaded responses here
+                prompt_responses=validation_prompt_responses,
                 llm=self.llm
             )
 
@@ -141,7 +137,7 @@ class Validator(Module):
                 funds_flow_challenge_expected=challenge_response.funds_flow_challenge_expected,
                 balance_tracking_challenge_actual=challenge_response.balance_tracking_challenge_actual,
                 balance_tracking_challenge_expected=challenge_response.balance_tracking_challenge_expected,
-                query_validation_result = validation_result
+                query_validation_result=validation_result
             )
         except Exception as e:
             logger.error(f"Failed to challenge miner", error=e, miner_key=miner_key)
@@ -201,6 +197,40 @@ class Validator(Module):
             logger.error(f"Miner failed to perform challenges", error=e, miner_key=miner_key)
             return None
 
+    async def validate_query_by_prompt(self, validation_prompt_id: int, validation_prompt: str, miner_key: str, miner_query: str, result: str, network: str, prompt_responses: list, llm) -> bool:
+        """
+        Validates the miner's query against a cached response (from the eagerly loaded prompt responses)
+        or uses LLM if no cached response is found.
+        """
+        cached_response = next(
+            (response.query for response in prompt_responses if response.miner_key == miner_key),
+            None
+        )
+
+        if cached_response:
+            logger.debug(f"Cached query found: {cached_response}")
+            if cached_response == miner_query and cached_response.is_valid is True:
+                logger.debug("Miner's query matches the cached query")
+                return True
+
+        # logger.info("No cached query found, using LLM for validation")
+        validation_result = llm.validate_query_by_prompt(validation_prompt, miner_query, network)
+
+        # Store the result from LLM in the cache for future use
+        if isinstance(result, (list, dict)):
+            result = json.dumps(result)
+
+        logger.info("Storing the validated result from LLM in the cache")
+        await self.validation_prompt_response_manager.store_response(
+            prompt_id=validation_prompt_id,
+            miner_key=miner_key,
+            query=miner_query,
+            result=result,
+            is_valid=validation_result
+        )
+
+        return validation_result
+
     async def _send_prompt(self, client, miner_key, llm_message_list) -> LlmMessageOutputList | None:
         try:
             llm_query_result = await client.call(
@@ -235,63 +265,14 @@ class Validator(Module):
         if response.query_validation_result is None:
             return score
 
-        similarity_score = 0
-        if response.query_validation_result == 'valid':
-            logger.info("Scoring: Valid")
-            similarity_score = 1
-        #similarity_score = fuzzy_json_similarity(
-        #    response.prompt_result_actual,
-        #    response.prompt_result_expected,
-        #    numeric_tolerance=0.05, string_threshold=80)
-        similarity_score = 0
-        score = score + (0.3 * similarity_score)
+        if response.query_validation_result:
+            score = score + 0.15
+        else:
+            return score
 
         multiplier = min(1, receipt_miner_multiplier)
-        score = score + (0.4 * multiplier)
-
+        score = score + (0.55 * multiplier)
         return score
-
-    @staticmethod
-    async def validate_query_by_prompt(random_validation_prompt: str, miner_key: str, miner_query: str, result: str, network: str,
-                                       validation_prompt_response_manager: ValidationPromptResponseManager, prompt_responses: list, llm) -> str:
-        """
-        Validates the miner's query against a cached response (from the eagerly loaded prompt responses)
-        or uses LLM if no cached response is found.
-        """
-        # Check if there is a cached response in the eager-loaded responses
-        cached_response = next(
-            (response.query for response in prompt_responses if response.miner_key == miner_key),
-            None
-        )
-
-        # If a cached query is found, compare it to the miner's query
-        if cached_response:
-            logger.info(f"Cached query found: {cached_response}")
-
-            # Compare the cached query with the actual query from the miner
-            if cached_response == miner_query:
-                logger.info("Miner's query matches the cached query")
-                return "valid"
-            else:
-                logger.info("Miner's query does not match the cached query")
-                return "invalid"
-
-        # If no cached query is found, use the LLM to validate the query
-        logger.info("No cached query found, using LLM for validation")
-        validation_result = llm.validate_query_by_prompt(random_validation_prompt, miner_query, network)
-
-        # Store the result from LLM in the cache for future use
-        if isinstance(result, (list, dict)):
-            result = json.dumps(result)
-        logger.info("Storing the validated result from LLM in the cache")
-        await validation_prompt_response_manager.store_response(
-            prompt=random_validation_prompt,
-            miner_key=miner_key,
-            query=miner_query,
-            result=result
-        )
-
-        return validation_result
 
     async def validate_step(self, netuid: int, settings: ValidatorSettings
                             ) -> None:

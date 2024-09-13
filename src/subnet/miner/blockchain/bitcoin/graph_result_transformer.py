@@ -25,7 +25,6 @@ class BitcoinGraphTransformer(BaseGraphTransformer):
         """
         Generic entry processor that identifies potential nodes, edges, or summary data in the entry.
         """
-        logger.debug(f"Processing entry: {entry}")
 
         # Check if the entry is a simple key-value pair structure (summary result)
         if all(isinstance(value, (int, float, str)) for value in entry.values()):
@@ -46,14 +45,12 @@ class BitcoinGraphTransformer(BaseGraphTransformer):
         Process a summary (e.g., total_incoming, total_outgoing) and add it to the graph.
         """
         summary_id = f"summary-{len(self.output_data)}"  # Create a unique ID for each summary
-        logger.info(f"Processing Summary: {summary}")
 
-        # Add the summary as a node to the graph output
         self.output_data.append({
             "id": summary_id,
             "type": "node",
             "label": "summary",
-            **summary  # Include all key-value pairs from the summary
+            **summary
         })
 
     def process_list(self, key: str, values: List[Any]) -> None:

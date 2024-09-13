@@ -61,7 +61,6 @@ class ValidationPromptManager:
         Fetches a random validation prompt and eagerly loads its associated responses in one DB roundtrip.
         """
         async with self.session_manager.session() as session:
-            # Perform a single query to fetch a random prompt along with its related responses
             stmt = (
                 select(ValidationPrompt)
                 .options(joinedload(ValidationPrompt.responses))  # Eagerly load responses
@@ -75,9 +74,10 @@ class ValidationPromptManager:
 
             if validation_prompt:
                 return (
+                    validation_prompt.id,
                     validation_prompt.prompt,
                     validation_prompt.prompt_model_type,
-                    validation_prompt.responses  # Eagerly loaded responses
+                    validation_prompt.responses
                 )
 
             return None, None, None

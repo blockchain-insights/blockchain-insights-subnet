@@ -91,9 +91,7 @@ class OpenAILLM(BaseLLM):
             logger.error(f"LlmQuery prompt generation error: {e}")
             raise Exception(LLM_ERROR_PROMPT_GENERATION_FAILED)
 
-
-    def validate_query_by_prompt(self, prompt: str, query: str, network: str) -> str:
-        # Read the main prompt template from disk
+    def validate_query_by_prompt(self, prompt: str, query: str, network: str) -> bool:
         validation_template_path = f"openai/prompts/{network}/validation/validation_prompt.txt"
         prompt_template = read_local_file(validation_template_path)
         if not prompt_template:
@@ -101,9 +99,8 @@ class OpenAILLM(BaseLLM):
 
         if not prompt or not query:
             logger.warning("The prompt or query is empty. Validation cannot proceed.")
-            return "Validation failed: Both prompt and query are required."
+            return False
 
-        # Safely substitute the prompt and query into the template
         try:
             substituted_template = prompt_template.replace('{prompt}', prompt).replace('{query}', query)
         except Exception as e:
@@ -111,10 +108,7 @@ class OpenAILLM(BaseLLM):
             raise Exception("Error formatting validation prompt with prompt and query") from e
 
         try:
-            # Prepare the full prompt for the LLM
             messages = [SystemMessage(content=substituted_template)]
-
-            # Send the messages to the LLM in chunks and collect responses
             message_chunks = split_messages_into_chunks(messages)
             ai_responses = []
             for chunk in message_chunks:
@@ -122,11 +116,10 @@ class OpenAILLM(BaseLLM):
                 ai_responses.append(ai_message.content)
             combined_response = "\n".join(ai_responses)
 
-            # Analyze the LLM's response to determine if the query is valid or invalid
             if 'query_valid' in combined_response.lower():
-                return "valid"
+                return True
             else:
-                return "invalid"
+                return False
 
         except Exception as e:
             logger.error(f"LlmQuery validation error: {e}")
