@@ -15,7 +15,9 @@ from src.subnet.protocol.blockchain import get_networks
 from src.subnet.validator.database.models.miner_discovery import MinerDiscoveryManager
 from src.subnet.validator.database.models.miner_receipts import MinerReceiptManager
 from src.subnet.validator.database.models.validation_prompt import ValidationPromptManager
+from src.subnet.validator.database.models.validation_prompt_response import ValidationPromptResponseManager
 from src.subnet.validator.database.session_manager import DatabaseSessionManager, run_migrations
+from src.subnet.validator.llm.factory import LLMFactory
 from src.subnet.validator.weights_storage import WeightsStorage
 from src.subnet.validator._config import ValidatorSettings, load_environment
 from src.subnet.validator.validator import Validator
@@ -129,8 +131,10 @@ if __name__ == "__main__":
     miner_discovery_manager = MinerDiscoveryManager(session_manager)
     miner_receipt_manager = MinerReceiptManager(session_manager)
     validation_prompt_manager = ValidationPromptManager(session_manager)
+    validation_prompt_response_manager = ValidationPromptResponseManager(session_manager)
     challenge_funds_flow_manager = ChallengeFundsFlowManager(session_manager)
     challenge_balance_tracking_manager = ChallengeBalanceTrackingManager(session_manager)
+    llm = LLMFactory.create_llm(settings)
 
     validator = Validator(
         keypair,
@@ -139,9 +143,11 @@ if __name__ == "__main__":
         weights_storage,
         miner_discovery_manager,
         validation_prompt_manager,
+        validation_prompt_response_manager,
         challenge_funds_flow_manager,
         challenge_balance_tracking_manager,
         miner_receipt_manager,
+        llm,
         query_timeout=settings.QUERY_TIMEOUT,
         challenge_timeout=settings.CHALLENGE_TIMEOUT,
         llm_query_timeout=settings.LLM_QUERY_TIMEOUT

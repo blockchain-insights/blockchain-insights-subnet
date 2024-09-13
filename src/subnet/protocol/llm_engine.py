@@ -1,6 +1,6 @@
 import hashlib
 import json
-from typing import List, Optional, Dict, Literal
+from typing import List, Optional, Dict, Literal, Any
 from pydantic import BaseModel, Field
 
 from src.subnet.protocol.blockchain import NETWORK_BITCOIN
@@ -67,8 +67,9 @@ class LlmMessage(BaseModel):
 
 
 class LlmMessageOutput(BaseModel):
-    type: Literal["graph", "table", "error"] = Field(..., title="The type of the output")
-    result: Optional[List[object]] = None
+    type: Literal["text", "graph", "table", "error"] = Field(..., title="The type of the output")
+    query: str = None
+    result: Optional[Any] = None
     error: Optional[ERROR_TYPE] = None
 
     class Config:
@@ -114,8 +115,7 @@ class ChallengeMinerResponse(BaseModel):
     funds_flow_challenge_actual: Optional[str]
     balance_tracking_challenge_actual: Optional[int]
 
-    prompt_result_expected: Optional[List[dict]]
-    prompt_result_actual: Optional[List[dict]]
+    query_validation_result: str
 
     def get_failed_challenges(self):
         funds_flow_challenge_passed = self.funds_flow_challenge_expected == self.funds_flow_challenge_actual
@@ -132,7 +132,8 @@ class ChallengeMinerResponse(BaseModel):
 
 
 class QueryOutput(BaseModel):
-    type: Literal["graph", "table", "chart", "error"] = Field(..., title="The type of the output")
+    type: Literal["text", "graph", "table", "chart", "error"] = Field(..., title="The type of the output")
+    query: str = None
     result: Optional[Dict] = None
     error: Optional[ERROR_TYPE] = None
 

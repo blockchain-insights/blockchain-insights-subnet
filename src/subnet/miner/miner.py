@@ -199,7 +199,7 @@ class Miner(Module):
                 chart_transformed_result = chart_transformer.convert_funds_flow_to_chart(result)
 
             output = LlmMessageOutputList(outputs=[
-                LlmMessageOutput(type="graph", result=graph_transformed_result)
+                LlmMessageOutput(type="graph", query=query, result=graph_transformed_result)
             ])
             return output
 
@@ -239,7 +239,7 @@ class Miner(Module):
                 chart_transformed_result = chart_transformer.convert_balance_tracking_to_chart(result)
 
             output = LlmMessageOutputList(outputs=[
-                LlmMessageOutput(type="table", result=tabular_transformed_result)
+                LlmMessageOutput(type="table", query=query, result=tabular_transformed_result)
             ])
 
             return output

@@ -15,8 +15,16 @@ class BaseLLM(ABC):
         Build a validation prompt from a given txid and block
         """
 
+
+
     @abstractmethod
     def determine_model_type(self, prompt: str, network: str):
         """
         Determine model type based on messages
+        """
+
+    @abstractmethod
+    def validate_query_by_prompt(self, prompt: str, query: str, network: str):
+        """
+        Validate query by prompt
         """
