@@ -24,10 +24,6 @@ class MinerSettings(BaseSettings):
     WORKERS: int = 4
 
     LLM_TYPE: str
-
-    POSTGRES_DB: str
-    POSTGRES_USER: str
-    POSTGRES_PASSWORD: str
     DATABASE_URL: str
 
     GRAPH_DATABASE_USER: str
