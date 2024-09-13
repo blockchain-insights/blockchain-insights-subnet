@@ -112,7 +112,7 @@ The subnet has evolved into a collaborative ecosystem where development is a sha
 This decentralized, collaborative approach fosters a dynamic and innovative environment, where all participants actively contribute to the network's evolution and success.
 
 <div style="display: flex; align-items: center;">
-  <img src="docs/collaboration_diagram.png" alt="collaboration_diagram" margin-right: 10px;">
+  <img src="docs/collaboration_diagram.png" alt="collaboration_diagram">
 </div>
 
 ```
