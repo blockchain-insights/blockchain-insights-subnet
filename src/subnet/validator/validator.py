@@ -127,7 +127,10 @@ class Validator(Module):
             validation_result = await Validator.validate_query_by_prompt(
                 random_validation_prompt=random_validation_prompt,
                 miner_key=miner_key,
-                miner_query=prompt_result_actual.outputs[0].result,
+                miner_query=prompt_result_actual.outputs[0].query,
+                result = prompt_result_actual.outputs[0].result,
+                network=discovery.network,
+                validation_prompt_response_manager= self.validation_prompt_response_manager,
                 prompt_responses=prompt_responses,  # Pass the eagerly loaded responses here
                 llm=self.llm
             )
@@ -249,8 +252,8 @@ class Validator(Module):
         return score
 
     @staticmethod
-    async def validate_query_by_prompt(random_validation_prompt: str, miner_key: str, miner_query: str,
-                                       prompt_responses: list, llm) -> str:
+    async def validate_query_by_prompt(random_validation_prompt: str, miner_key: str, miner_query: str, result: str, network: str,
+                                       validation_prompt_response_manager: ValidationPromptResponseManager, prompt_responses: list, llm) -> str:
         """
         Validates the miner's query against a cached response (from the eagerly loaded prompt responses)
         or uses LLM if no cached response is found.
@@ -275,7 +278,18 @@ class Validator(Module):
 
         # If no cached query is found, use the LLM to validate the query
         logger.info("No cached query found, using LLM for validation")
-        validation_result = llm.validate_query_by_prompt(random_validation_prompt, miner_query)
+        validation_result = llm.validate_query_by_prompt(random_validation_prompt, miner_query, network)
+
+        # Store the result from LLM in the cache for future use
+        if isinstance(result, (list, dict)):
+            result = json.dumps(result)
+        logger.info("Storing the validated result from LLM in the cache")
+        await validation_prompt_response_manager.store_response(
+            prompt=random_validation_prompt,
+            miner_key=miner_key,
+            query=miner_query,
+            result=result
+        )
 
         return validation_result
 
