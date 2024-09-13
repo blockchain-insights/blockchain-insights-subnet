@@ -12,6 +12,8 @@ from sqlalchemy import func
 from sqlalchemy import text
 from datetime import datetime
 
+from sqlalchemy.orm import relationship, joinedload
+
 from src.subnet.validator.database import OrmBase
 from src.subnet.validator.database.base_model import to_dict
 from src.subnet.validator.database.session_manager import DatabaseSessionManager
@@ -22,12 +24,17 @@ Base = declarative_base()
 
 class ValidationPrompt(OrmBase):
     __tablename__ = 'validation_prompt'
+
     id = Column(Integer, primary_key=True, autoincrement=True)
     prompt = Column(Text, nullable=False)
     prompt_model_type = Column(String, nullable=False)
     data = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     network = Column(String, nullable=False)
+
+    # Use back_populates to explicitly define the relationship
+    responses = relationship("ValidationPromptResponse", back_populates="validation_prompt", cascade="all, delete", lazy="joined")
+
 
 class ValidationPromptManager:
     def __init__(self, session_manager: DatabaseSessionManager):
@@ -55,21 +62,31 @@ class ValidationPromptManager:
                 )
                 await session.execute(stmt)
 
-    async def get_random_prompt(self, network: str) -> str:
+    async def get_random_prompt(self, network: str):
+        """
+        Fetches a random validation prompt and eagerly loads its associated responses in one DB roundtrip.
+        """
         async with self.session_manager.session() as session:
-            query = text("""
-                   SELECT prompt, prompt_model_type, data 
-                   FROM validation_prompt
-                   WHERE network = :network
-                   ORDER BY RANDOM() 
-                   LIMIT 1
-               """)
-            result = await session.execute(query, {"network": network})
-            prompt_data = result.fetchone()
+            # Perform a single query to fetch a random prompt along with its related responses
+            stmt = (
+                select(ValidationPrompt)
+                .options(joinedload(ValidationPrompt.responses))  # Eagerly load responses
+                .where(ValidationPrompt.network == network)
+                .order_by(func.random())  # Get a random prompt
+                .limit(1)
+            )
 
-            if prompt_data:
-                return prompt_data[0], prompt_data[1], prompt_data[2]
-            return None, None
+            result = await session.execute(stmt)
+            validation_prompt = result.scalars().first()
+
+            if validation_prompt:
+                return (
+                    validation_prompt.prompt,
+                    validation_prompt.prompt_model_type,
+                    validation_prompt.responses  # Eagerly loaded responses
+                )
+
+            return None, None, None
 
     async def get_prompt_count(self, network: str):
         async with self.session_manager.session() as session:

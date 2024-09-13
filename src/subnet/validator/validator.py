@@ -105,24 +105,30 @@ class Validator(Module):
                 return None
 
             # Prompt Phase
-            random_validation_prompt, prompt_model_type, prompt_result_expected = await self.validation_prompt_manager.get_random_prompt(discovery.network)
+            random_validation_prompt, prompt_model_type, prompt_responses = await self.validation_prompt_manager.get_random_prompt(
+                discovery.network)
+
             if not random_validation_prompt:
                 logger.error("Failed to get a random validation prompt")
                 return None
 
+            # Assuming you use the prompt in LLM message creation
             llm_message_list = LlmMessageList(messages=[LlmMessage(type=0, content=random_validation_prompt)])
+
+            # Send the prompt and get the miner's query response
             prompt_result_actual = await self._send_prompt(client, miner_key, llm_message_list)
+
             if not prompt_result_actual:
                 return None
 
             logger.info(f"Prompt result actual is {prompt_result_actual}")
 
+            # Validate the miner's query by checking it against cached responses (eager-loaded)
             validation_result = await Validator.validate_query_by_prompt(
                 random_validation_prompt=random_validation_prompt,
                 miner_key=miner_key,
                 miner_query=prompt_result_actual.outputs[0].result,
-                network=discovery.network,
-                validation_prompt_response_manager=self.validation_prompt_response_manager,
+                prompt_responses=prompt_responses,  # Pass the eagerly loaded responses here
                 llm=self.llm
             )
 
@@ -195,7 +201,7 @@ class Validator(Module):
     async def _send_prompt(self, client, miner_key, llm_message_list) -> LlmMessageOutputList | None:
         try:
             llm_query_result = await client.call(
-                "llm_query_v2",
+                "llm_query",
                 miner_key,
                 {"llm_messages_list": llm_message_list.model_dump()},
                 timeout=self.llm_query_timeout,
@@ -243,35 +249,33 @@ class Validator(Module):
         return score
 
     @staticmethod
-    async def validate_query_by_prompt(random_validation_prompt: str, miner_key: str, miner_query: str, network: str,
-                                       validation_prompt_response_manager: ValidationPromptResponseManager, llm) -> str:
-        # Retrieve cached query from DB using the miner_key and random_validation_prompt
-        cached_query = await validation_prompt_response_manager.get_response_by_prompt_and_miner(
-            random_validation_prompt, miner_key)
+    async def validate_query_by_prompt(random_validation_prompt: str, miner_key: str, miner_query: str,
+                                       prompt_responses: list, llm) -> str:
+        """
+        Validates the miner's query against a cached response (from the eagerly loaded prompt responses)
+        or uses LLM if no cached response is found.
+        """
+        # Check if there is a cached response in the eager-loaded responses
+        cached_response = next(
+            (response.query for response in prompt_responses if response.miner_key == miner_key),
+            None
+        )
 
         # If a cached query is found, compare it to the miner's query
-        if cached_query:
-            logger.info(f"Cached query found: {cached_query}")
+        if cached_response:
+            logger.info(f"Cached query found: {cached_response}")
 
             # Compare the cached query with the actual query from the miner
-            if cached_query == miner_query:
+            if cached_response == miner_query:
                 logger.info("Miner's query matches the cached query")
                 return "valid"
             else:
                 logger.info("Miner's query does not match the cached query")
                 return "invalid"
 
-        # If no cached query is found, store the miner's query in the DB
-        logger.info("No cached query found, storing the new query in the cache")
-        await validation_prompt_response_manager.store_response(
-            random_validation_prompt,
-            miner_key,
-            miner_query
-        )
-
-        # Since no cached query was found, use the LLM to validate the query
-        logger.info("Using LLM for validation")
-        validation_result = llm.validate_query_by_prompt(random_validation_prompt, miner_query, network)
+        # If no cached query is found, use the LLM to validate the query
+        logger.info("No cached query found, using LLM for validation")
+        validation_result = llm.validate_query_by_prompt(random_validation_prompt, miner_query)
 
         return validation_result
 

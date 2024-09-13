@@ -1,6 +1,6 @@
 from typing import Optional
 
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, joinedload
 
 from loguru import logger
 from sqlalchemy import Column, Integer, String, Float, DateTime, update, insert, Text, ForeignKey
@@ -9,7 +9,7 @@ from sqlalchemy.future import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy import text
 
-from src.subnet.validator.database import OrmBase
+from src.subnet.validator.database import OrmBase, ValidationPrompt
 from src.subnet.validator.database.session_manager import DatabaseSessionManager
 
 
@@ -19,18 +19,20 @@ class ValidationPromptResponse(OrmBase):
     __tablename__ = 'validation_prompt_response'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    prompt_id = Column(Integer, ForeignKey('validation_prompt.id', ondelete='CASCADE'), nullable=False)  # Added cascade delete
+    prompt_id = Column(Integer, ForeignKey('validation_prompt.id', ondelete='CASCADE'), nullable=False)
     miner_key = Column(String, nullable=False)
     query = Column(String, nullable=False)
+    result = Column(String, nullable=False)
 
-    prompt = relationship("ValidationPrompt", backref="responses", cascade="all, delete")
+    # Explicitly define the relationship with back_populates
+    validation_prompt = relationship("ValidationPrompt", back_populates="responses")
 
 
 class ValidationPromptResponseManager:
-    def __init__(self, session_manager: DatabaseSessionManager):
+    def __init__(self, session_manager):
         self.session_manager = session_manager
 
-    async def store_response(self, prompt: str, miner_key: str, query: str):
+    async def store_response(self, prompt: str, miner_key: str, query: str, result: str):
         """
         Stores a new validation prompt response.
         Retrieves the prompt ID based on the prompt text and stores the corresponding response.
@@ -44,8 +46,8 @@ class ValidationPromptResponseManager:
                     WHERE prompt = :prompt 
                     LIMIT 1
                 """)
-                result = await session.execute(prompt_query, {"prompt": prompt})
-                prompt_id = result.scalar()  # Extract the prompt ID
+                res = await session.execute(prompt_query, {"prompt": prompt})
+                prompt_id = res.scalar()  # Extract the prompt ID
 
                 if not prompt_id:
                     logger.error("No prompt found for the given text")
@@ -55,7 +57,8 @@ class ValidationPromptResponseManager:
                 stmt = insert(ValidationPromptResponse).values(
                     prompt_id=prompt_id,
                     miner_key=miner_key,
-                    query=query
+                    query=query,
+                    result=result,
                 )
                 await session.execute(stmt)
 
@@ -65,30 +68,22 @@ class ValidationPromptResponseManager:
         Returns the query string if found, otherwise None.
         """
         async with self.session_manager.session() as session:
-            async with session.begin():
-                # Retrieve the prompt_id based on the prompt text using raw SQL
-                prompt_query = text("""
-                    SELECT id 
-                    FROM validation_prompt 
-                    WHERE prompt = :prompt 
-                    LIMIT 1
-                """)
-                result = await session.execute(prompt_query, {"prompt": prompt})
-                prompt_id = result.scalar()
+            # Retrieve the prompt and its responses using eager loading
+            prompt_query = await session.execute(
+                select(ValidationPrompt)
+                .options(joinedload(ValidationPrompt.responses))
+                .where(ValidationPrompt.prompt == prompt)
+            )
+            validation_prompt = prompt_query.scalars().first()
 
-                if not prompt_id:
-                    logger.error(f"No prompt found for the given text: {prompt}")
-                    return None
+            if not validation_prompt:
+                logger.error(f"No prompt found for the given text: {prompt}")
+                return None
 
-                # Retrieve the single response associated with this prompt_id and miner_key
-                response_query = select(
-                    ValidationPromptResponse.query
-                ).where(
-                    ValidationPromptResponse.prompt_id == prompt_id,
-                    ValidationPromptResponse.miner_key == miner_key
-                ).limit(1)
+            # Retrieve the single response associated with this prompt_id and miner_key
+            response = next(
+                (resp.query for resp in validation_prompt.responses if resp.miner_key == miner_key),
+                None
+            )
 
-                response_result = await session.execute(response_query)
-                query = response_result.scalar()
-
-                return query if query else None
+            return response if response else None

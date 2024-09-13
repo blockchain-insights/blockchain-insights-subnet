@@ -68,6 +68,7 @@ class LlmMessage(BaseModel):
 
 class LlmMessageOutput(BaseModel):
     type: Literal["text", "graph", "table", "error"] = Field(..., title="The type of the output")
+    query: str = None
     result: Optional[Any] = None
     error: Optional[ERROR_TYPE] = None
 
@@ -132,6 +133,7 @@ class ChallengeMinerResponse(BaseModel):
 
 class QueryOutput(BaseModel):
     type: Literal["text", "graph", "table", "chart", "error"] = Field(..., title="The type of the output")
+    query: str = None
     result: Optional[Dict] = None
     error: Optional[ERROR_TYPE] = None
 
