@@ -16,6 +16,8 @@
     - [Miners: Empowered Innovators](#miners-empowered-innovators)
     - [A Collaborative Ecosystem](#a-collaborative-ecosystem)
     - [Roles & Responsibilities](#roles--responsibilities)
+- [Miner Setup](MINER_SETUP.md)
+- [Validator Setup](VALIDATOR_SETUP.md)
 
 ### Subnet Vision
 
