@@ -21,7 +21,6 @@ from .database.models.challenge_balance_tracking import ChallengeBalanceTracking
 from .database.models.challenge_funds_flow import ChallengeFundsFlowManager
 from .database.models.validation_prompt_response import ValidationPromptResponseManager
 from .encryption import generate_hash
-from .fuzzy_compare import fuzzy_json_similarity
 from .helpers import raise_exception_if_not_registered, get_ip_port, cut_to_max_allowed_weights
 from .llm.base_llm import BaseLLM
 from .llm.factory import LLMFactory
@@ -222,7 +221,6 @@ class Validator(Module):
             else:
                 return 0.15
 
-        # all challenges are passed, setting base score to 0.36
         score = 0.3
 
         if response.query_validation_result is None:
@@ -236,10 +234,11 @@ class Validator(Module):
         #    response.prompt_result_actual,
         #    response.prompt_result_expected,
         #    numeric_tolerance=0.05, string_threshold=80)
-        score += 0.3 * similarity_score
-        logger.info(f"Scoring: Score {score}")
+        similarity_score = 0
+        score = score + (0.3 * similarity_score)
+
         multiplier = min(1, receipt_miner_multiplier)
-        score += 0.4 * multiplier
+        score = score + (0.4 * multiplier)
 
         return score
 
@@ -357,24 +356,28 @@ class Validator(Module):
         self.weights_storage.setup()
         weighted_scores: dict[int, int] = self.weights_storage.read()
 
-        scores = sum(score_dict.values())
+        logger.debug(f"Setting weights: {score_dict}")
+        score_sum = sum(score_dict.values())
 
-        if scores == 0:
+        if score_sum == 0:
             logger.warning("No scores to distribute")
             return
 
         for uid, score in score_dict.items():
-            weight = int(score * 1000 / scores)
+            weight = int(score * 1000 / score_sum)
             weighted_scores[uid] = weight
 
         # filter out 0 weights
         weighted_scores = {k: v for k, v in weighted_scores.items() if v != 0}
+        weighted_scores = {k: v for k, v in weighted_scores.items() if k in score_dict}
 
         self.weights_storage.store(weighted_scores)
+
         uids = list(weighted_scores.keys())
         weights = list(weighted_scores.values())
 
         # send the blockchain call
+        logger.debug(f"Sending weights to the blockchain: {weighted_scores}")
         client.vote(key=key, uids=uids, weights=weights, netuid=netuid)
 
     async def validation_loop(self, settings: ValidatorSettings) -> None:
