@@ -110,3 +110,9 @@ The subnet has evolved into a collaborative ecosystem where development is a sha
    - Validators provide essential APIs to miners, enabling their participation in Chain Chat and other network activities. They play a crucial role in maintaining the network's integrity by ensuring that all transactions and validations meet the required standards, and they support miners in integrating their contributions seamlessly into the network.
 
 This decentralized, collaborative approach fosters a dynamic and innovative environment, where all participants actively contribute to the network's evolution and success.
+
+<div style="display: flex; align-items: center;">
+  <img src="docs/collaboration_diagram.png" alt="collaboration_diagram" margin-right: 10px;">
+</div>
+
+```
