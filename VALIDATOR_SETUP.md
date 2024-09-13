@@ -1,4 +1,4 @@
-# Chain Insights Subnet - The validator Setup
+# Chain Insights - The validator Setup
 
 ## Table of Contents
 - [Setup](#setup)

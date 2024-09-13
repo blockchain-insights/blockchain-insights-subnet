@@ -1,7 +1,9 @@
-# Chain Insights Subnet - The Miner Setup
+# Chain Insights - The Miner Setup
 
 ## Table of Contents
 - [Setup](#setup)
+  - [Blockchain Indexer Setup](#blockchain-indexer-setup)
+    - [Bitcoin](#bitcoin-blockchain-indexer-setup)
   - [Miner Setup](#miner-setup)
     - [Prerequisites](#prerequisites)
     - [Clone repository](#clone-repository)
@@ -11,6 +13,19 @@
     - [Run multiple miners](#run-multiple-miners)
 
 ## Setup
+
+### Blockchain Indexer Setup
+
+Miner requires a blockchain indexer to be able to fetch the blockchain data. The indexer should be running and accessible to the miner.
+At the moment we deliver open source version of the Bitcoin Blockchain Indexer. There is also an Ethereum Blockchain Indexer available, but it is not operational, and should be used as a reference only for building custom implementation by individual miners.
+
+#### Bitcoin Blockchain Indexer Setup
+  - [Bitcoin Blockchain Indexer](https://github.com/blockchain-insights/blockchain-insights-indexer-bitcoin)
+  
+### Miner Setup
+
+```shell
+
 
 ### Miner Setup
 
