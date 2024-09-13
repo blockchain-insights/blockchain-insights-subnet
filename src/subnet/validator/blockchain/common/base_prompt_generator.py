@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from src.subnet.validator._config import ValidatorSettings
 from src.subnet.validator.database.models.validation_prompt import ValidationPromptManager
-from src.subnet.validator.llm.base_llm import BaseLLM
+
 
 class BasePromptGenerator(ABC):
     def __init__(self, settings: ValidatorSettings):

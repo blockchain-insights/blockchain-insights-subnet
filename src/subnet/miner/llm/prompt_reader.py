@@ -1,5 +1,5 @@
-from loguru import logger
 import os
+from loguru import logger
 
 
 def read_local_file(file_path):

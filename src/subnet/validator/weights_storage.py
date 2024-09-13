@@ -1,6 +1,6 @@
-from loguru import logger
 import os
 import pickle
+from loguru import logger
 
 
 class WeightsStorage:

@@ -1,5 +1,4 @@
 from decimal import Decimal
-from loguru import logger
 from src.subnet.protocol.llm_engine import Challenge, MODEL_TYPE_FUNDS_FLOW, MODEL_TYPE_BALANCE_TRACKING
 from .node_utils import initialize_tx_out_hash_table, get_tx_out_hash_table_sub_keys, construct_redeem_script, \
     hash_redeem_script, create_p2sh_address, pubkey_to_address, check_if_block_is_valid_for_challenge, parse_block_data, \
@@ -11,6 +10,7 @@ import os
 import random
 from ..abstract_node import Node
 from ..random_block import select_block
+from loguru import logger
 
 
 class BitcoinNode(Node):
@@ -290,7 +290,7 @@ class BitcoinNode(Node):
         return input_amounts, output_amounts, input_addresses, output_addresses, in_total_amount, out_total_amount
 
     def get_random_txid_from_block(self, block_height):
-        logger.info(f"Fetching random txid from block {block_height}")
+        logger.info(f"Fetching random tx_id from", block_height=block_height)
 
         block_data = self.get_block_by_height(block_height)
         transactions = block_data.get('tx', [])
@@ -311,6 +311,6 @@ class BitcoinNode(Node):
 
         txid = selected_txn['txid']
 
-        logger.info(f"Selected transaction ID: {txid} from block {block_height}")
+        logger.info(f"Selected transaction tx_id: {txid} from block {block_height}", block_height=block_height, tx_id=txid)
 
         return txid, block_data

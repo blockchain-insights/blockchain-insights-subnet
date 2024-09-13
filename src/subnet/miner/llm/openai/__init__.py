@@ -2,12 +2,12 @@ from typing import List
 import json
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
-from loguru import logger
 
 from src.subnet.miner._config import MinerSettings
 from src.subnet.miner.llm.base_llm import BaseLLM
 from src.subnet.miner.llm.prompt_reader import read_local_file
 from src.subnet.miner.llm.utils import split_messages_into_chunks
+from loguru import logger
 from src.subnet.protocol.llm_engine import LlmMessage, LLM_ERROR_QUERY_BUILD_FAILED, LLM_ERROR_INTERPRETION_FAILED, \
     LLM_ERROR_NOT_APPLICAPLE_QUESTIONS, LLM_ERROR_GENERAL_RESPONSE_FAILED, MODEL_TYPE_FUNDS_FLOW, \
     MODEL_TYPE_BALANCE_TRACKING, LLM_MESSAGE_TYPE_USER

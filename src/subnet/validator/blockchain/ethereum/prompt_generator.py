@@ -1,9 +1,8 @@
 import random
-from loguru import logger
-#from src.subnet.validator.nodes.ethereum.node import EthereumNode
 from src.subnet.validator.blockchain.common.base_prompt_generator import BasePromptGenerator
 from src.subnet.validator.database.models.validation_prompt import ValidationPromptManager
 from src.subnet.validator.llm.base_llm import BaseLLM
+from loguru import logger
 
 
 class PromptGenerator(BasePromptGenerator):

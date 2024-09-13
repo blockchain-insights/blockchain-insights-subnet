@@ -2,11 +2,12 @@ import asyncio
 import signal
 import sys
 import threading
+from datetime import datetime
 
-from loguru import logger
 from communex._common import get_node_url
 from communex.client import CommuneClient
 from communex.compat.key import classic_load_key
+from loguru import logger
 
 from src.subnet.validator.database.models.challenge_balance_tracking import ChallengeBalanceTrackingManager
 from src.subnet.validator.database.models.challenge_funds_flow import ChallengeFundsFlowManager
@@ -83,32 +84,42 @@ class BalanceTrackingChallengeGeneratorThread(threading.Thread):
         finally:
             loop.close()
 
-
 if __name__ == "__main__":
-    logger.remove()
-    logger.add(
-        "../logs/validator.log",
-        rotation="500 MB",
-        format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}",
-        level="DEBUG"
-    )
-
-    logger.add(
-        sys.stdout,
-        format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}",
-        level="DEBUG"
-    )
 
     if len(sys.argv) != 2:
-        logger.error("Usage: python -m subnet.cli <environment>")
+        print("Usage: python -m subnet.cli <environment>")
         sys.exit(1)
 
     environment = sys.argv[1]
     load_environment(environment)
 
-    # Setup configurations
     settings = ValidatorSettings()
     keypair = classic_load_key(settings.VALIDATOR_KEY)
+
+    def patch_record(record):
+        record["extra"]["validator_key"] = keypair.ss58_address
+        record["extra"]["service"] = 'validator'
+        record["extra"]["timestamp"] = datetime.utcnow().isoformat()
+        record["extra"]["level"] = record['level'].name
+
+        return True
+
+    logger.remove()
+    logger.add(
+        "../logs/validator.log",
+        rotation="500 MB",
+        format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message} | {extra}",
+        level="DEBUG",
+        filter=patch_record
+    )
+
+    logger.add(
+        sys.stdout,
+        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | {level} | <level>{message}</level> | {extra}",
+        level="DEBUG",
+        filter=patch_record,
+    )
+
     c_client = CommuneClient(get_node_url(use_testnet=(environment == 'testnet')))
     weights_storage = WeightsStorage(settings.WEIGHTS_FILE_NAME)
 

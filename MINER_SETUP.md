@@ -58,19 +58,12 @@ MINER_NAME=miner1
 NETWORK=bitcoin
 PORT=9962
 
-POSTGRES_USER=bitcoin
-POSTGRES_PASSWORD={put_proper_value_here}
-POSTGRES_HOST={put_proper_value_here}
-POSTGRES_PORT={put_proper_value_here}
-POSTGRES_DB={put_proper_value_here}
-
 DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
 
 GRAPH_DATABASE_URL={put_proper_value_here}
 GRAPH_DATABASE_USER={put_proper_value_here}
 GRAPH_DATABASE_PASSWORD={put_proper_value_here}
 
-BITCOIN_NODE_RPC_URL=http://{put_proper_value_here}:{put_proper_value_here}@{put_proper_value_here}:8332
 LLM_API_KEY={put_proper_value_here}
 LLM_TYPE=openai
 ```

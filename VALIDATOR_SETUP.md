@@ -61,8 +61,8 @@ cp ./env/.env.validator.example ./env/.env.validator.mainnet
 
 Now edit the `.env.validator.mainnet` file to set the appropriate configurations.
 ```shell
-ITERATION_INTERVAL=100
-MAX_ALLOWED_WEIGHTS=420
+ITERATION_INTERVAL=512
+MAX_ALLOWED_WEIGHTS=32
 NET_UID=20
 VALIDATOR_KEY=<your_validator_comx_key>
 LLM_QUERY_TIMEOUT=120

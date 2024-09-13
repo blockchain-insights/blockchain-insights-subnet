@@ -1,8 +1,4 @@
 from typing import Optional, Tuple
-import json
-from decimal import Decimal
-
-from loguru import logger
 from sqlalchemy import Column, Integer, String, DateTime, insert, delete
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.future import select
@@ -12,10 +8,8 @@ from sqlalchemy import text
 from datetime import datetime
 
 from src.subnet.validator.database import OrmBase
-from src.subnet.validator.database.base_model import to_dict
 from src.subnet.validator.database.session_manager import DatabaseSessionManager
-
-import random
+from loguru import logger
 
 Base = declarative_base()
 

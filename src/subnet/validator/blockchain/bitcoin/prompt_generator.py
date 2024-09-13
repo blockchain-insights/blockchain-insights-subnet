@@ -1,7 +1,6 @@
 import random
-from loguru import logger
-
 from src.subnet.protocol.llm_engine import MODEL_TYPE_FUNDS_FLOW, MODEL_TYPE_BALANCE_TRACKING
+from loguru import logger
 from src.subnet.validator.nodes.bitcoin.node import BitcoinNode
 from src.subnet.validator.blockchain.common.base_prompt_generator import BasePromptGenerator
 from src.subnet.validator.database.models.validation_prompt import ValidationPromptManager

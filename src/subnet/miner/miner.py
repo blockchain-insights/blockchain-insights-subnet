@@ -1,9 +1,11 @@
 import signal
 import traceback
+from datetime import datetime
+
 from communex._common import get_node_url
 from communex.client import CommuneClient
 from communex.module import Module, endpoint
-from communex.module._rate_limiters.limiters import IpLimiterMiddleware, IpLimiterParams
+from communex.module._rate_limiters.limiters import IpLimiterParams
 from keylimiter import TokenBucketLimiter
 from loguru import logger
 from starlette.middleware.cors import CORSMiddleware
@@ -19,6 +21,7 @@ from src.subnet.protocol.llm_engine import LLM_UNKNOWN_ERROR, LLM_ERROR_MESSAGES
     LlmMessageOutput
 from src.subnet.validator.database import db_manager
 import time
+
 
 class Miner(Module):
 
@@ -257,28 +260,39 @@ if __name__ == "__main__":
     import sys
 
     if len(sys.argv) != 2:
-        logger.error("Usage: python -m subnet.cli <environment> ; where <environment> is 'testnet' or 'mainnet'")
+        print("Usage: python -m subnet.cli <environment> ; where <environment> is 'testnet' or 'mainnet'")
         sys.exit(1)
 
     env = sys.argv[1]
     use_testnet = env == 'testnet'
     load_environment(env)
 
+    settings = MinerSettings()
+    keypair = classic_load_key(settings.MINER_KEY)
+
+    def patch_record(record):
+        record["extra"]["miner_key"] = keypair.ss58_address
+        record["extra"]["service"] = 'miner'
+        record["extra"]["timestamp"] = datetime.utcnow().isoformat()
+        record["extra"]["level"] = record['level'].name
+
+        return True
+
     logger.remove()
     logger.add(
         "../logs/miner.log",
         rotation="500 MB",
-        format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}"
+        format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message} | {extra}",
+        filter=patch_record
     )
 
     logger.add(
         sys.stdout,
-        format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}",
-        level="DEBUG"
+        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | {level} | {message} | {extra}",
+        level="DEBUG",
+        filter = patch_record
     )
 
-    settings = MinerSettings()
-    keypair = classic_load_key(settings.MINER_KEY)
     c_client = CommuneClient(get_node_url(use_testnet=use_testnet))
     miner = Miner(settings=settings)
     refill_rate: float = 1 / 1000

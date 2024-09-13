@@ -1,8 +1,6 @@
-import random
-from loguru import logger
-#from src.subnet.validator.nodes.ethereum.node import EthereumNode
 from src.subnet.validator.blockchain.common.funds_flow.base_challenge_generator import BaseChallengeGenerator
 from src.subnet.validator.database.models.challenge_funds_flow import ChallengeFundsFlowManager
+from loguru import logger
 
 
 class ChallengeGenerator(BaseChallengeGenerator):

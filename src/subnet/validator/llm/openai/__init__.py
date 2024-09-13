@@ -1,15 +1,12 @@
-from typing import List, Optional
-import json
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
-from loguru import logger
-
+from langchain_core.messages import HumanMessage, SystemMessage
 from src.subnet.validator._config import ValidatorSettings
 from src.subnet.validator.llm.base_llm import BaseLLM
 from src.subnet.validator.llm.prompt_reader import read_local_file
 from src.subnet.validator.llm.utils import split_messages_into_chunks
 from src.subnet.protocol.llm_engine import LLM_ERROR_PROMPT_GENERATION_FAILED, MODEL_TYPE_FUNDS_FLOW, \
     MODEL_TYPE_BALANCE_TRACKING
+from loguru import logger
 
 
 class OpenAILLM(BaseLLM):
@@ -33,7 +30,7 @@ class OpenAILLM(BaseLLM):
 
         try:
             ai_message = self.chat_gpt4o.invoke(messages)
-            logger.info(f"AI-generated message: {ai_message.content}")
+            logger.info(f"AI-generated message", content=ai_message.content)
             content = ai_message.content
             if "Funds Flow" in content:
                 return MODEL_TYPE_FUNDS_FLOW

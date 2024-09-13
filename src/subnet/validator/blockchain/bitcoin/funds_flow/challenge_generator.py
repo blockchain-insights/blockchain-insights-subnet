@@ -1,5 +1,3 @@
-import json
-import random
 from loguru import logger
 from src.subnet.validator.nodes.bitcoin.node import BitcoinNode  # This can be substituted for EthereumNode if needed
 from src.subnet.validator.blockchain.common.funds_flow.base_challenge_generator import BaseChallengeGenerator

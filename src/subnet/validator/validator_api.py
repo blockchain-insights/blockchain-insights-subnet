@@ -1,5 +1,6 @@
 import signal
-from typing import Optional, List
+from datetime import datetime
+from typing import Optional
 import uvicorn
 from communex._common import get_node_url
 from communex.client import CommuneClient
@@ -103,21 +104,8 @@ class ValidatorApi:
 if __name__ == "__main__":
     import sys
 
-    logger.remove()
-    logger.add(
-        "../../logs/validator_api.log",
-        rotation="500 MB",
-        format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}"
-    )
-
-    logger.add(
-        sys.stdout,
-        format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}",
-        level="DEBUG"
-    )
-
     if len(sys.argv) != 2:
-        logger.error("Usage: python -m subnet.validator_api <environment> ; where <environment> is 'testnet' or 'mainnet'")
+        print("Usage: python -m subnet.validator_api <environment> ; where <environment> is 'testnet' or 'mainnet'")
         sys.exit(1)
 
     env = sys.argv[1]
@@ -126,6 +114,30 @@ if __name__ == "__main__":
 
     settings = ValidatorSettings()
     keypair = classic_load_key(settings.VALIDATOR_KEY)
+
+    def patch_record(record):
+        record["extra"]["validator_key"] = keypair.ss58_address
+        record["extra"]["service"] = 'validator-api'
+        record["extra"]["timestamp"] = datetime.utcnow().isoformat()
+        record["extra"]["level"] = record['level'].name
+
+        return True
+
+    logger.remove()
+    logger.add(
+        "../../logs/validator_api.log",
+        rotation="500 MB",
+        format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}",
+        filter=patch_record
+    )
+
+    logger.add(
+        sys.stdout,
+        format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}",
+        level="DEBUG",
+        filter=patch_record
+    )
+
     c_client = CommuneClient(get_node_url(use_testnet=use_testnet))
     weights_storage = WeightsStorage(settings.WEIGHTS_FILE_NAME)
 
