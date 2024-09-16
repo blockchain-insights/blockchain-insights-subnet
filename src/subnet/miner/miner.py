@@ -186,7 +186,6 @@ class Miner(Module):
             graph_search.close()
 
             logger.info(f"Query execution time: {time.time() - execute_query_start_time} seconds")
-            logger.info(f"Result: {result}")
 
             # Use transformer for graph result
             graph_transformer = self.graph_transformer_factory.create_graph_transformer(self.settings.NETWORK)
