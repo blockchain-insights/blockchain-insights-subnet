@@ -203,13 +203,13 @@ class Validator(Module):
         or uses LLM if no cached response is found.
         """
         cached_response = next(
-            (response.query for response in prompt_responses if response.miner_key == miner_key),
+            (response for response in prompt_responses if response.miner_key == miner_key),
             None
         )
 
         if cached_response:
             logger.debug(f"Cached query found: {cached_response}")
-            if cached_response == miner_query and cached_response.is_valid is True:
+            if cached_response.query == miner_query and cached_response.is_valid is True:
                 logger.debug("Miner's query matches the cached query")
                 return True
 
