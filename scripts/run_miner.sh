@@ -1,7 +1,7 @@
 #!/bin/bash
 
 python3 -m venv venv_miner
-source venv/bin/activate
+source venv_miner/bin/activate
 pip install -r requirements.txt
 
 cp -r env venv_miner/
