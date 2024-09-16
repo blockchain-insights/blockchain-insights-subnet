@@ -118,7 +118,7 @@ class Validator(Module):
             if not prompt_result_actual:
                 return None
 
-            logger.info(f"Prompt result actual is {prompt_result_actual}")
+            logger.info(f"Prompt result received")
 
             validation_result = await self.validate_query_by_prompt(
                 validation_prompt_id=validation_prompt_id,

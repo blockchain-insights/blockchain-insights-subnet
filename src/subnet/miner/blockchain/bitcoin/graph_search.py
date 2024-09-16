@@ -86,6 +86,6 @@ class BitcoinGraphSearch(BaseGraphSearch):
 
                 # Append the processed record to the result list
                 results_data.append(processed_record)
-            logger.info(f"Results data: {results_data}")
+
             return results_data
 
