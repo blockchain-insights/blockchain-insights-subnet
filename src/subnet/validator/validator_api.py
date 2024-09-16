@@ -135,7 +135,7 @@ if __name__ == "__main__":
 
     logger.add(
         sys.stdout,
-        format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}",
+        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level}</level> | <blue>{message}</blue> | {extra}",
         level="DEBUG",
         filter=patch_record
     )
