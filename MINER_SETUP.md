@@ -24,11 +24,6 @@ At the moment we deliver open source version of the Bitcoin Blockchain Indexer. 
   
 ### Miner Setup
 
-```shell
-
-
-### Miner Setup
-
 #### Prerequisites
 
 - Ubuntu 22.04 LTS (or similar)
