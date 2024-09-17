@@ -289,15 +289,7 @@ class Validator(Module):
         for key in modules.keys():
             module_meta_data = modules[key]
             uid = module_meta_data['uid']
-            stake = module_meta_data['stake']
-
-            logger.debug(f"Checking miner", uid=uid, module_meta_data=module_meta_data)
-
-            if stake > 5000:
-                logger.debug(f"Skipping miner with stake > 5000", uid=uid, stake=stake)
-                continue
             if uid not in ip_ports:
-                logger.debug(f"Skipping miner without address", uid=uid)
                 continue
             module_addr = ip_ports[uid]
             miners_module_info[uid] = (module_addr, modules[key])
