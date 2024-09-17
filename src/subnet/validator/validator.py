@@ -209,9 +209,8 @@ class Validator(Module):
         )
 
         if cached_response:
-            logger.debug(f"Cached query found: {cached_response}")
             if cached_response.query == miner_query and cached_response.is_valid is True:
-                logger.debug("Miner's query matches the cached query")
+                logger.debug(f"Valid cached query found: {cached_response.query}")
                 return True
 
         # logger.info("No cached query found, using LLM for validation")
