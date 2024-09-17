@@ -77,6 +77,7 @@ class Validator(Module):
             if addr.startswith('None'):
                 port = addr.split(':')[1]
                 modules_adresses[id] = f'0.0.0.0:{port}'
+        logger.debug(f"Got modules addresses", modules_adresses=modules_adresses)
         return modules_adresses
 
     async def _challenge_miner(self, miner_info):
@@ -274,8 +275,7 @@ class Validator(Module):
         score = score + (0.55 * multiplier)
         return score
 
-    async def validate_step(self, netuid: int, settings: ValidatorSettings
-                            ) -> None:
+    async def validate_step(self, netuid: int, settings: ValidatorSettings) -> None:
 
         score_dict: dict[int, float] = {}
         miners_module_info = {}
@@ -290,9 +290,14 @@ class Validator(Module):
             module_meta_data = modules[key]
             uid = module_meta_data['uid']
             stake = module_meta_data['stake']
+
+            logger.debug(f"Checking miner", uid=uid, module_meta_data=module_meta_data)
+
             if stake > 5000:
+                logger.debug(f"Skipping miner with stake > 5000", uid=uid, stake=stake)
                 continue
             if uid not in ip_ports:
+                logger.debug(f"Skipping miner without address", uid=uid)
                 continue
             module_addr = ip_ports[uid]
             miners_module_info[uid] = (module_addr, modules[key])
