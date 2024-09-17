@@ -156,7 +156,7 @@ class Miner(Module):
             output = LlmMessageOutputList(outputs=[LlmMessageOutput(type='error', error=error_code, result=[LLM_ERROR_MESSAGES.get(error_code, 'An error occurred')])])
             return output
 
-        logger.debug(f"Serving miner llm query output: {output} (Total time taken: {time.time() - start_time} seconds)")
+        logger.debug(f"Serving miner llm query output, (Total time taken: {time.time() - start_time} seconds)")
 
         return output
 
