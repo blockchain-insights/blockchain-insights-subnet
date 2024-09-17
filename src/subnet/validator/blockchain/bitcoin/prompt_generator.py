@@ -16,7 +16,14 @@ class PromptGenerator(BasePromptGenerator):
         "Retrieve the details of the transaction with txid {txid} in block {block}.",
         "Provide the total number of transactions in block {block} and identify the largest transaction by amount.",
         "Determine the fees paid for the transaction with txid {txid} in block {block}.",
-        "Identify all addresses involved in the transaction with txid {txid} in block {block}."
+        "Identify all addresses involved in the transaction with txid {txid} in block {block}.",
+        "List the top 3 balances in block {block}, along with their respective amounts and timestamps.",
+        "Identify the largest balance change in block {block} and provide the associated timestamp.",
+        "Determine the total sum of balances for all addresses in block {block} and return the block's timestamp.",
+        "Retrieve the top 3 balance increases in block {block} and return the corresponding amounts and timestamps.",
+        "Provide the total number of balance changes in block {block} and identify the highest balance after the block is processed.",
+        "Return all balance adjustments made in block {block}, including the block's timestamp and the highest balance.",
+        "Calculate the total BTC held in block {block} and identify the block's timestamp."
     ]
 
     def __init__(self, settings, llm: BaseLLM):
