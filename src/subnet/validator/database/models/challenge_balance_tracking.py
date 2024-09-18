@@ -14,7 +14,7 @@ from loguru import logger
 Base = declarative_base()
 
 class ChallengeBalanceTracking(OrmBase):
-    __tablename__ = 'challenge_balance_tracking'
+    __tablename__ = 'challenges_balance_tracking'
     id = Column(Integer, primary_key=True, autoincrement=True)
     challenge = Column(String, nullable=False)
     block_height = Column(String, nullable=False, unique=True)

@@ -16,7 +16,7 @@ Base = declarative_base()
 
 
 class MinerDiscovery(OrmBase):
-    __tablename__ = 'miner_discovery'
+    __tablename__ = 'miner_discoveries'
     id = Column(Integer, primary_key=True, autoincrement=True)
     uid = Column(Integer, nullable=False)
     miner_key = Column(String, nullable=False, unique=True)

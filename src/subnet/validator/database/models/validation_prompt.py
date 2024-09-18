@@ -17,7 +17,7 @@ from loguru import logger
 Base = declarative_base()
 
 class ValidationPrompt(OrmBase):
-    __tablename__ = 'validation_prompt'
+    __tablename__ = 'validation_prompts'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     prompt = Column(Text, nullable=False)

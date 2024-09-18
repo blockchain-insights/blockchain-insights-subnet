@@ -14,7 +14,7 @@ from loguru import logger
 Base = declarative_base()
 
 class ChallengeFundsFlow(OrmBase):
-    __tablename__ = 'challenge_funds_flow'
+    __tablename__ = 'challenges_funds_flow'
     id = Column(Integer, primary_key=True, autoincrement=True)
     challenge = Column(String, nullable=False)
     tx_id = Column(String, nullable=False, unique=True)
