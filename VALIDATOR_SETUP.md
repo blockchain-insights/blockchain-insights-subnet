@@ -121,6 +121,7 @@ pm2 save
 
 Or run the validator in auto update mode:
 ```shell
+cd ~/validator1
 pm2 start ./scripts/run_validator_auto_update.sh --name validator -- mainnet validator
-
+pm2 save
 ```
