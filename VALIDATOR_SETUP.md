@@ -115,12 +115,12 @@ Then run the validator:
 ```shell
 # use pm2 to run the validator
 cd ~/validator1
-pm2 start ./scripts/run_validator.sh --name validator_name
+pm2 start ./scripts/run_validator.sh --name validator
 pm2 save
 ```
 
 Or run the validator in auto update mode:
 ```shell
-pm2 start ./scripts/run_validator_auto_update.sh --name validator_name -- mainnet validator_name
+pm2 start ./scripts/run_validator_auto_update.sh --name validator -- mainnet validator
 
 ```
