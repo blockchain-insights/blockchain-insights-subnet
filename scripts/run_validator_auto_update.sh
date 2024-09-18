@@ -26,7 +26,7 @@ check_for_updates() {
             deactivate
 
             # Restart the script using pm2
-            pm2 restart <your_pm2_process_name>
+            pm2 restart 0
 
             # Exit the update checker
             exit 0
