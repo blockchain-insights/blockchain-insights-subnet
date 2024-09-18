@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-time Metrics Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        .metric-box {
+            margin: 50px;
+            padding: 20px;
+            border: 2px solid #007bff;
+            display: inline-block;
+            font-size: 2em;
+            background-color: #f1f1f1;
+        }
+    </style>
+</head>
+<body>
+    <h1>Real-time Metrics Dashboard</h1>
+    <div class="metric-box">
+        <span id="metric-value">0</span>
+    </div>
+
+    <script>
+        const ws = new WebSocket("ws://localhost:8000/ws");
+
+        ws.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            document.getElementById("metric-value").innerText = data.metric;
+        };
+    </script>
+</body>
+</html>
+</title>
+</head>
+<body>
+
+</body>
+</html>
