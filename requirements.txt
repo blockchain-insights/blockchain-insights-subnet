@@ -18,3 +18,5 @@ python-bitcoinrpc
 bitcoin
 base58
 pycryptodome
+jinja2
+websockets

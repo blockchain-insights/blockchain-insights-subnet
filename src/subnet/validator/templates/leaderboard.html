@@ -2,46 +2,39 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title><!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Real-time Metrics Dashboard</title>
+    <title>Real-Time Metrics Dashboard</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             text-align: center;
+            margin-top: 50px;
         }
-        .metric-box {
-            margin: 50px;
-            padding: 20px;
-            border: 2px solid #007bff;
-            display: inline-block;
-            font-size: 2em;
-            background-color: #f1f1f1;
+        .metric {
+            font-size: 48px;
+            margin: 20px;
         }
     </style>
 </head>
 <body>
-    <h1>Real-time Metrics Dashboard</h1>
-    <div class="metric-box">
-        <span id="metric-value">0</span>
-    </div>
+    <h1>Real-Time Metrics Dashboard</h1>
+    <div class="metric" id="metric-value">0</div>
 
     <script>
-        const ws = new WebSocket("ws://localhost:8000/ws");
+        const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        const ws = new WebSocket(`${protocol}://${window.location.host}/ws`);
 
         ws.onmessage = function(event) {
             const data = JSON.parse(event.data);
-            document.getElementById("metric-value").innerText = data.metric;
+            document.getElementById("metric-value").textContent = data.metric;
+        };
+
+        ws.onclose = function(event) {
+            console.log('WebSocket closed:', event);
+        };
+
+        ws.onerror = function(error) {
+            console.error('WebSocket error:', error);
         };
     </script>
-</body>
-</html>
-</title>
-</head>
-<body>
-
 </body>
 </html>
