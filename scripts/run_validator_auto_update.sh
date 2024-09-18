@@ -1,8 +1,16 @@
 #!/bin/bash
 
+# Path to the version file
+VERSION_FILE="version.txt"
+
 # Function to get the current version
 get_current_version() {
-    python -c "from subnet import __init__; print(__init__.version)"
+    # Read the version from the version.txt file
+    if [[ -f $VERSION_FILE ]]; then
+        cat $VERSION_FILE
+    else
+        echo "0"  # Return a default version if version.txt doesn't exist
+    fi
 }
 
 # Function to check for updates and restart if needed
@@ -26,7 +34,7 @@ check_for_updates() {
             deactivate
 
             # Restart the script using pm2
-            pm2 restart 0
+            pm2 restart "$PM2_PROCESS_NAME"
 
             # Exit the update checker
             exit 0
@@ -36,6 +44,16 @@ check_for_updates() {
         sleep 300
     done
 }
+
+# Check if the correct number of arguments are provided
+if [ "$#" -lt 2 ]; then
+    echo "Usage: $0 <network_type> <pm2_process_name>"
+    exit 1
+fi
+
+# Get arguments
+NETWORK_TYPE=$1
+PM2_PROCESS_NAME=$2
 
 # Activate the virtual environment and install dependencies
 python3 -m venv venv_validator
@@ -48,9 +66,6 @@ cp -r env venv_validator/
 # Set PYTHONPATH
 export PYTHONPATH=$(pwd)
 echo "PYTHONPATH is set to $PYTHONPATH"
-
-# Define network type
-NETWORK_TYPE=${1:-mainnet}
 
 # Get the current version before starting
 current_version=$(get_current_version)
