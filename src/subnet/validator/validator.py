@@ -25,7 +25,7 @@ from .llm.base_llm import BaseLLM
 from .nodes.factory import NodeFactory
 from .weights_storage import WeightsStorage
 from src.subnet.validator.database.models.miner_discovery import MinerDiscoveryManager
-from src.subnet.validator.database.models.miner_receipts import MinerReceiptManager, ReceiptMinerRank
+from src.subnet.validator.database.models.miner_receipt import MinerReceiptManager, ReceiptMinerRank
 from src.subnet.protocol.llm_engine import LlmQueryRequest, LlmMessage, Challenge, LlmMessageList, ChallengesResponse, \
     ChallengeMinerResponse, LlmMessageOutputList, MODEL_TYPE_FUNDS_FLOW
 from src.subnet.protocol.blockchain import Discovery

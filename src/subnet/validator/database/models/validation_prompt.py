@@ -17,7 +17,7 @@ from loguru import logger
 Base = declarative_base()
 
 class ValidationPrompt(OrmBase):
-    __tablename__ = 'validation_prompt'
+    __tablename__ = 'validation_prompts'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     prompt = Column(Text, nullable=False)
@@ -92,10 +92,10 @@ class ValidationPromptManager:
     async def try_delete_oldest_prompt(self, network: str):
         async with self.session_manager.session() as session:
             query = text("""
-                DELETE FROM validation_prompt
+                DELETE FROM validation_prompts
                 WHERE id = (
                     SELECT id 
-                    FROM validation_prompt
+                    FROM validation_prompts
                     WHERE network = :network
                     ORDER BY created_at ASC
                     LIMIT 1

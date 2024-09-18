@@ -13,7 +13,7 @@ from src.subnet.validator.database.models.challenge_balance_tracking import Chal
 from src.subnet.validator.database.models.challenge_funds_flow import ChallengeFundsFlowManager
 from src.subnet.protocol.blockchain import get_networks
 from src.subnet.validator.database.models.miner_discovery import MinerDiscoveryManager
-from src.subnet.validator.database.models.miner_receipts import MinerReceiptManager
+from src.subnet.validator.database.models.miner_receipt import MinerReceiptManager
 from src.subnet.validator.database.models.validation_prompt import ValidationPromptManager
 from src.subnet.validator.database.models.validation_prompt_response import ValidationPromptResponseManager
 from src.subnet.validator.database.session_manager import DatabaseSessionManager, run_migrations

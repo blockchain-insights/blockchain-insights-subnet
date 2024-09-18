@@ -10,10 +10,10 @@ from src.subnet.validator.database import OrmBase
 Base = declarative_base()
 
 class ValidationPromptResponse(OrmBase):
-    __tablename__ = 'validation_prompt_response'
+    __tablename__ = 'validation_prompt_responses'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    prompt_id = Column(Integer, ForeignKey('validation_prompt.id', ondelete='CASCADE'), nullable=False)
+    prompt_id = Column(Integer, ForeignKey('validation_prompts.id', ondelete='CASCADE'), nullable=False)
     miner_key = Column(String, nullable=False)
     query = Column(String, nullable=False)
     result = Column(Text, nullable=False)
@@ -35,7 +35,7 @@ class ValidationPromptResponseManager:
             async with session.begin():
                 prompt_query = text("""
                     SELECT id 
-                    FROM validation_prompt 
+                    FROM validation_prompts 
                     WHERE id = :prompt_id 
                     LIMIT 1
                 """)

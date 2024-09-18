@@ -14,7 +14,7 @@ from loguru import logger
 Base = declarative_base()
 
 class ChallengeFundsFlow(OrmBase):
-    __tablename__ = 'challenge_funds_flow'
+    __tablename__ = 'challenges_funds_flow'
     id = Column(Integer, primary_key=True, autoincrement=True)
     challenge = Column(String, nullable=False)
     tx_id = Column(String, nullable=False, unique=True)
@@ -47,7 +47,7 @@ class ChallengeFundsFlowManager:
         async with self.session_manager.session() as session:
             query = text("""
                 SELECT challenge, tx_id 
-                FROM challenge_funds_flow 
+                FROM challenges_funds_flow 
                 WHERE network = :network 
                 ORDER BY RANDOM() 
                 LIMIT 1
@@ -72,9 +72,9 @@ class ChallengeFundsFlowManager:
             async with session.begin():
                 # Raw SQL query to delete the oldest challenge and return the deleted ID
                 query = text("""
-                    DELETE FROM challenge_funds_flow
+                    DELETE FROM challenges_funds_flow
                     WHERE id = (
-                        SELECT id FROM challenge_funds_flow
+                        SELECT id FROM challenges_funds_flow
                         WHERE network = :network
                         ORDER BY created_at ASC
                         LIMIT 1

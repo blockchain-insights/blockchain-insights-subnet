@@ -14,7 +14,7 @@ from loguru import logger
 Base = declarative_base()
 
 class ChallengeBalanceTracking(OrmBase):
-    __tablename__ = 'challenge_balance_tracking'
+    __tablename__ = 'challenges_balance_tracking'
     id = Column(Integer, primary_key=True, autoincrement=True)
     challenge = Column(String, nullable=False)
     block_height = Column(String, nullable=False, unique=True)
@@ -51,7 +51,7 @@ class ChallengeBalanceTrackingManager:
         async with self.session_manager.session() as session:
             query = text("""
                 SELECT challenge, balance_tracking_expected_response 
-                FROM challenge_balance_tracking 
+                FROM challenges_balance_tracking 
                 WHERE network = :network 
                 ORDER BY RANDOM() 
                 LIMIT 1
@@ -76,9 +76,9 @@ class ChallengeBalanceTrackingManager:
             async with session.begin():
                 # Raw SQL query to delete the oldest challenge and return the deleted ID
                 query = text("""
-                       DELETE FROM challenge_balance_tracking
+                       DELETE FROM challenges_balance_tracking
                        WHERE id = (
-                           SELECT id FROM challenge_balance_tracking
+                           SELECT id FROM challenges_balance_tracking
                            WHERE network = :network
                            ORDER BY created_at ASC
                            LIMIT 1
