@@ -35,7 +35,7 @@ class ValidationPromptResponseManager:
             async with session.begin():
                 prompt_query = text("""
                     SELECT id 
-                    FROM validation_prompt 
+                    FROM validation_prompts 
                     WHERE id = :prompt_id 
                     LIMIT 1
                 """)

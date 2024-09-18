@@ -47,7 +47,7 @@ class ChallengeFundsFlowManager:
         async with self.session_manager.session() as session:
             query = text("""
                 SELECT challenge, tx_id 
-                FROM challenge_funds_flow 
+                FROM challenges_funds_flow 
                 WHERE network = :network 
                 ORDER BY RANDOM() 
                 LIMIT 1
@@ -72,7 +72,7 @@ class ChallengeFundsFlowManager:
             async with session.begin():
                 # Raw SQL query to delete the oldest challenge and return the deleted ID
                 query = text("""
-                    DELETE FROM challenge_funds_flow
+                    DELETE FROM challenges_funds_flow
                     WHERE id = (
                         SELECT id FROM challenge_funds_flow
                         WHERE network = :network
