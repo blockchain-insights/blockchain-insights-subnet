@@ -78,7 +78,7 @@ class ChallengeBalanceTrackingManager:
                 query = text("""
                        DELETE FROM challenges_balance_tracking
                        WHERE id = (
-                           SELECT id FROM challenge_balance_tracking
+                           SELECT id FROM challenges_balance_tracking
                            WHERE network = :network
                            ORDER BY created_at ASC
                            LIMIT 1
