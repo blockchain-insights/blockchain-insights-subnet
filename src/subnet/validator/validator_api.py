@@ -19,7 +19,7 @@ from src.subnet.validator.database.models.challenge_funds_flow import ChallengeF
 from src.subnet.validator.database.models.miner_discovery import MinerDiscoveryManager
 from src.subnet.validator.database.models.miner_receipt import MinerReceiptManager
 
-from src.subnet.validator._config import ValidatorSettings, load_environment
+from src.subnet.validator._config import ValidatorSettings, load_environment, SettingsManager
 from src.subnet.validator.database.models.validation_prompt import ValidationPromptManager
 from src.subnet.validator.database.models.validation_prompt_response import ValidationPromptResponseManager
 from src.subnet.validator.database.session_manager import DatabaseSessionManager
@@ -114,7 +114,8 @@ if __name__ == "__main__":
     use_testnet = env == 'testnet'
     load_environment(env)
 
-    settings = ValidatorSettings()
+    settings_manager = SettingsManager.get_instance()
+    settings = settings_manager.get_settings()
     keypair = classic_load_key(settings.VALIDATOR_KEY)
 
     def patch_record(record):

@@ -11,7 +11,7 @@ from loguru import logger
 from starlette.websockets import WebSocketDisconnect
 import asyncio
 
-from src.subnet.validator._config import ValidatorSettings, load_environment
+from src.subnet.validator._config import ValidatorSettings, load_environment, SettingsManager
 from src.subnet.validator.database.models.miner_discovery import MinerDiscoveryManager
 from src.subnet.validator.database.models.miner_receipt import MinerReceiptManager
 from src.subnet.validator.database.session_manager import DatabaseSessionManager
@@ -28,6 +28,10 @@ if __name__ == "__main__":
     env = sys.argv[1]
     use_testnet = env == 'testnet'
     load_environment(env)
+
+    settings_manager = SettingsManager.get_instance()
+    settings = settings_manager.get_settings()
+    keypair = classic_load_key(settings.VALIDATOR_KEY)
 
     def patch_record(record):
         record["extra"]["validator_key"] = keypair.ss58_address
@@ -52,8 +56,6 @@ if __name__ == "__main__":
         level="DEBUG",
         filter=patch_record
     )
-    settings = ValidatorSettings()
-    keypair = classic_load_key(settings.VALIDATOR_KEY)
 
     session_manager = DatabaseSessionManager()
     session_manager.init(settings.DATABASE_URL)
