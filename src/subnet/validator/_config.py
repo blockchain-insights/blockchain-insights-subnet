@@ -90,9 +90,6 @@ class ValidatorSettings(BaseSettings):
             response.raise_for_status()
             data = response.json()
             logger.debug("Fetched settings from GitHub.")
-            with open(local_config_path, 'w') as f:
-                json.dump(data, f)
-                logger.debug("Cached settings to local config file.")
         except requests.RequestException:
             logger.error("Error fetching settings from GitHub")
             if os.path.exists(local_config_path):
