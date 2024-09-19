@@ -2,30 +2,65 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Real-Time Metrics Dashboard</title>
+    <title>Miner Metrics Dashboard</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             text-align: center;
             margin-top: 50px;
         }
-        .metric {
-            font-size: 48px;
-            margin: 20px;
+        .network-container {
+            margin-bottom: 50px;
+        }
+        .metric-table {
+            margin: 0 auto;
+            width: 80%;
+            border-collapse: collapse;
+        }
+        .metric-table th, .metric-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+        }
+        .metric-table th {
+            background-color: #f2f2f2;
+            font-size: 24px;
+        }
+        .metric-table td {
+            font-size: 20px;
         }
     </style>
 </head>
 <body>
-    <h1>Real-Time Metrics Dashboard</h1>
-    <div class="metric" id="metric-value">0</div>
+    <h1>Miner Metrics Dashboard</h1>
+    <div id="metrics-container">
+        <!-- Network tables will be appended here dynamically -->
+    </div>
 
     <script>
         const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
         const ws = new WebSocket(`${protocol}://${window.location.host}/ws`);
 
         ws.onmessage = function(event) {
-            const data = JSON.parse(event.data);
-            document.getElementById("metric-value").textContent = data.metric;
+            // Parse the WebSocket message
+            let parsedData;
+            try {
+                parsedData = JSON.parse(event.data);
+                console.log('Received data:', parsedData); // Log the received data to inspect its structure
+
+                // Check if parsedData is an array
+                if (Array.isArray(parsedData)) {
+                    // Use parsedData directly
+                    updateTables(parsedData);
+                } else if (typeof parsedData === 'object' && parsedData !== null) {
+                    // Handle object case, perhaps wrap it in an array
+                    updateTables([parsedData]);
+                } else {
+                    console.error('Expected an array or object but received:', parsedData);
+                }
+
+            } catch (error) {
+                console.error('Error parsing WebSocket data:', error);
+            }
         };
 
         ws.onclose = function(event) {
@@ -35,6 +70,94 @@
         ws.onerror = function(error) {
             console.error('WebSocket error:', error);
         };
+
+        function updateTables(data) {
+            // Get the metrics container element
+            const metricsContainer = document.getElementById('metrics-container');
+
+            // Clear existing network tables
+            metricsContainer.innerHTML = '';
+
+            // Iterate over the data array to construct separate tables for each network
+            data.forEach(networkData => {
+                // Check if 'networkData' has 'network' and 'data' properties
+                if (!networkData.network || !Array.isArray(networkData.data)) {
+                    console.error('Invalid data format:', networkData);
+                    return;
+                }
+
+                // Create a container for the network
+                const networkContainer = document.createElement('div');
+                networkContainer.className = 'network-container';
+
+                // Create a title for the network
+                const networkTitle = document.createElement('h2');
+                networkTitle.textContent = `Network: ${networkData.network}`;
+                networkContainer.appendChild(networkTitle);
+
+                // Create a table element
+                const table = document.createElement('table');
+                table.className = 'metric-table';
+
+                // Create table header
+                const thead = document.createElement('thead');
+                thead.innerHTML = `
+                    <tr>
+                        <th>Network</th>
+                        <th>Address</th>
+                        <th>Updated</th>
+                        <th>Rank</th>
+                        <th>Total Receipts in last month</th>
+                        <th>Accepted Receipts in last month</th>
+                    </tr>
+                `;
+                table.appendChild(thead);
+
+                // Create table body
+                const tbody = document.createElement('tbody');
+                networkData.data.forEach(minerData => {
+                    // Create a new row
+                    const row = document.createElement('tr');
+
+                    // Create cells for the row
+                    const networkCell = document.createElement('td');
+                    networkCell.textContent = networkData.network;
+                    row.appendChild(networkCell);
+
+                    const minerKeyCell = document.createElement('td');
+                    minerKeyCell.textContent = minerData.miner_key || 'N/A';
+                    row.appendChild(minerKeyCell);
+
+                    const timestampCell = document.createElement('td');
+                    timestampCell.textContent = minerData.timestamp || 'N/A';
+                    row.appendChild(timestampCell);
+
+                    const rankCell = document.createElement('td');
+                    rankCell.textContent = minerData.rank !== undefined ? minerData.rank : 'N/A';
+                    row.appendChild(rankCell);
+
+                    const totalReceiptsCell = document.createElement('td');
+                    totalReceiptsCell.textContent = minerData.total_receipts !== undefined ? minerData.total_receipts : 'N/A';
+                    row.appendChild(totalReceiptsCell);
+
+                    const acceptedReceiptsCell = document.createElement('td');
+                    acceptedReceiptsCell.textContent = minerData.accepted_receipts !== undefined ? minerData.accepted_receipts : 'N/A';
+                    row.appendChild(acceptedReceiptsCell);
+
+                    // Append the row to the table body
+                    tbody.appendChild(row);
+                });
+
+                // Append the tbody to the table
+                table.appendChild(tbody);
+
+                // Add the table to the network container
+                networkContainer.appendChild(table);
+
+                // Add the network container to the metrics container
+                metricsContainer.appendChild(networkContainer);
+            });
+        }
     </script>
 </body>
 </html>

@@ -107,7 +107,7 @@ if __name__ == "__main__":
     import sys
 
     if len(sys.argv) != 2:
-        print("Usage: python -m subnet.validator_api <environment> ; where <environment> is 'testnet' or 'mainnet'")
+        print("Usage: python -m subnet.validator.validator_api <environment> ; where <environment> is 'testnet' or 'mainnet'")
         sys.exit(1)
 
     env = sys.argv[1]

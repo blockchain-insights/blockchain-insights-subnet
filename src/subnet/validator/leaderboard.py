@@ -1,3 +1,4 @@
+import json
 import signal
 from datetime import datetime
 
@@ -9,7 +10,6 @@ from fastapi.staticfiles import StaticFiles
 from loguru import logger
 from starlette.websockets import WebSocketDisconnect
 import asyncio
-import random
 
 from src.subnet.validator._config import ValidatorSettings, load_environment
 from src.subnet.validator.database.models.miner_discovery import MinerDiscoveryManager
@@ -22,7 +22,7 @@ if __name__ == "__main__":
     import sys
 
     if len(sys.argv) != 2:
-        print("Usage: python -m subnet.validator_api <environment> ; where <environment> is 'testnet' or 'mainnet'")
+        print("Usage: python -m subnet.validator.leaderboard <environment> ; where <environment> is 'testnet' or 'mainnet'")
         sys.exit(1)
 
     env = sys.argv[1]
@@ -74,15 +74,17 @@ if __name__ == "__main__":
     async def get_dashboard(request: Request):
         return templates.TemplateResponse("leaderboard.html", {"request": request})
 
-
     @app.websocket("/ws")
     async def websocket_endpoint(websocket: WebSocket):
         await websocket.accept()
         try:
             while True:
-                data = {"metric": random.randint(1, 100)}
+                data = await miner_discovery_manager.get_miners_for_leader_board()
+                json_data = json.dumps(data)
+
+                logger.debug(f"Sending data: {data}")
                 await websocket.send_json(data)
-                await asyncio.sleep(1)
+                await asyncio.sleep(10000000000)
         except WebSocketDisconnect:
             logger.error("WebSocket connection closed")
 

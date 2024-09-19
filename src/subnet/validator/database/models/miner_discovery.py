@@ -1,7 +1,7 @@
 import random
 from typing import Optional
 
-from sqlalchemy import Column, Integer, String, Float, DateTime, update, insert, func
+from sqlalchemy import Column, Integer, String, Float, DateTime, update, insert, func, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.future import select
 from sqlalchemy.dialects.postgresql import insert
@@ -29,11 +29,6 @@ class MinerDiscovery(OrmBase):
     total_challenges = Column(Integer, nullable=False, default=0)
     is_trusted = Column(Integer, nullable=False, default=0)
 
-
-# TODO: migracja, dodanie kolumny failed_challenges, total_challenges, zwiększenie wersji bazy danych, migracja danych, dodanie obsługi w kodzie,
-# TODO: zapisywanie wyników challenge'ów w bazie danych
-# TODO: scoring minerów na podstawie wyników challenge'ów
-#TODO: pobieranie minerów z bazy danych na podstawie wyników challenge'ów do dalszej analizy
 
 class MinerDiscoveryManager:
     def __init__(self, session_manager: DatabaseSessionManager):
@@ -115,6 +110,74 @@ class MinerDiscoveryManager:
                 await session.execute(
                     delete(MinerDiscovery).where(MinerDiscovery.miner_key == miner_key)
                 )
+
+    async def get_miners_for_leader_board(self, network: Optional[str] = None):
+        async with self.session_manager.session() as session:
+            if not network:
+                # Raw SQL query without network filter using LEFT JOIN
+                raw_sql = """
+                SELECT 
+                    md.network,
+                    md.miner_key,
+                    CAST(md.timestamp AS VARCHAR) AS timestamp,
+                    md.rank,
+                    COALESCE(COUNT(mr.id), 0) AS total_receipts,
+                    COALESCE(SUM(CASE WHEN mr.accepted THEN 1 ELSE 0 END), 0) AS accepted_receipts
+                FROM 
+                    miner_discoveries AS md
+                LEFT JOIN 
+                    miner_receipts AS mr ON md.miner_key = mr.miner_key
+                GROUP BY 
+                    md.network, 
+                    md.miner_key, 
+                    md.timestamp, 
+                    md.rank
+                ORDER BY 
+                    md.timestamp DESC, 
+                    md.rank DESC;
+                """
+            else:
+                # Raw SQL query with network filter using LEFT JOIN
+                raw_sql = """
+                SELECT 
+                    md.id,
+                    md.network,
+                    CAST(md.timestamp AS VARCHAR) AS timestamp,
+                    md.rank,
+                    COALESCE(COUNT(mr.id), 0) AS total_receipts,
+                    COALESCE(SUM(CASE WHEN mr.accepted THEN 1 ELSE 0 END), 0) AS accepted_receipts
+                FROM 
+                    miner_discoveries AS md
+                LEFT JOIN 
+                    miner_receipts AS mr ON md.miner_key = mr.miner_key
+                WHERE 
+                    md.network = :network
+                GROUP BY 
+                    md.id,
+                    md.network, 
+                    md.timestamp, 
+                    md.rank
+                ORDER BY 
+                    md.timestamp DESC, 
+                    md.rank DESC;
+                """
+
+            # Execute raw SQL query
+            result = await session.execute(text(raw_sql), {"network": network} if network else {})
+            # Use row._mapping to convert each row to a dictionary
+            miners = [dict(row._mapping) for row in result.fetchall()]
+
+            if not network:
+                networks = set(miner['network'] for miner in miners)
+                return [
+                    {
+                        "network": net,
+                        "data": [miner for miner in miners if miner['network'] == net]
+                    }
+                    for net in networks
+                ]
+            else:
+                return {"network": network, "data": miners}
 
     async def get_miners_for_cross_check(self, network):
         async with self.session_manager.session() as session:

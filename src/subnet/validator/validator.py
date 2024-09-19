@@ -357,7 +357,6 @@ class Validator(Module):
                 weighted_scores[uid] = weight
 
         weighted_scores = {k: v for k, v in weighted_scores.items() if k in score_dict}
-        #weighted_scores = {k: v for k, v in weighted_scores.items() if v != 0}
 
         self.weights_storage.store(weighted_scores)
 
