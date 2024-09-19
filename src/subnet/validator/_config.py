@@ -1,6 +1,17 @@
+import json
 import os
+
+import requests
+from loguru import logger
+from pydantic import ConfigDict
 from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
+import threading
+import time
+import os
+import json
+import requests
+from pydantic_settings import BaseSettings
 
 
 def load_environment(env: str):
@@ -12,7 +23,6 @@ def load_environment(env: str):
         raise ValueError(f"Unknown environment: {env}")
 
     load_dotenv(dotenv_path=dotenv_path)
-
 
 class ValidatorSettings(BaseSettings):
     ITERATION_INTERVAL: int
@@ -43,5 +53,92 @@ class ValidatorSettings(BaseSettings):
     BALANCE_TRACKING_CHALLENGE_FREQUENCY: int
     BALANCE_TRACKING_CHALLENGE_THRESHOLD: int
 
-    class Config:
-        extra = 'ignore'
+    model_config = ConfigDict(
+        extra='ignore',
+        frozen=True  # Make settings immutable for thread safety
+    )
+
+    @classmethod
+    def settings_customise_sources(
+            cls,
+            settings_cls,
+            init_settings,
+            env_settings,
+            dotenv_settings,
+            file_secret_settings,
+    ):
+        return (
+            cls.fetch_github_settings,
+            init_settings,
+            env_settings,
+            dotenv_settings,
+            file_secret_settings,
+        )
+
+    @staticmethod
+    def fetch_github_settings():
+        local_config_path = 'subnet/validator/config.json'
+        url = f'https://raw.githubusercontent.com/blockchain-insights/blockchain-insights-subnet/main/src/{local_config_path}'
+        data = {}
+        try:
+            response = requests.get(url, timeout=5)
+            response.raise_for_status()
+            data = response.json()
+            logger.debug("Fetched settings from GitHub.")
+            with open(local_config_path, 'w') as f:
+                json.dump(data, f)
+                logger.debug("Cached settings to local config file.")
+        except requests.RequestException:
+            logger.error("Error fetching settings from GitHub")
+            if os.path.exists(local_config_path):
+                try:
+                    with open(local_config_path, 'r') as f:
+                        data = json.load(f)
+                    logger.debug("Loaded settings from local config file")
+                except Exception:
+                    logger.error("Error reading local config file")
+            else:
+                logger.error("Local config file not found")
+        return data
+
+
+class SettingsManager:
+    _instance = None
+    _instance_lock = threading.Lock()
+
+    def __init__(self):
+        if not hasattr(self, '_initialized'):
+            self._settings_lock = threading.Lock()
+            self._settings = ValidatorSettings()
+            self._stop_event = threading.Event()
+            self._reload_interval = 60  # seconds; adjust as needed
+            self._thread = threading.Thread(target=self._background_reloader, daemon=True)
+            self._thread.start()
+            self._initialized = True
+
+    @classmethod
+    def get_instance(cls):
+        if cls._instance is None:
+            with cls._instance_lock:
+                if cls._instance is None:
+                    cls._instance = cls()
+        return cls._instance
+
+    def _background_reloader(self):
+        while not self._stop_event.is_set():
+            time.sleep(self._reload_interval)
+            self.reload()
+            logger.debug("Settings reloaded")
+
+    def reload(self):
+        new_settings = ValidatorSettings()
+        with self._settings_lock:
+            self._settings = new_settings
+
+    def get_settings(self):
+        with self._settings_lock:
+            return self._settings
+
+    def stop_reloader(self):
+        self._stop_event.set()
+        self._thread.join()

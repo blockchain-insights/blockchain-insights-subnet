@@ -19,7 +19,7 @@ from src.subnet.validator.database.models.validation_prompt_response import Vali
 from src.subnet.validator.database.session_manager import DatabaseSessionManager, run_migrations
 from src.subnet.validator.llm.factory import LLMFactory
 from src.subnet.validator.weights_storage import WeightsStorage
-from src.subnet.validator._config import ValidatorSettings, load_environment
+from src.subnet.validator._config import ValidatorSettings, load_environment, SettingsManager
 from src.subnet.validator.validator import Validator
 from src.subnet.validator.llm_prompt_utility import main as llm_main
 from src.subnet.validator.challenge_utility import main as funds_flow_main, main as balance_tracking_main
@@ -93,7 +93,8 @@ if __name__ == "__main__":
     environment = sys.argv[1]
     load_environment(environment)
 
-    settings = ValidatorSettings()
+    settings_manager = SettingsManager.get_instance()
+    settings = settings_manager.get_settings()
     keypair = classic_load_key(settings.VALIDATOR_KEY)
 
     def patch_record(record):
