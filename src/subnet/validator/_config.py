@@ -1,10 +1,6 @@
-import json
-import os
-
-import requests
+import sys
 from loguru import logger
 from pydantic import ConfigDict
-from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
 import threading
 import time
@@ -23,6 +19,15 @@ def load_environment(env: str):
         raise ValueError(f"Unknown environment: {env}")
 
     load_dotenv(dotenv_path=dotenv_path)
+
+
+logger.remove()
+logger.add(
+        sys.stdout,
+        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level}</level> | <blue>{message}</blue>",
+        level="DEBUG",
+    )
+
 
 class ValidatorSettings(BaseSettings):
     ITERATION_INTERVAL: int
@@ -111,7 +116,7 @@ class SettingsManager:
             self._settings_lock = threading.Lock()
             self._settings = ValidatorSettings()
             self._stop_event = threading.Event()
-            self._reload_interval = 60  # seconds; adjust as needed
+            self._reload_interval = 600
             self._thread = threading.Thread(target=self._background_reloader, daemon=True)
             self._thread.start()
             self._initialized = True
@@ -126,7 +131,7 @@ class SettingsManager:
 
     def _background_reloader(self):
         while not self._stop_event.is_set():
-            time.sleep(self._reload_interval)
+            self._stop_event.wait(self._reload_interval)
             self.reload()
             logger.debug("Settings reloaded")
 

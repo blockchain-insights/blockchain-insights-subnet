@@ -19,11 +19,10 @@ from src.subnet.validator.database.models.validation_prompt_response import Vali
 from src.subnet.validator.database.session_manager import DatabaseSessionManager, run_migrations
 from src.subnet.validator.llm.factory import LLMFactory
 from src.subnet.validator.weights_storage import WeightsStorage
-from src.subnet.validator._config import ValidatorSettings, load_environment, SettingsManager
+from src.subnet.validator._config import load_environment, SettingsManager
 from src.subnet.validator.validator import Validator
 from src.subnet.validator.llm_prompt_utility import main as llm_main
 from src.subnet.validator.challenge_utility import main as funds_flow_main, main as balance_tracking_main
-
 
 
 class PromptGeneratorThread(threading.Thread):
@@ -83,6 +82,7 @@ class BalanceTrackingChallengeGeneratorThread(threading.Thread):
             loop.run_until_complete(balance_tracking_main(self.settings, self.network, self.model, self.frequency, self.threshold, self.terminate_event))
         finally:
             loop.close()
+
 
 if __name__ == "__main__":
 
@@ -158,6 +158,7 @@ if __name__ == "__main__":
     def shutdown_handler(signal_num, frame):
         logger.info("Received shutdown signal, stopping...")
         validator.terminate_event.set()
+        settings_manager.stop_reloader()
         logger.debug("Shutdown handler finished")
 
     # Signal handling for graceful shutdown
