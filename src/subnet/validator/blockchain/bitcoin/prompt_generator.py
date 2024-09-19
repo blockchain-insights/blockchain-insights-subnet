@@ -44,10 +44,9 @@ class PromptGenerator(BasePromptGenerator):
         logger.debug(f"Generated Challenge Prompt", prompt=prompt)
         prompt_model_type = self.llm.determine_model_type(prompt, self.network)
 
-        parsed_block_data = json.dumps(parse_block_data(block_data))
         current_prompt_count = await validation_prompt_manager.get_prompt_count(self.network)
         if current_prompt_count >= threshold:
             await validation_prompt_manager.try_delete_oldest_prompt(self.network)
 
-        await validation_prompt_manager.store_prompt(prompt, prompt_model_type, parsed_block_data, self.network)
+        await validation_prompt_manager.store_prompt(prompt, prompt_model_type, block_data, self.network)
         logger.info(f"Prompt stored in the database successfully.")

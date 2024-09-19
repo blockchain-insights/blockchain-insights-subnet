@@ -43,7 +43,8 @@ class ValidationPromptManager:
             return str(data)
         return data
 
-    async def store_prompt(self, prompt: str, prompt_model_type: str, data_json: str, network: str):
+    async def store_prompt(self, prompt: str, prompt_model_type: str, data: dict, network: str):
+        data_json = json.dumps(self._convert_decimals_to_strings(data))
         async with self.session_manager.session() as session:
             async with session.begin():
                 stmt = insert(ValidationPrompt).values(

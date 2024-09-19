@@ -73,11 +73,11 @@ class ValidatorSettings(BaseSettings):
             file_secret_settings,
     ):
         return (
-            cls.fetch_github_settings,
             init_settings,
             env_settings,
             dotenv_settings,
             file_secret_settings,
+            cls.fetch_github_settings,
         )
 
     @staticmethod
