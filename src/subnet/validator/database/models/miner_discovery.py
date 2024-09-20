@@ -61,7 +61,10 @@ class MinerDiscoveryManager:
             result = await session.execute(
                 select(MinerDiscovery).where(MinerDiscovery.miner_key == miner_key, MinerDiscovery.network == network)
             )
-            return to_dict(result.scalars().first())
+            miner = result.scalars().first()
+            if miner is None:
+                return None
+            return to_dict(miner)
 
     async def get_miners_by_network(self, network: Optional[str]):
         if not network:
