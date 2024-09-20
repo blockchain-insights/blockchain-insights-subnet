@@ -195,6 +195,7 @@ if __name__ == "__main__":
 
     def shutdown_handler(signal, frame):
         logger.debug("Shutdown handler started")
+        settings_manager.stop_reloader()
         uvicorn_server.should_exit = True
         uvicorn_server.force_exit = True
         logger.debug("Shutdown handler finished")

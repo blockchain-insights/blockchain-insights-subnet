@@ -37,39 +37,29 @@
     </div>
 
     <script>
-        const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-        const ws = new WebSocket(`${protocol}://${window.location.host}/ws`);
-
-        ws.onmessage = function(event) {
-            // Parse the WebSocket message
-            let parsedData;
+        async function fetchMetrics() {
             try {
-                parsedData = JSON.parse(event.data);
-                console.log('Received data:', parsedData); // Log the received data to inspect its structure
+                const response = await fetch('/leaderboard'); // Adjust the URL if necessary
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const parsedData = await response.json();
+                console.log('Received data:', parsedData);
 
                 // Check if parsedData is an array
-                if (Array.isArray(parsedData)) {
-                    // Use parsedData directly
-                    updateTables(parsedData);
-                } else if (typeof parsedData === 'object' && parsedData !== null) {
+                if (Array.isArray(parsedData.data)) {
+                    updateTables(parsedData.data);
+                } else if (typeof parsedData.data === 'object' && parsedData.data !== null) {
                     // Handle object case, perhaps wrap it in an array
-                    updateTables([parsedData]);
+                    updateTables([parsedData.data]);
                 } else {
-                    console.error('Expected an array or object but received:', parsedData);
+                    console.error('Expected an array or object but received:', parsedData.data);
                 }
 
             } catch (error) {
-                console.error('Error parsing WebSocket data:', error);
+                console.error('Error fetching leaderboard data:', error);
             }
-        };
-
-        ws.onclose = function(event) {
-            console.log('WebSocket closed:', event);
-        };
-
-        ws.onerror = function(error) {
-            console.error('WebSocket error:', error);
-        };
+        }
 
         function updateTables(data) {
             // Get the metrics container element
@@ -158,6 +148,12 @@
                 metricsContainer.appendChild(networkContainer);
             });
         }
+
+        // Fetch the metrics when the page loads
+        fetchMetrics();
+
+        // Optionally, you could refresh the data every 60 seconds
+        setInterval(fetchMetrics, 60000);
     </script>
 </body>
 </html>

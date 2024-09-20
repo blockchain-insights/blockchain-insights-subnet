@@ -1,4 +1,3 @@
-import asyncio
 import time
 import redis.asyncio
 from fastapi import FastAPI, Request, HTTPException
@@ -16,8 +15,8 @@ class RateLimiterMiddleware(BaseHTTPMiddleware):
         client_ip = request.client.host
         key = f"rate_limiter:{client_ip}"
         current_time = int(time.time())
-        pipeline = self.redis.pipeline()
 
+        pipeline = self.redis.pipeline()
         pipeline.zremrangebyscore(key, 0, current_time - self.window_seconds)
         pipeline.zadd(key, {f"{current_time}:{request.url.path}": current_time})
         pipeline.expire(key, self.window_seconds)
