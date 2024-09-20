@@ -31,7 +31,7 @@ async def main(settings: ValidatorSettings, network: str, model: str, frequency:
             try:
                 # Generate and store challenges
                 await generate_challenge_and_store(settings, network, model, challenge_manager, threshold)
-                terminate_event.wait(frequency * 60)  # Wait for the specified frequency
+                await asyncio.sleep(frequency * 60)
             except asyncio.TimeoutError:
                 logger.error("Timeout occurred while generating or storing the challenge.")
     except Exception as e:
