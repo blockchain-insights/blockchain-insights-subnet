@@ -8,6 +8,8 @@
     - [Env configuration](#env-configuration)
     - [Validator wallet creation](#validator-wallet-creation)
     - [Running the validator and monitoring](#running-the-validator-and-monitoring)
+    - [Running the validator api](#running-the-validator-api)
+    - [Running the miner leaderboard](#running-the-miner-leaderboard)
 
 ## Setup
 
@@ -124,4 +126,36 @@ Or run the validator in auto update mode:
 cd ~/validator1
 pm2 start ./scripts/run_validator_auto_update.sh --name validator -- mainnet validator
 pm2 save
+```
+
+### Running the validator api
+
+```shell
+cd ~/validator1
+pm2 start ./scripts/run_validator_api.sh --name validator-api
+pm2 save
+```
+
+Or run the validator api in auto update mode:
+```shell
+cd ~/validator1
+pm2 start ./scripts/run_validator_api_auto_update.sh --name validator-api -- mainnet validator-api
+pm2 save
+```
+
+### Running the miner leaderboard
+
+```shell
+cd ~/validator1
+pm2 start ./scripts/run_miner_leaderboard.sh --name miner-leaderboard
+pm2 save
+```
+
+Or run the miner leaderboard in auto update mode:
+```shell
+cd ~/validator1
+pm2 start ./scripts/run_miner_leaderboard_auto_update.sh --name miner-leaderboard -- mainnet leaderboard
+pm2 save
+```
+
 ```

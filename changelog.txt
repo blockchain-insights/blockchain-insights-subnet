@@ -1,3 +1,4 @@
 1.0.0 - official release
 1.0.1 - added remote configuration, initial version of leader board, removed verbose logging
 1.0.2 - leaderboards and validator api fixes
+1.0.3 - fixed ratelimiter, added scoring readme, added autoupdate for leaderboard, validator api

@@ -8,7 +8,7 @@ alembic
 sqlalchemy
 psycopg2-binary
 asyncpg
-redis
+aioredis
 neo4j
 langchain
 langchain-openai
