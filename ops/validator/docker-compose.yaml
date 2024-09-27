@@ -25,7 +25,7 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeit456$}
     volumes:
       - ./backup:/backup # Mounting backup directory on host
-    entrypoint: [ "sh", "-c", "PGPASSWORD=$${POSTGRES_PASSWORD} pg_dump --dbname=postgresql://$${POSTGRES_USER}@postgres:5432/$${POSTGRES_DB} > /backup/backup_$$(date +\"%Y-%m-%d_%H-%M-%S\").sql" ]
+    entrypoint: [ "sh", "-c", "PGPASSWORD=$${POSTGRES_PASSWORD} pg_dump --dbname=postgresql://$${POSTGRES_USER}@postgres-sn20:5432/$${POSTGRES_DB} > /backup/backup_$$(date +\"%Y-%m-%d_%H-%M-%S\").sql" ]
 
   redis:
     image: redis:alpine
