@@ -58,6 +58,9 @@ current_version=$(get_current_version)
 check_for_updates &
 UPDATE_PID=$!
 
+# Trap termination signals and call the cleanup function
+trap cleanup SIGINT SIGTERM
+
 cd src
 python3 subnet/validator/validator_api.py $NETWORK_TYPE
 
