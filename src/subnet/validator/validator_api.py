@@ -20,6 +20,7 @@ from src.subnet.validator.database.models.miner_receipt import MinerReceiptManag
 
 from src.subnet.validator._config import load_environment, SettingsManager
 from src.subnet.validator.database.session_manager import DatabaseSessionManager
+from src.subnet.validator.graphql.schema import graphql_app
 from src.subnet.validator.rate_limiter import RateLimiterMiddleware
 from src.subnet.validator.validator import Validator
 from src.subnet.validator.weights_storage import WeightsStorage
@@ -55,7 +56,6 @@ class ValidatorApi:
     async def get_miner_metadata(self, network: Optional[str] = None, api_key: str = Depends(api_key_auth)):
         results = await self.validator.miner_discovery_manager.get_miners_by_network(network)
         return results
-
 
     async def get_receipts(self, miner_key: str, page: int = 1, page_size: int = 10, api_key: str = Depends(api_key_auth)):
         results = await self.validator.miner_receipt_manager.get_receipts_by_miner_key(miner_key, page, page_size)
@@ -142,6 +142,13 @@ if __name__ == "__main__":
 
     validator_api = ValidatorApi(validator)
     app.include_router(validator_api.router)
+
+    app.include_router(
+        graphql_app,
+        prefix="/graphql",
+        dependencies=[Depends(api_key_auth)]  # Apply API key auth to GraphQL
+    )
+
     app.add_middleware(RateLimiterMiddleware, redis_url=settings.REDIS_URL, max_requests=settings.API_RATE_LIMIT,
                             window_seconds=60)
 
