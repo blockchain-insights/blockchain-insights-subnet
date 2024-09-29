@@ -39,6 +39,18 @@ class Miner(Module):
         }
 
     @endpoint
+    async def query_funds_flow(self, query: str) -> dict:
+        search = GraphSearchFactory().create_graph_search(self.settings)
+        result = await search.execute_query(query)
+        return result
+
+    @endpoint
+    async def query_balance_tracking(self, query: str) -> dict:
+        search = BalanceSearchFactory().create_balance_search(self.settings.NETWORK)
+        result = await search.execute_query(query)
+        return result
+
+    @endpoint
     async def challenge(self, challenge: Challenge) -> Challenge:
         """
         Solves the challenge and returns the output
