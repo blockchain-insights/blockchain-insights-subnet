@@ -1,5 +1,5 @@
 from decimal import Decimal
-from src.subnet.protocol.llm_engine import Challenge, MODEL_TYPE_FUNDS_FLOW, MODEL_TYPE_BALANCE_TRACKING
+from src.subnet.protocol import Challenge, MODEL_TYPE_FUNDS_FLOW, MODEL_TYPE_BALANCE_TRACKING
 from .node_utils import initialize_tx_out_hash_table, get_tx_out_hash_table_sub_keys, construct_redeem_script, \
     hash_redeem_script, create_p2sh_address, pubkey_to_address, check_if_block_is_valid_for_challenge, parse_block_data, \
     Transaction, VIN, SATOSHI, VOUT

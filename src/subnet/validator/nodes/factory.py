@@ -1,4 +1,4 @@
-from src.subnet.protocol.blockchain import NETWORK_BITCOIN
+from src.subnet.protocol import NETWORK_BITCOIN
 from src.subnet.validator.nodes.bitcoin.node import BitcoinNode
 
 

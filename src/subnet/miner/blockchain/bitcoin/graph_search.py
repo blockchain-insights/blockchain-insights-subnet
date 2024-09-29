@@ -3,9 +3,7 @@ import time
 from neo4j import GraphDatabase
 from src.subnet.miner._config import MinerSettings
 from src.subnet.miner.blockchain import BaseGraphSearch
-from src.subnet.miner.blockchain.bitcoin.query_builder import QueryBuilder
 from loguru import logger
-from src.subnet.protocol.llm_engine import Query
 
 
 class BitcoinGraphSearch(BaseGraphSearch):
@@ -22,12 +20,6 @@ class BitcoinGraphSearch(BaseGraphSearch):
 
     def close(self):
         self.driver.close()
-
-    def execute_predefined_query(self, query: Query):
-        cypher_query = QueryBuilder.build_query(query)
-        logger.info(f"Executing cypher query: {cypher_query}")
-        result = self._execute_cypher_query(cypher_query)
-        return result
 
     def execute_query(self, query: str):
         logger.info(f"Executing cypher query: {query}")

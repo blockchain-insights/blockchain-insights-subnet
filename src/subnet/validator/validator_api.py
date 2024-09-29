@@ -12,18 +12,14 @@ from pydantic import BaseModel
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import Response
 
-from src.subnet.protocol.llm_engine import LlmQueryRequest
 from src.subnet.validator.database.models.api_key import ApiKeyManager
 from src.subnet.validator.database.models.challenge_balance_tracking import ChallengeBalanceTrackingManager
 from src.subnet.validator.database.models.challenge_funds_flow import ChallengeFundsFlowManager
 from src.subnet.validator.database.models.miner_discovery import MinerDiscoveryManager
 from src.subnet.validator.database.models.miner_receipt import MinerReceiptManager
 
-from src.subnet.validator._config import ValidatorSettings, load_environment, SettingsManager
-from src.subnet.validator.database.models.validation_prompt import ValidationPromptManager
-from src.subnet.validator.database.models.validation_prompt_response import ValidationPromptResponseManager
+from src.subnet.validator._config import load_environment, SettingsManager
 from src.subnet.validator.database.session_manager import DatabaseSessionManager
-from src.subnet.validator.llm.factory import LLMFactory
 from src.subnet.validator.rate_limiter import RateLimiterMiddleware
 from src.subnet.validator.validator import Validator
 from src.subnet.validator.weights_storage import WeightsStorage
@@ -52,7 +48,6 @@ class ValidatorApi:
         self.validator = validator
         self.router = APIRouter()
         self.router.add_api_route("/api/v1/miner/metadata", self.get_miner_metadata, methods=["GET"])
-        self.router.add_api_route("/api/v1/miner/query", self.query_miner, methods=["POST"])
         self.router.add_api_route("/api/v1/miner/receipts", self.get_receipts, methods=["GET"])
         self.router.add_api_route("/api/v1/miner/receipts", self.accept_receipt, methods=["POST"])
         self.router.add_api_route("/api/v1/miner/receipts/stats", self.get_receipt_miner_multiplier, methods=["GET"])
@@ -61,34 +56,6 @@ class ValidatorApi:
         results = await self.validator.miner_discovery_manager.get_miners_by_network(network)
         return results
 
-    async def query_miner(self, request: LlmQueryRequest, api_key: str = Depends(api_key_auth)):
-        results = await self.validator.query_miner(request)
-
-        """
-        
-         return {
-                "request_id": request_id,
-                "timestamp": timestamp,
-                "miner_keys": [request.miner_key],
-                "prompt_hash": prompt_hash,
-                "response": result,
-            }
-        
-        
-        response = {
-                    "miner_hotkey": str(uuid.UUID(int=0)),
-                    "response": [
-                        {
-                            "type": "text",
-                            "result": "cant receive any response due to poor miner network",
-                            "interpreted_result":  "cant receive any response due to poor miner network"
-                        }
-                    ]
-                }
-        
-        """
-
-        return results
 
     async def get_receipts(self, miner_key: str, page: int = 1, page_size: int = 10, api_key: str = Depends(api_key_auth)):
         results = await self.validator.miner_receipt_manager.get_receipts_by_miner_key(miner_key, page, page_size)
@@ -148,11 +115,8 @@ if __name__ == "__main__":
     session_manager.init(settings.DATABASE_URL)
     miner_discovery_manager = MinerDiscoveryManager(session_manager)
     miner_receipt_manager = MinerReceiptManager(session_manager)
-    validation_prompt_manager = ValidationPromptManager(session_manager)
-    validation_prompt_response_manager = ValidationPromptResponseManager(session_manager)
     challenge_funds_flow_manager = ChallengeFundsFlowManager(session_manager)
     challenge_balance_tracking_manager = ChallengeBalanceTrackingManager(session_manager)
-    llm = LLMFactory.create_llm(settings)
 
     global api_key_manager
     api_key_manager = ApiKeyManager(session_manager)
@@ -163,15 +127,11 @@ if __name__ == "__main__":
         c_client,
         weights_storage,
         miner_discovery_manager,
-        validation_prompt_manager,
-        validation_prompt_response_manager,
         challenge_funds_flow_manager,
         challenge_balance_tracking_manager,
         miner_receipt_manager,
-        llm,
         query_timeout=settings.QUERY_TIMEOUT,
         challenge_timeout=settings.CHALLENGE_TIMEOUT,
-        llm_query_timeout=settings.LLM_QUERY_TIMEOUT
     )
 
     app = FastAPI(

@@ -2,10 +2,10 @@ import src.subnet.validator.blockchain.bitcoin.funds_flow.challenge_generator as
 import src.subnet.validator.blockchain.bitcoin.balance_tracking.challenge_generator as bitcoin_balance_tracking
 import src.subnet.validator.blockchain.ethereum.funds_flow.challenge_generator as ethereum_funds_flow
 import src.subnet.validator.blockchain.ethereum.balance_tracking.challenge_generator as ethereum_balance_tracking
-from src.subnet.protocol.blockchain import NETWORK_BITCOIN, NETWORK_ETHEREUM
 import src.subnet.validator.blockchain.common.funds_flow.base_challenge_generator as funds_flow
 import src.subnet.validator.blockchain.common.balance_tracking.base_challenge_generator as balance_tracking
-from src.subnet.protocol.llm_engine import MODEL_TYPE_FUNDS_FLOW, MODEL_TYPE_BALANCE_TRACKING
+from src.subnet.protocol import MODEL_TYPE_FUNDS_FLOW, MODEL_TYPE_BALANCE_TRACKING, NETWORK_BITCOIN, NETWORK_ETHEREUM
+
 
 class ChallengeGeneratorFactory:
     @classmethod
