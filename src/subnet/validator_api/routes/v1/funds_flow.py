@@ -2,10 +2,10 @@ from typing import Optional
 from fastapi import Depends, APIRouter
 from pydantic import BaseModel
 
-from src.subnet.protocol import MODEL_TYPE_FUNDS_FLOW
+from src.subnet.protocol import MODEL_TYPE_FUNDS_FLOW, NETWORK_BITCOIN
 from src.subnet.validator.validator import Validator
-from src.subnet.validator_api import get_validator
-from src.subnet.validator_api.routes import api_key_auth
+from src.subnet.validator_api import get_validator, api_key_auth
+from src.subnet.validator_api.services.bitcoin_query_api import BitcoinQueryApi
 
 funds_flow_bitcoin_router = APIRouter(prefix="/v1/funds-flow", tags=["funds-flow"])
 
@@ -23,20 +23,12 @@ async def get_block(network: str,
                     validator: Validator = Depends(get_validator),
                     api_key: str = Depends(api_key_auth)):
 
-    """
-    Get block
-    Args:
-        network: network
-        block_height: block_height
-        validator:
-        api_key: API key for authentication
+    if network == NETWORK_BITCOIN:
+        query_api = BitcoinQueryApi(validator)
+        data = await query_api.get_block(block_height)
+        return data
 
-    Returns:
-
-    """
-
-    result = await validator.query_miner(network, MODEL_TYPE_FUNDS_FLOW, "RETURN 1")
-    return result
+    return []
 
 
 @funds_flow_bitcoin_router.get("/{network}/get_transaction_by_tx_id")

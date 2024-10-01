@@ -3,6 +3,10 @@ from communex._common import get_node_url
 from communex.client import CommuneClient
 from communex.compat.key import classic_load_key
 import sys
+
+from fastapi import Security, HTTPException
+from fastapi.security import APIKeyHeader
+
 from src.subnet.validator.database.models.api_key import ApiKeyManager
 from src.subnet.validator.database.models.challenge_balance_tracking import ChallengeBalanceTrackingManager
 from src.subnet.validator.database.models.challenge_funds_flow import ChallengeFundsFlowManager
@@ -62,3 +66,14 @@ validator = Validator(
 
 def get_validator():
     return validator
+
+api_key_header = APIKeyHeader(name='x-api-key', auto_error = False)
+
+
+async def api_key_auth(api_key: str = Security(api_key_header)):
+    global api_key_manager
+    if api_key_manager is None:
+        raise HTTPException(status_code=500, detail="API Key Manager not initialized")
+    has_access = await api_key_manager.validate_api_key(api_key)
+    if not has_access:
+        raise HTTPException(status_code=401, detail="Missing or Invalid API key")

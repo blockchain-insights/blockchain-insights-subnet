@@ -1,0 +1,104 @@
+from abc import ABC, abstractmethod
+from typing import List, Any, Dict, Set
+
+
+def satoshi_to_btc(satoshi: int) -> float:
+    return satoshi / 1e8
+
+
+class BaseGraphTransformer(ABC):
+    @abstractmethod
+    def transform_result(self, result: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Transform graph results into a structured format."""
+        pass
+
+
+class BitcoinGraphTransformer(BaseGraphTransformer):
+    def __init__(self):
+        self.output_data: List[Dict[str, Any]] = []
+        self.node_ids: Set[str] = set()
+        self.edge_ids: Set[str] = set()
+
+    def transform_result(self, result: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        self.output_data = []
+        self.node_ids = set()
+        self.edge_ids = set()
+
+        for entry in result:
+            self.process_entry(entry)
+
+        return self.output_data
+
+    def process_entry(self, entry: Dict[str, Any]) -> None:
+        """
+        Generic entry processor that identifies potential nodes, edges, or summary data in the entry.
+        """
+
+        if all(isinstance(value, (int, float, str)) for value in entry.values()):
+            self.process_summary(entry)
+        else:
+            for key, value in entry.items():
+                if isinstance(value, dict):
+                    self.add_generic_node(key, value)
+                elif isinstance(value, list):
+                    self.process_list(key, value)
+
+    def process_summary(self, summary: Dict[str, Any]) -> None:
+        """
+        Process a summary (e.g., total_incoming, total_outgoing) and add it to the graph.
+        """
+        summary_id = f"summary-{len(self.output_data)}"  # Create a unique ID for each summary
+
+        self.output_data.append({
+            "id": summary_id,
+            "type": "node",
+            "label": "summary",
+            **summary
+        })
+
+    def process_list(self, key: str, values: List[Any]) -> None:
+        """
+        Processes lists, which could contain relationships or complex data structures.
+        """
+        for item in values:
+            if isinstance(item, dict):
+                self.add_generic_node(key, item)
+
+    def add_generic_node(self, key: str, node_data: Dict[str, Any]) -> None:
+        """
+        Generic node processing that treats any dictionary as a node.
+        """
+        node_id = node_data.get('id') or node_data.get('tx_id') or node_data.get('address')
+
+        if node_id and node_id not in self.node_ids:
+            self.output_data.append({
+                "id": node_id,
+                "type": "node",
+                "label": key,  # Use the key to categorize the node
+                **node_data  # Include all node attributes generically
+            })
+            self.node_ids.add(node_id)
+
+        for subkey, subvalue in node_data.items():
+            if isinstance(subvalue, dict):
+                self.process_sent_edge(subvalue, node_id)
+
+    def process_sent_edge(self, edge_data: Dict[str, Any], from_id: str) -> None:
+        """
+        Processes any key-value pair within a node as an edge if it has the required structure.
+        """
+        to_id = edge_data.get('to_id') or edge_data.get('address')
+        if from_id and to_id:
+            edge_id = f"{from_id}-{to_id}"
+            if edge_id not in self.edge_ids:
+                edge_label = edge_data.get('label', 'SENT')
+
+                self.output_data.append({
+                    "id": edge_id,
+                    "type": "edge",
+                    "label": edge_label,
+                    "from_id": from_id,
+                    "to_id": to_id,
+                    **edge_data  # Include all edge attributes generically
+                })
+                self.edge_ids.add(edge_id)

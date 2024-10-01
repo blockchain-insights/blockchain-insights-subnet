@@ -1,18 +1,27 @@
 from typing import Optional
 
+from src.subnet.protocol import NETWORK_BITCOIN, MODEL_TYPE_FUNDS_FLOW
+from src.subnet.validator.validator import Validator
 from src.subnet.validator_api.services import QueryApi
 
 
 class BitcoinQueryApi(QueryApi):
+    def __init__(self, validator: Validator):
+        super().__init__()
+        self.validator = validator
 
     async def get_block(self, block_height: int) -> dict:
-        """
-        MATCH (t:Transaction {block_height: 108320})
-        OPTIONAL MATCH (t)-[outS:SENT]->(outAddr:Address)
-        OPTIONAL MATCH (inAddr:Address)-[inS:SENT]->(t)
-        RETURN t, outS, outAddr, inS, inAddr
-        """
-        pass
+        query = f"""MATCH (t:Transaction {{block_height: {block_height}}})
+                    OPTIONAL MATCH (t)-[outS:SENT]->(outAddr:Address)
+                    OPTIONAL MATCH (inAddr:Address)-[inS:SENT]->(t)
+                    RETURN t, outS, outAddr, inS, inAddr
+                """
+
+        try:
+            data = await self.validator.query_miner(NETWORK_BITCOIN, MODEL_TYPE_FUNDS_FLOW, query, miner_key=None)
+            return data
+        except Exception as e:
+            return {"error": str(e)}
 
     async def get_transaction_by_tx_id(self, tx_id: str) -> dict:
         """
