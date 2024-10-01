@@ -63,8 +63,6 @@ class ChallengeMinerResponse(BaseModel):
     funds_flow_challenge_actual: Optional[str]
     balance_tracking_challenge_actual: Optional[int]
 
-    query_validation_result: bool
-
     def get_failed_challenges(self):
         funds_flow_challenge_passed = self.funds_flow_challenge_expected == self.funds_flow_challenge_actual
         balance_tracking_challenge_passed = self.balance_tracking_challenge_expected == self.balance_tracking_challenge_actual

@@ -39,18 +39,22 @@ class Miner(Module):
 
     @endpoint
     async def query(self, model_type: str, query: str) -> dict:
+        try:
 
-        if model_type != MODEL_TYPE_FUNDS_FLOW:
-            search = GraphSearchFactory().create_graph_search(self.settings)
-            result = await search.execute_query(query)
-            return result
+            if model_type == MODEL_TYPE_FUNDS_FLOW:
+                search = GraphSearchFactory().create_graph_search(self.settings)
+                result = search.execute_query(query)
+                return result
 
-        elif model_type == MODEL_TYPE_BALANCE_TRACKING:
-            search = BalanceSearchFactory().create_balance_search(self.settings.NETWORK)
-            result = await search.execute_query(query)
-            return result
-        else:
-            raise ValueError(f"Invalid model type: {model_type}")
+            elif model_type == MODEL_TYPE_BALANCE_TRACKING:
+                search = BalanceSearchFactory().create_balance_search(self.settings.NETWORK)
+                result = await search.execute_query(query)
+                return result
+            else:
+                raise ValueError(f"Invalid model type: {model_type}")
+        except Exception as e:
+            logger.error(f"Error executing query: {e}")
+            return {"error": str(e)}
 
     @endpoint
     async def challenge(self, challenge: Challenge) -> Challenge:
