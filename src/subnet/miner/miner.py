@@ -1,6 +1,5 @@
 import signal
 from datetime import datetime
-
 from communex._common import get_node_url
 from communex.client import CommuneClient
 from communex.module import Module, endpoint
@@ -11,7 +10,7 @@ from starlette.middleware.cors import CORSMiddleware
 from src.subnet.miner._config import MinerSettings, load_environment
 from src.subnet.miner.blockchain import GraphSearchFactory
 from src.subnet.miner.blockchain import BalanceSearchFactory
-from src.subnet.protocol import Challenge, MODEL_TYPE_FUNDS_FLOW
+from src.subnet.protocol import Challenge, MODEL_TYPE_FUNDS_FLOW, MODEL_TYPE_BALANCE_TRACKING
 from src.subnet.validator.database import db_manager
 
 
@@ -39,16 +38,19 @@ class Miner(Module):
         }
 
     @endpoint
-    async def query_funds_flow(self, query: str) -> dict:
-        search = GraphSearchFactory().create_graph_search(self.settings)
-        result = await search.execute_query(query)
-        return result
+    async def query(self, model_type: str, query: str) -> dict:
 
-    @endpoint
-    async def query_balance_tracking(self, query: str) -> dict:
-        search = BalanceSearchFactory().create_balance_search(self.settings.NETWORK)
-        result = await search.execute_query(query)
-        return result
+        if model_type != MODEL_TYPE_FUNDS_FLOW:
+            search = GraphSearchFactory().create_graph_search(self.settings)
+            result = await search.execute_query(query)
+            return result
+
+        elif model_type == MODEL_TYPE_BALANCE_TRACKING:
+            search = BalanceSearchFactory().create_balance_search(self.settings.NETWORK)
+            result = await search.execute_query(query)
+            return result
+        else:
+            raise ValueError(f"Invalid model type: {model_type}")
 
     @endpoint
     async def challenge(self, challenge: Challenge) -> Challenge:

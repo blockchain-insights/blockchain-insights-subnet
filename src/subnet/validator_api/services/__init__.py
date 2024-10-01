@@ -4,6 +4,11 @@ from typing import Optional, List
 class QueryApi:
 
     async def get_block(self, block_height: int) -> dict:
+
+
+        # i need to call validator.query_funds_flow(network, cypher_query)
+
+
         pass
 
     async def get_transaction_by_tx_id(self, tx_id: str) -> dict:

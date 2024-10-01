@@ -2,6 +2,7 @@ from typing import Optional
 from fastapi import Depends, APIRouter
 from pydantic import BaseModel
 
+from src.subnet.protocol import MODEL_TYPE_FUNDS_FLOW, MODEL_TYPE_BALANCE_TRACKING
 from src.subnet.validator.validator import Validator
 from src.subnet.validator_api import get_validator
 from src.subnet.validator_api.routes import api_key_auth
@@ -17,11 +18,15 @@ class MinerMetadataRequest(BaseModel):
 async def query(network: str,
                              validator: Validator = Depends(get_validator),
                              api_key: str = Depends(api_key_auth)):
-    return []
+
+    result = await validator.query_miner(network, MODEL_TYPE_BALANCE_TRACKING, "SELECT 1")
+    return result
 
 
 @balance_tracking_bitcoin_router.get("/{network}/timestamps")
 async def get_timestamps(network: str,
                              validator: Validator = Depends(get_validator),
                              api_key: str = Depends(api_key_auth)):
-    return []
+
+    result = await validator.query_miner(network, MODEL_TYPE_BALANCE_TRACKING, "SELECT 1")
+    return result

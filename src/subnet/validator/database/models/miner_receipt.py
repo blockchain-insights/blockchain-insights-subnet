@@ -1,5 +1,4 @@
 from typing import List, Optional, Dict
-
 from pydantic import BaseModel
 from sqlalchemy import Column, String, DateTime, update, insert, BigInteger, Boolean, UniqueConstraint, Text, select, \
     func, text
@@ -17,7 +16,8 @@ class MinerReceipt(OrmBase):
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     request_id = Column(String, nullable=False)
     miner_key = Column(String, nullable=False)
-    prompt_hash = Column(Text, nullable=False)
+    model_type = Column(String, nullable=False)
+    query_hash = Column(Text, nullable=False)
     accepted = Column(Boolean, nullable=False, default=False)
     timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
 
@@ -35,13 +35,14 @@ class MinerReceiptManager:
     def __init__(self, session_manager: DatabaseSessionManager):
         self.session_manager = session_manager
 
-    async def store_miner_receipt(self, request_id: str, miner_key: str, prompt_hash: str, timestamp: datetime):
+    async def store_miner_receipt(self, request_id: str, miner_key: str, model_type: str, query_hash: str, timestamp: datetime):
         async with self.session_manager.session() as session:
             async with session.begin():
                 stmt = insert(MinerReceipt).values(
                     request_id=request_id,
                     miner_key=miner_key,
-                    prompt_hash=prompt_hash,
+                    model_type=model_type,
+                    query_hash=query_hash,
                     accepted=False,
                     timestamp=timestamp
                 )

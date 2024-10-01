@@ -5,7 +5,7 @@ import time
 import uuid
 from datetime import datetime
 from random import sample
-from typing import cast, Dict
+from typing import cast, Dict, Optional
 
 from communex.client import CommuneClient  # type: ignore
 from communex.misc import get_map_modules
@@ -285,39 +285,39 @@ class Validator(Module):
                     logger.info("Terminating validation loop")
                     break
 
-    """
-    async def query_miner(self, request: LlmQueryRequest) -> dict:
+    async def query_miner(self, network: str, model_type: str, query, miner_key: Optional[str]) -> dict:
         request_id = str(uuid.uuid4())
         timestamp = datetime.utcnow()
-        prompt_dict = [message.model_dump() for message in request.prompt]
-        prompt_hash = generate_hash(json.dumps(prompt_dict))
-        llm_message_list = LlmMessageList(messages=request.prompt)
+        query_hash = generate_hash(query)
 
-        if request.miner_key:
-            miner = await self.miner_discovery_manager.get_miner_by_key(request.miner_key, request.network)
+        if miner_key:
+            miner = await self.miner_discovery_manager.get_miner_by_key(miner_key, network)
             if not miner:
                 return {
                     "request_id": request_id,
                     "timestamp": timestamp,
                     "miner_keys": [],
-                    "prompt_hash": prompt_hash,
+                    "query_hash": query_hash,
+                    "model_type": model_type,
+                    "query": query,
                     "response": []}
 
-            result = await self._query_miner(miner, llm_message_list)
-
-            await self.miner_receipt_manager.store_miner_receipt(request_id, request.miner_key, prompt_hash, timestamp)
+            result = await self._query_miner(miner, model_type, query)
+            await self.miner_receipt_manager.store_miner_receipt(request_id, miner_key, model_type, query_hash, timestamp)
 
             return {
                 "request_id": request_id,
                 "timestamp": timestamp,
-                "miner_keys": [request.miner_key],
-                "prompt_hash": prompt_hash,
-                "response": result,
+                "miner_keys": [miner_key],
+                "query_hash": query_hash,
+                "model_type": model_type,
+                "query": query,
+                "response": [result]
             }
         else:
             select_count = 3
             sample_size = 16
-            miners = await self.miner_discovery_manager.get_miners_by_network(request.network)
+            miners = await self.miner_discovery_manager.get_miners_by_network(network)
 
             if len(miners) < 3:
                 top_miners = miners
@@ -326,23 +326,25 @@ class Validator(Module):
 
             query_tasks = []
             for miner in top_miners:
-                query_tasks.append(self._query_miner(miner, llm_message_list))
+                query_tasks.append(self._query_miner(miner,  model_type, query))
 
             responses = await asyncio.gather(*query_tasks)
 
             for miner, response in zip(top_miners, responses):
                 if response:
-                    await self.miner_receipt_manager.store_miner_receipt(request_id, miner['miner_key'], prompt_hash, timestamp)
+                    await self.miner_receipt_manager.store_miner_receipt(request_id, miner['miner_key'], model_type, query_hash, timestamp)
 
             return {
                 "request_id": request_id,
                 "timestamp": timestamp,
                 "miner_keys": [miner['miner_key'] for miner in top_miners],
-                "prompt_hash": prompt_hash,
-                "response": responses,
+                "query_hash": query_hash,
+                "model_type": model_type,
+                "query": query,
+                "response": responses
             }
 
-    async def _query_miner(self, miner, llm_message_list: LlmMessageList):
+    async def _query_miner(self, miner, model_type, query):
         miner_key = miner['miner_key']
         miner_network = miner['network']
         module_ip = miner['miner_address']
@@ -350,17 +352,15 @@ class Validator(Module):
         module_client = ModuleClient(module_ip, module_port, self.key)
         try:
             llm_query_result = await module_client.call(
-                "llm_query",
+                "query",
                 miner_key,
-                {"llm_messages_list": llm_message_list.model_dump()},
-                timeout=self.llm_query_timeout,
+                {"model_type": model_type, "query": query},
+                timeout=self.query_timeout,
             )
             if not llm_query_result:
                 return None
 
-            return LlmMessageOutputList(**llm_query_result)
+            return llm_query_result
         except Exception as e:
             logger.warning(f"Failed to query miner", error=e, miner_key=miner_key)
             return None
-
-    """
