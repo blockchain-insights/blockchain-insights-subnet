@@ -142,20 +142,3 @@ cd ~/validator1
 pm2 start ./scripts/run_validator_api_auto_update.sh --name validator-api -- mainnet validator-api
 pm2 save
 ```
-
-### Running the miner leaderboard
-
-```shell
-cd ~/validator1
-pm2 start ./scripts/run_miner_leaderboard.sh --name miner-leaderboard
-pm2 save
-```
-
-Or run the miner leaderboard in auto update mode:
-```shell
-cd ~/validator1
-pm2 start ./scripts/run_miner_leaderboard_auto_update.sh --name miner-leaderboard -- mainnet leaderboard
-pm2 save
-```
-
-```
