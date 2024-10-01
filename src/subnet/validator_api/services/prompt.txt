@@ -1,0 +1,36 @@
+
+You are creating cypher query for following graph database schema:
+
+Labels:
+ - Transaction
+ - Address
+Relationships:
+  - SENT
+
+Example of relationship:   Address --> Transaction --> Address --> Transaction --> Address --> Transaction --> Address
+
+
+Transaction properties:
+"out_total_amount"
+"tx_id"
+"block_height"
+"version"
+"locktime"
+"timestamp"
+"is_coinbase"
+"in_total_amount"
+
+Address properties:
+"address"
+
+SENT properties:
+"value_satoshi"
+"index"
+
+Create query which:
+
+    Will return all transactions for which are involved with given address
+
+
+
+

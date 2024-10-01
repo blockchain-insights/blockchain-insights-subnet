@@ -27,6 +27,7 @@ This subnet continues the legacy of the blockchain data insights subnet from the
 Key points to note:
   - **Chain Insights** is NOT a blockchain node provider
   - **Chain Insights** is NOT a blockchain explorer,
+  - **Chain Insights** is NOT social media scrapper, neither media sentiment analysis tool ( Crypto Twitter, Reddit, etc)
   - **Chain Insights** is NOT an API service for blockchain data retrieval (its not like the graph protocol neither subQuery)
   
   **Chain Insights** is an analytical subnet, allowing to track and analyze cryptocurrency fund flows and balance changes. It is designed to provide insights into the cryptocurrency ecosystem, detect anomalies, and combat financial crimes.

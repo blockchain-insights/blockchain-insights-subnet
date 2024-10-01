@@ -10,6 +10,6 @@ export PYTHONPATH=$(pwd)
 echo "PYTHONPATH is set to $PYTHONPATH"
 NETWORK_TYPE=${1:-mainnet}
 cd src
-python3 subnet/validator/validator_api.py $NETWORK_TYPE
+python3 subnet/validator_api/main.py $NETWORK_TYPE
 
 deactivate
