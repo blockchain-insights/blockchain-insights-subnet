@@ -24,6 +24,13 @@ The Subnet aims to deliver comprehensive insights into cryptocurrency fund flows
 
 This subnet continues the legacy of the blockchain data insights subnet from the Bittensor ecosystem, but with its root vision from 25th October 2023.
 
+Key points to note:
+  - **Chain Insights** is NOT a blockchain node provider
+  - **Chain Insights** is NOT a blockchain explorer,
+  - **Chain Insights** is NOT an API service for blockchain data retrieval (its not like the graph protocol neither subQuery)
+  
+  **Chain Insights** is an analytical subnet, allowing to track and analyze cryptocurrency fund flows and balance changes. It is designed to provide insights into the cryptocurrency ecosystem, detect anomalies, and combat financial crimes.
+
 ### Roadmap
 
 - [x] **Migration from Bittensor**: Transition the subnet from the Bittensor ecosystem to a commune ai ecosystem.
