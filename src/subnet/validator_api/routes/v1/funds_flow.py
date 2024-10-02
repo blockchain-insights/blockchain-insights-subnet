@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from src.subnet.protocol import MODEL_TYPE_FUNDS_FLOW, NETWORK_BITCOIN
 from src.subnet.validator.validator import Validator
 from src.subnet.validator_api import get_validator, api_key_auth
+from src.subnet.validator_api.models import BitcoinGraphTransformer
 from src.subnet.validator_api.services.bitcoin_query_api import BitcoinQueryApi
 
 funds_flow_bitcoin_router = APIRouter(prefix="/v1/funds-flow", tags=["funds-flow"])
@@ -26,6 +27,13 @@ async def get_block(network: str,
     if network == NETWORK_BITCOIN:
         query_api = BitcoinQueryApi(validator)
         data = await query_api.get_block(block_height)
+
+
+        data['results'] = []
+        for response in data['response']:
+            result = BitcoinGraphTransformer().transform_result(response)
+            data['results'].append(result)
+
         return data
 
     return []

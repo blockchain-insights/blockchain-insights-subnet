@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List, Dict, Any
 
 from src.subnet.protocol import NETWORK_BITCOIN, MODEL_TYPE_FUNDS_FLOW
 from src.subnet.validator.validator import Validator
@@ -11,10 +11,10 @@ class BitcoinQueryApi(QueryApi):
         self.validator = validator
 
     async def get_block(self, block_height: int) -> dict:
-        query = f"""MATCH (t:Transaction {{block_height: {block_height}}})
-                    OPTIONAL MATCH (t)-[outS:SENT]->(outAddr:Address)
-                    OPTIONAL MATCH (inAddr:Address)-[inS:SENT]->(t)
-                    RETURN t, outS, outAddr, inS, inAddr
+        query = f"""MATCH (t1:Transaction {{block_height: {block_height}}})
+                    OPTIONAL MATCH (t1)-[s1:SENT]->(a1:Address)
+                    OPTIONAL MATCH (a2:Address)-[s2:SENT]->(t1)
+                    RETURN t1, s1, a1, s2, a2
                 """
 
         try:

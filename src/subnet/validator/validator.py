@@ -296,13 +296,13 @@ class Validator(Module):
                 return {
                     "request_id": request_id,
                     "timestamp": timestamp,
-                    "miner_keys": [],
+                    "miner_keys": None,
                     "query_hash": query_hash,
                     "model_type": model_type,
                     "query": query,
                     "response": []}
 
-            result = await self._query_miner(miner, model_type, query)
+            response = await self._query_miner(miner, model_type, query)
             await self.miner_receipt_manager.store_miner_receipt(request_id, miner_key, model_type, query_hash, timestamp)
 
             return {
@@ -312,7 +312,7 @@ class Validator(Module):
                 "query_hash": query_hash,
                 "model_type": model_type,
                 "query": query,
-                "response": [result]
+                "response": response
             }
         else:
             select_count = 3

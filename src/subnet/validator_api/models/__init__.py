@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import List, Any, Dict, Set
 
+from loguru import logger
+
 
 def satoshi_to_btc(satoshi: int) -> float:
     return satoshi / 1e8
@@ -13,92 +15,104 @@ class BaseGraphTransformer(ABC):
         pass
 
 
+# Helper function to convert satoshi to BTC
+def satoshi_to_btc(satoshi: int) -> float:
+    return satoshi / 1e8
+
+
 class BitcoinGraphTransformer(BaseGraphTransformer):
     def __init__(self):
         self.output_data: List[Dict[str, Any]] = []
-        self.node_ids: Set[str] = set()
+        self.transaction_ids: Set[str] = set()
+        self.address_ids: Set[str] = set()
         self.edge_ids: Set[str] = set()
 
     def transform_result(self, result: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        logger.debug("Transforming result")  # Debugging: Log transformation start
         self.output_data = []
-        self.node_ids = set()
+        self.transaction_ids = set()
+        self.address_ids = set()
         self.edge_ids = set()
 
         for entry in result:
-            self.process_entry(entry)
-
+            self.process_transaction_entry(entry)
         return self.output_data
 
-    def process_entry(self, entry: Dict[str, Any]) -> None:
-        """
-        Generic entry processor that identifies potential nodes, edges, or summary data in the entry.
-        """
+    def process_transaction_entry(self, entry: Dict[str, Any]) -> None:
+        # Log the entry for debugging purposes
+        logger.debug(f"Entry: {entry}")  # Debugging: Log entire entry
 
-        if all(isinstance(value, (int, float, str)) for value in entry.values()):
-            self.process_summary(entry)
-        else:
-            for key, value in entry.items():
-                if isinstance(value, dict):
-                    self.add_generic_node(key, value)
-                elif isinstance(value, list):
-                    self.process_list(key, value)
+        address_node = entry.get('a1')
+        recipient_node = entry.get('a2')
+        transaction_node = entry.get('t1')
 
-    def process_summary(self, summary: Dict[str, Any]) -> None:
-        """
-        Process a summary (e.g., total_incoming, total_outgoing) and add it to the graph.
-        """
-        summary_id = f"summary-{len(self.output_data)}"  # Create a unique ID for each summary
+        # Check if nodes are not None and access properties
+        address = address_node['address'] if address_node else None
+        recipient = recipient_node['address'] if recipient_node else None
+        transaction = transaction_node if transaction_node else {}
 
-        self.output_data.append({
-            "id": summary_id,
-            "type": "node",
-            "label": "summary",
-            **summary
-        })
+        tx_id = transaction.get('tx_id')
 
-    def process_list(self, key: str, values: List[Any]) -> None:
-        """
-        Processes lists, which could contain relationships or complex data structures.
-        """
-        for item in values:
-            if isinstance(item, dict):
-                self.add_generic_node(key, item)
+        logger.debug(
+            f"Processing Entry: address={address}, recipient={recipient}, tx_id={tx_id}")  # Debugging: Log node details
 
-    def add_generic_node(self, key: str, node_data: Dict[str, Any]) -> None:
-        """
-        Generic node processing that treats any dictionary as a node.
-        """
-        node_id = node_data.get('id') or node_data.get('tx_id') or node_data.get('address')
-
-        if node_id and node_id not in self.node_ids:
+        # Add the sender address node
+        if address and address not in self.address_ids:
             self.output_data.append({
-                "id": node_id,
+                "id": address,
                 "type": "node",
-                "label": key,  # Use the key to categorize the node
-                **node_data  # Include all node attributes generically
+                "label": "address"
             })
-            self.node_ids.add(node_id)
+            self.address_ids.add(address)
 
-        for subkey, subvalue in node_data.items():
-            if isinstance(subvalue, dict):
-                self.process_sent_edge(subvalue, node_id)
+        # Add the recipient address node
+        if recipient and recipient not in self.address_ids:
+            self.output_data.append({
+                "id": recipient,
+                "type": "node",
+                "label": "address"
+            })
+            self.address_ids.add(recipient)
 
-    def process_sent_edge(self, edge_data: Dict[str, Any], from_id: str) -> None:
-        """
-        Processes any key-value pair within a node as an edge if it has the required structure.
-        """
-        to_id = edge_data.get('to_id') or edge_data.get('address')
-        if from_id and to_id:
-            edge_id = f"{from_id}-{to_id}"
-            if edge_id not in self.edge_ids:
-                edge_label = edge_data.get('label', 'SENT')
+        # Add the transaction node
+        if tx_id and tx_id not in self.transaction_ids:
+            self.output_data.append({
+                "id": tx_id,
+                "type": "node",
+                "label": "transaction",
+                "balance": satoshi_to_btc(transaction.get('out_total_amount', 0)),
+                "timestamp": transaction.get('timestamp'),
+                "block_height": transaction.get('block_height')
+            })
+            self.transaction_ids.add(tx_id)
 
-                self.output_data.append({
-                    "id": edge_id,
-                    "type": "edge",
-                    "label": edge_label,
-                    "from_id": from_id,
-                    "to_id": to_id,
-                    **edge_data  # Include all edge attributes generically
-                })
-                self.edge_ids.add(edge_id)
+        # Process edges using the `value_satoshi`
+        sent_transaction1 = entry.get('s1', {})
+        sent_transaction2 = entry.get('s2', {})
+
+        logger.debug(f"s1 value_satoshi: {sent_transaction1.get('value_satoshi')}")  # Debugging: Log edge values
+        logger.debug(f"s2 value_satoshi: {sent_transaction2.get('value_satoshi')}")  # Debugging: Log edge values
+
+        self.process_sent_edge(sent_transaction1, address, tx_id)
+        self.process_sent_edge(sent_transaction2, tx_id, recipient)
+
+    def process_sent_edge(self, sent_transaction: Dict[str, Any], from_id: str, to_id: str) -> None:
+        value_satoshi = sent_transaction.get('value_satoshi')
+
+        edge_id = f"{from_id}-{to_id}"
+        if from_id and to_id and edge_id not in self.edge_ids:
+            if value_satoshi is not None:
+                edge_label = f"{satoshi_to_btc(value_satoshi):.8f} BTC"
+            else:
+                edge_label = "SENT"
+
+            self.output_data.append({
+                "id": edge_id,
+                "type": "edge",
+                "label": edge_label,
+                "from_id": from_id,
+                "to_id": to_id
+            })
+            self.edge_ids.add(edge_id)
+
+            logger.debug(f"Processed Edge: {edge_id}, Label: {edge_label}")  # Debugging: Log edge creation
