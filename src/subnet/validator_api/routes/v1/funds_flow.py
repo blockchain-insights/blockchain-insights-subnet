@@ -28,7 +28,6 @@ async def get_block(network: str,
         query_api = BitcoinQueryApi(validator)
         data = await query_api.get_block(block_height)
 
-
         data['results'] = []
         for response in data['response']:
             result = BitcoinGraphTransformer().transform_result(response)

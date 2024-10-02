@@ -90,8 +90,8 @@ class BitcoinGraphTransformer(BaseGraphTransformer):
         sent_transaction1 = entry.get('s1', {})
         sent_transaction2 = entry.get('s2', {})
 
-        logger.debug(f"s1 value_satoshi: {sent_transaction1.get('value_satoshi')}")  # Debugging: Log edge values
-        logger.debug(f"s2 value_satoshi: {sent_transaction2.get('value_satoshi')}")  # Debugging: Log edge values
+        #logger.debug(f"s1 value_satoshi: {sent_transaction1.get('value_satoshi', {})}")  # Debugging: Log edge values
+        #logger.debug(f"s2 value_satoshi: {sent_transaction2.get('value_satoshi', {})}")  # Debugging: Log edge values
 
         self.process_sent_edge(sent_transaction1, address, tx_id)
         self.process_sent_edge(sent_transaction2, tx_id, recipient)
