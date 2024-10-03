@@ -19,4 +19,4 @@ bitcoin
 base58
 pycryptodome
 jinja2
-websockets
+strawberry-graphql

@@ -23,14 +23,11 @@ class MinerSettings(BaseSettings):
     PORT: int = 9962
     WORKERS: int = 4
 
-    LLM_TYPE: str
     DATABASE_URL: str
 
     GRAPH_DATABASE_USER: str
     GRAPH_DATABASE_PASSWORD: str
     GRAPH_DATABASE_URL: str
-
-    LLM_API_KEY: str
 
     class Config:
         extra = 'ignore'

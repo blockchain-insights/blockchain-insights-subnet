@@ -3,7 +3,7 @@ import threading
 from src.subnet.validator._config import ValidatorSettings, load_environment
 from src.subnet.validator.database.session_manager import DatabaseSessionManager
 from src.subnet.validator.blockchain.common.challenge_generator_factory import ChallengeGeneratorFactory
-from src.subnet.protocol.llm_engine import MODEL_TYPE_FUNDS_FLOW, MODEL_TYPE_BALANCE_TRACKING
+from src.subnet.protocol import MODEL_TYPE_FUNDS_FLOW, MODEL_TYPE_BALANCE_TRACKING
 from loguru import logger
 
 

@@ -1,11 +1,11 @@
 import time
 
-from neo4j import GraphDatabase
+from neo4j import GraphDatabase, READ_ACCESS
+from neo4j.exceptions import Neo4jError
+
 from src.subnet.miner._config import MinerSettings
 from src.subnet.miner.blockchain import BaseGraphSearch
-from src.subnet.miner.blockchain.bitcoin.query_builder import QueryBuilder
 from loguru import logger
-from src.subnet.protocol.llm_engine import Query
 
 
 class BitcoinGraphSearch(BaseGraphSearch):
@@ -22,17 +22,6 @@ class BitcoinGraphSearch(BaseGraphSearch):
 
     def close(self):
         self.driver.close()
-
-    def execute_predefined_query(self, query: Query):
-        cypher_query = QueryBuilder.build_query(query)
-        logger.info(f"Executing cypher query: {cypher_query}")
-        result = self._execute_cypher_query(cypher_query)
-        return result
-
-    def execute_query(self, query: str):
-        logger.info(f"Executing cypher query: {query}")
-        result = self._execute_cypher_query(query)
-        return result
 
     def solve_challenge(self, in_total_amount: int, out_total_amount: int, tx_id_last_6_chars: str) -> str | None:
         start_time = time.time()
@@ -60,32 +49,26 @@ class BitcoinGraphSearch(BaseGraphSearch):
             execution_time = end_time - start_time
             logger.info(f"Execution time for solve_challenge: {execution_time} seconds")
 
-    def _execute_cypher_query(self, cypher_query: str):
-        with self.driver.session() as session:
-            result = session.run(cypher_query)
-            if not result:
-                return None
+    def execute_query(self, query: str):
+        with self.driver.session(default_access_mode=READ_ACCESS) as session:
+            try:
+                result = session.run(query)
+                if not result:
+                    return None
 
-            # Fetch result data and log it
-            result_data = result.data()
+                result_data = result.data()
+                results_data = []
 
-            # Prepare to store results in a list
-            results_data = []
+                for record in result_data:
+                    processed_record = {}
+                    for key, value in record.items():
+                        if hasattr(value, 'items'):
+                            processed_record[key] = dict(value)
+                        else:
+                            processed_record[key] = value
+                    results_data.append(processed_record)
+                return results_data
 
-            for record in result_data:
-                # For each record, convert the entire record to a dictionary
-                processed_record = {}
-
-                # Iterate through all key-value pairs in the record
-                for key, value in record.items():
-                    # If the value is a relationship or node, convert it to a dict
-                    if hasattr(value, 'items'):
-                        processed_record[key] = dict(value)
-                    else:
-                        processed_record[key] = value
-
-                # Append the processed record to the result list
-                results_data.append(processed_record)
-
-            return results_data
+            except Neo4jError as e:
+                raise ValueError("Query attempted to modify data, which is not allowed.") from e
 

@@ -5,7 +5,7 @@ import time
 import uuid
 from datetime import datetime
 from random import sample
-from typing import cast, Dict
+from typing import cast, Dict, Optional
 
 from communex.client import CommuneClient  # type: ignore
 from communex.misc import get_map_modules
@@ -18,18 +18,13 @@ from ._config import ValidatorSettings
 
 from .database.models.challenge_balance_tracking import ChallengeBalanceTrackingManager
 from .database.models.challenge_funds_flow import ChallengeFundsFlowManager
-from .database.models.validation_prompt_response import ValidationPromptResponseManager
 from .encryption import generate_hash
 from .helpers import raise_exception_if_not_registered, get_ip_port, cut_to_max_allowed_weights
-from .llm.base_llm import BaseLLM
 from .nodes.factory import NodeFactory
 from .weights_storage import WeightsStorage
 from src.subnet.validator.database.models.miner_discovery import MinerDiscoveryManager
-from src.subnet.validator.database.models.miner_receipt import MinerReceiptManager, ReceiptMinerRank
-from src.subnet.protocol.llm_engine import LlmQueryRequest, LlmMessage, Challenge, LlmMessageList, ChallengesResponse, \
-    ChallengeMinerResponse, LlmMessageOutputList, MODEL_TYPE_FUNDS_FLOW
-from src.subnet.protocol.blockchain import Discovery
-from src.subnet.validator.database.models.validation_prompt import ValidationPromptManager
+from src.subnet.validator.database.models.miner_receipt import MinerReceiptManager
+from src.subnet.protocol import Challenge, ChallengesResponse, ChallengeMinerResponse, Discovery
 
 
 class Validator(Module):
@@ -41,14 +36,10 @@ class Validator(Module):
             client: CommuneClient,
             weights_storage: WeightsStorage,
             miner_discovery_manager: MinerDiscoveryManager,
-            validation_prompt_manager: ValidationPromptManager,
-            validation_prompt_response_manager: ValidationPromptResponseManager,
             challenge_funds_flow_manager: ChallengeFundsFlowManager,
             challenge_balance_tracking_manager: ChallengeBalanceTrackingManager,
             miner_receipt_manager: MinerReceiptManager,
-            llm: BaseLLM,
             query_timeout: int = 60,
-            llm_query_timeout: int = 60,
             challenge_timeout: int = 60,
 
     ) -> None:
@@ -58,15 +49,11 @@ class Validator(Module):
         self.client = client
         self.key = key
         self.netuid = netuid
-        self.llm = llm
-        self.llm_query_timeout = llm_query_timeout
         self.challenge_timeout = challenge_timeout
         self.query_timeout = query_timeout
         self.weights_storage = weights_storage
         self.miner_discovery_manager = miner_discovery_manager
         self.terminate_event = threading.Event()
-        self.validation_prompt_manager = validation_prompt_manager
-        self.validation_prompt_response_manager = validation_prompt_response_manager
         self.challenge_funds_flow_manager = challenge_funds_flow_manager
         self.challenge_balance_tracking_manager = challenge_balance_tracking_manager
 
@@ -103,42 +90,12 @@ class Validator(Module):
             if not challenge_response:
                 return None
 
-            # Prompt Phase
-            validation_prompt_id, validation_prompt, validation_prompt_model_type, validation_prompt_responses = await self.validation_prompt_manager.get_random_prompt(discovery.network)
-
-            if not validation_prompt:
-                logger.error("Failed to get a random validation prompt")
-                return None
-
-            # Assuming you use the prompt in LLM message creation
-            llm_message_list = LlmMessageList(messages=[LlmMessage(type=0, content=validation_prompt)])
-
-            # Send the prompt and get the miner's query response
-            prompt_result_actual = await self._send_prompt(client, miner_key, llm_message_list)
-
-            if not prompt_result_actual:
-                return None
-
-            logger.info(f"Prompt result received")
-
-            validation_result = await self.validate_query_by_prompt(
-                validation_prompt_id=validation_prompt_id,
-                validation_prompt=validation_prompt,
-                miner_key=miner_key,
-                miner_query=prompt_result_actual.outputs[0].query,
-                result=prompt_result_actual.outputs[0].result,
-                network=discovery.network,
-                prompt_responses=validation_prompt_responses,
-                llm=self.llm
-            )
-
             return ChallengeMinerResponse(
                 network=discovery.network,
                 funds_flow_challenge_actual=challenge_response.funds_flow_challenge_actual,
                 funds_flow_challenge_expected=challenge_response.funds_flow_challenge_expected,
                 balance_tracking_challenge_actual=challenge_response.balance_tracking_challenge_actual,
                 balance_tracking_challenge_expected=challenge_response.balance_tracking_challenge_expected,
-                query_validation_result=validation_result
             )
         except Exception as e:
             logger.error(f"Failed to challenge miner", error=e, miner_key=miner_key)
@@ -198,55 +155,6 @@ class Validator(Module):
             logger.error(f"Miner failed to perform challenges", error=e, miner_key=miner_key)
             return None
 
-    async def validate_query_by_prompt(self, validation_prompt_id: int, validation_prompt: str, miner_key: str, miner_query: str, result: str, network: str, prompt_responses: list, llm) -> bool:
-        """
-        Validates the miner's query against a cached response (from the eagerly loaded prompt responses)
-        or uses LLM if no cached response is found.
-        """
-        cached_response = next(
-            (response for response in prompt_responses if response.miner_key == miner_key),
-            None
-        )
-
-        if cached_response:
-            if cached_response.query == miner_query and cached_response.is_valid is True:
-                logger.debug(f"Valid cached query found: {cached_response.query}")
-                return True
-
-        # logger.info("No cached query found, using LLM for validation")
-        validation_result = llm.validate_query_by_prompt(validation_prompt, miner_query, network)
-
-        # Store the result from LLM in the cache for future use
-        if isinstance(result, (list, dict)):
-            result = json.dumps(result)
-
-        logger.info("Storing the validated result from LLM in the cache")
-        await self.validation_prompt_response_manager.store_response(
-            prompt_id=validation_prompt_id,
-            miner_key=miner_key,
-            query=miner_query,
-            result=result,
-            is_valid=validation_result
-        )
-
-        return validation_result
-
-    async def _send_prompt(self, client, miner_key, llm_message_list) -> LlmMessageOutputList | None:
-        try:
-            llm_query_result = await client.call(
-                "llm_query",
-                miner_key,
-                {"llm_messages_list": llm_message_list.model_dump()},
-                timeout=self.llm_query_timeout,
-            )
-            if not llm_query_result:
-                return None
-
-            return LlmMessageOutputList(**llm_query_result)
-        except Exception as e:
-            logger.info(f"Miner failed to generate an answer", error=e, miner_key=miner_key)
-            return None
-
     @staticmethod
     def _score_miner(response: ChallengeMinerResponse, receipt_miner_multiplier: float) -> float:
         if not response:
@@ -262,16 +170,8 @@ class Validator(Module):
 
         score = 0.3
 
-        if response.query_validation_result is None:
-            return score
-
-        if response.query_validation_result:
-            score = score + 0.15
-        else:
-            return score
-
-        multiplier = min(1, receipt_miner_multiplier)
-        score = score + (0.55 * multiplier)
+        multiplier = min(1.0, receipt_miner_multiplier)
+        score = score + (0.7 * multiplier)
         return score
 
     async def validate_step(self, netuid: int, settings: ValidatorSettings) -> None:
@@ -385,39 +285,39 @@ class Validator(Module):
                     logger.info("Terminating validation loop")
                     break
 
-    """ VALIDATOR API METHODS"""
-    async def query_miner(self, request: LlmQueryRequest) -> dict:
+    async def query_miner(self, network: str, model_type: str, query, miner_key: Optional[str]) -> dict:
         request_id = str(uuid.uuid4())
         timestamp = datetime.utcnow()
-        prompt_dict = [message.model_dump() for message in request.prompt]
-        prompt_hash = generate_hash(json.dumps(prompt_dict))
-        llm_message_list = LlmMessageList(messages=request.prompt)
+        query_hash = generate_hash(query)
 
-        if request.miner_key:
-            miner = await self.miner_discovery_manager.get_miner_by_key(request.miner_key, request.network)
+        if miner_key:
+            miner = await self.miner_discovery_manager.get_miner_by_key(miner_key, network)
             if not miner:
                 return {
                     "request_id": request_id,
                     "timestamp": timestamp,
-                    "miner_keys": [],
-                    "prompt_hash": prompt_hash,
+                    "miner_keys": None,
+                    "query_hash": query_hash,
+                    "model_type": model_type,
+                    "query": query,
                     "response": []}
 
-            result = await self._query_miner(miner, llm_message_list)
-
-            await self.miner_receipt_manager.store_miner_receipt(request_id, request.miner_key, prompt_hash, timestamp)
+            response = await self._query_miner(miner, model_type, query)
+            await self.miner_receipt_manager.store_miner_receipt(request_id, miner_key, model_type, query_hash, timestamp)
 
             return {
                 "request_id": request_id,
                 "timestamp": timestamp,
-                "miner_keys": [request.miner_key],
-                "prompt_hash": prompt_hash,
-                "response": result,
+                "miner_keys": [miner_key],
+                "query_hash": query_hash,
+                "model_type": model_type,
+                "query": query,
+                "response": response
             }
         else:
             select_count = 3
             sample_size = 16
-            miners = await self.miner_discovery_manager.get_miners_by_network(request.network)
+            miners = await self.miner_discovery_manager.get_miners_by_network(network)
 
             if len(miners) < 3:
                 top_miners = miners
@@ -426,23 +326,25 @@ class Validator(Module):
 
             query_tasks = []
             for miner in top_miners:
-                query_tasks.append(self._query_miner(miner, llm_message_list))
+                query_tasks.append(self._query_miner(miner,  model_type, query))
 
             responses = await asyncio.gather(*query_tasks)
 
             for miner, response in zip(top_miners, responses):
                 if response:
-                    await self.miner_receipt_manager.store_miner_receipt(request_id, miner['miner_key'], prompt_hash, timestamp)
+                    await self.miner_receipt_manager.store_miner_receipt(request_id, miner['miner_key'], model_type, query_hash, timestamp)
 
             return {
                 "request_id": request_id,
                 "timestamp": timestamp,
                 "miner_keys": [miner['miner_key'] for miner in top_miners],
-                "prompt_hash": prompt_hash,
-                "response": responses,
+                "query_hash": query_hash,
+                "model_type": model_type,
+                "query": query,
+                "response": responses
             }
 
-    async def _query_miner(self, miner, llm_message_list: LlmMessageList):
+    async def _query_miner(self, miner, model_type, query):
         miner_key = miner['miner_key']
         miner_network = miner['network']
         module_ip = miner['miner_address']
@@ -450,15 +352,15 @@ class Validator(Module):
         module_client = ModuleClient(module_ip, module_port, self.key)
         try:
             llm_query_result = await module_client.call(
-                "llm_query",
+                "query",
                 miner_key,
-                {"llm_messages_list": llm_message_list.model_dump()},
-                timeout=self.llm_query_timeout,
+                {"model_type": model_type, "query": query},
+                timeout=self.query_timeout,
             )
             if not llm_query_result:
                 return None
 
-            return LlmMessageOutputList(**llm_query_result)
+            return llm_query_result
         except Exception as e:
             logger.warning(f"Failed to query miner", error=e, miner_key=miner_key)
             return None

@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from src.subnet.validator._config import ValidatorSettings
 from src.subnet.validator.database.models.challenge_balance_tracking import ChallengeBalanceTrackingManager
 
+
 class BaseChallengeGenerator(ABC):
     def __init__(self, settings: ValidatorSettings):
         self.settings = settings

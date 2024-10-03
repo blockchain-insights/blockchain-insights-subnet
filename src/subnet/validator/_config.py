@@ -43,15 +43,8 @@ class ValidatorSettings(BaseSettings):
     API_RATE_LIMIT: int
     REDIS_URL: str
 
-    LLM_QUERY_TIMEOUT: int  # llm query timeout (organic prompt)
     QUERY_TIMEOUT: int   # cross check query timeout
     CHALLENGE_TIMEOUT: int  # challenge and llm challenge time
-
-    LLM_API_KEY: str
-    LLM_TYPE: str
-
-    PROMPT_FREQUENCY: int
-    PROMPT_THRESHOLD: int
 
     FUNDS_FLOW_CHALLENGE_FREQUENCY: int
     FUNDS_FLOW_CHALLENGE_THRESHOLD: int

@@ -20,7 +20,7 @@ check_for_updates() {
 
         if [ "$current_version" != "$new_version" ]; then
             echo "Version has changed from $current_version to $new_version. Restarting script."
-            pkill -f "python3 subnet/cli.py"
+            pkill -f "python3 subnet/validator_api/main.py"
             deactivate
             pm2 restart "$PM2_PROCESS_NAME"
             exit 0
@@ -62,6 +62,6 @@ UPDATE_PID=$!
 trap cleanup SIGINT SIGTERM
 
 cd src
-python3 subnet/validator/validator_api.py $NETWORK_TYPE
+python3 subnet/validator_api/main.py $NETWORK_TYPE
 
 deactivate
