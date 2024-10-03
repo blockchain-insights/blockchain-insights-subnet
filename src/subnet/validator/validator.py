@@ -119,7 +119,7 @@ class Validator(Module):
 
             return Discovery(**discovery)
         except Exception as e:
-            logger.info(f"Miner failed to get discovery", miner_key=miner_key)
+            logger.info(f"Miner failed to get discovery", miner_key=miner_key, error=e)
             return None
 
     async def _perform_challenges(self, client, miner_key, discovery, node) -> ChallengesResponse | None:
