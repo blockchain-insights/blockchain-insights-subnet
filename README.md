@@ -13,7 +13,10 @@
 - [Scoring](#scoring)
 - [Miner Setup](MINER_SETUP.md)
 - [Validator Setup](VALIDATOR_SETUP.md)
-
+- Appendix
+  - [History of the Chain Insights Subnet](#History-of-the-Chain-Insights-Subnet)
+  - [Guru Posdast with aphex5](#Guru-Posdast-with-aphex5)
+  
 ### Subnet Vision
 
 The Subnet aims to deliver comprehensive insights into cryptocurrency fund flows and balance changes, presented in a user-friendly manner. It is designed to:
@@ -107,3 +110,44 @@ The Validator module continuously assesses miners, recalculating scores based on
 
 - **Scoring Influence:** Higher scores lead to more rewards and influence within the network.
 - **Dynamic Updates:** Scores adjust dynamically based on performance, ensuring only reliable miners maintain their influence in the network.
+
+
+#Appendix
+
+## History of the Chain Insights Subnet
+
+**Formation and Launch**
+
+Chain Insights Subnet was formally registered on the Bittensor network on October 25, 2023. The subnet became operational in the first days of December 2023. It was founded by **aphex5**, a well-known figure in the community. From its inception, Chain Insights aimed to provide comprehensive analytics for tracking and analyzing cryptocurrency fund flows and balance changes, offering valuable insights into the cryptocurrency ecosystem, detecting anomalies, and combating financial crimes.
+
+**Early Growth and Team Expansion**
+
+The project quickly garnered attention and support from validators, bolstered by growing emissions. At the beginning of the first quarter (Q1) of 2024, the subnet team expanded by adding six new developers. This growth continued into the second quarter (Q2) with the addition of four more developers, bringing fresh expertise and momentum to the project.
+
+**Shift in Development Priorities**
+
+However, during Q2, Chain Insights faced significant challenges that necessitated a shift in development priorities. The primary stressor was the **Open Tensor Foundation (OTF)**, which demanded more diversified miner metrics, benchmarking, and monitoring. These requirements diverted the team's focus away from developing core product functionalities.
+
+Subsequent demands from the OTF included transforming miners into producers of "commodities," which required integrating additional AI components into the miner side. This shift was not aligned with Chain Insights' original product vision. As a result, the team struggled to achieve success in these new areas. The OTF's requirements were constantly evolving, starting with requests to "copy some other blockchain in the form of a subnet," then stipulating that 20% of miners must be the best performers while the remaining 80% could be less efficient, and later insisting that miners produce tangible goods.
+
+**Challenges and Deregistration**
+
+Despite efforts to adapt, Chain Insights was unable to meet the ever-changing demands set by the OTF. By August 25, 2024, the subnet faced deregistration. Prior to this, the team had implemented several features, including Chain Chat, large language model (LLM) conversions to Cypher/SQL queries, and miner/validator monitoring, miner performance benchmarking. However, these efforts were insufficient to satisfy the OTF's requirements.
+
+Compounding these challenges, the judges from the OTF frequently changed, bringing new judgment rules and a lack of understanding of Chain Insights' objectives. They questioned the subnet's focus, asking why it did not monitor social media or why it was positioned as a blockchain explorer.
+
+**Transition to Commune AI**
+
+In response to these obstacles, the Chain Insights team decided to transition to Commune AI. This move allowed them to develop their subnet independently, free from the influence of the OTF. By doing so, they aim to pursue their original vision without being subjected to the constantly changing directives of a major governing party.
+
+**Current Vision**
+
+Today, Chain Insights continues to focus on its core mission of providing advanced analytics for cryptocurrency fund flows and balance changes. The team is dedicated to delivering valuable insights into the cryptocurrency ecosystem, enhancing anomaly detection, and strengthening efforts to combat financial crimes. By operating within Commune AI, Chain Insights strives to maintain its autonomy and stay true to its foundational goals, fostering innovation and reliability in the blockchain analytics space.
+
+## Guru Podcast with aphex5
+
+- [Listen on spotify](https://open.spotify.com/episode/62k9rmnWWCWHf8bvawpO6R?si=WJcJPM0BSmmSSDWsm5T4EQ&nd=1&dlsi=368afd1dbeb149dd)
+- [Wath on X platform](https://x.com/KeithSingery/status/1768303479741898862?s=20)
+
+## Chain Chat early days demo
+- [Watch on loom](https://www.loom.com/share/4ef89f1952a542a88968cd24578e1f43?sid=49f08f16-52a9-44e4-90d5-74bdd533a30d)
