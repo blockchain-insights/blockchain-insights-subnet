@@ -7,6 +7,8 @@ from communex.module._rate_limiters.limiters import IpLimiterParams
 from keylimiter import TokenBucketLimiter
 from loguru import logger
 from starlette.middleware.cors import CORSMiddleware
+
+from src.subnet import VERSION
 from src.subnet.miner._config import MinerSettings, load_environment
 from src.subnet.miner.blockchain import GraphSearchFactory
 from src.subnet.miner.blockchain import BalanceSearchFactory
@@ -23,18 +25,26 @@ class Miner(Module):
         self.balance_search_factory = BalanceSearchFactory()
 
     @endpoint
-    async def discovery(self) -> dict:
+    async def discovery(self, validator_version) -> dict:
         """
-        Returns the network of the miner
+        Returns the network, version and graph database type of the miner
         Returns:
             dict: The network of the miner
             {
-                "network": "bitcoin"
+                "network": "bitcoin",
+                "version": 1.0,
+                "graph_db": "neo4j"
             }
         """
 
+        if validator_version != VERSION:
+            logger.error(f"Invalid version: {validator_version}, expected: {VERSION}")
+            raise ValueError(f"Invalid version: {validator_version}, expected: {VERSION}")
+
         return {
-            "network": self.settings.NETWORK
+            "network": self.settings.NETWORK,
+            "version": VERSION,
+            "graph_db": self.settings.GRAPH_DB_TYPE
         }
 
     @endpoint

@@ -25,6 +25,7 @@ from .weights_storage import WeightsStorage
 from src.subnet.validator.database.models.miner_discovery import MinerDiscoveryManager
 from src.subnet.validator.database.models.miner_receipt import MinerReceiptManager
 from src.subnet.protocol import Challenge, ChallengesResponse, ChallengeMinerResponse, Discovery
+from .. import VERSION
 
 
 class Validator(Module):
@@ -91,6 +92,8 @@ class Validator(Module):
                 return None
 
             return ChallengeMinerResponse(
+                version=discovery.version,
+                graph_db=discovery.graph_db,
                 network=discovery.network,
                 funds_flow_challenge_actual=challenge_response.funds_flow_challenge_actual,
                 funds_flow_challenge_expected=challenge_response.funds_flow_challenge_expected,
@@ -110,7 +113,7 @@ class Validator(Module):
             discovery = await client.call(
                 "discovery",
                 miner_key,
-                {},
+                {"validator_version": VERSION},
                 timeout=self.challenge_timeout,
             )
 
@@ -211,6 +214,8 @@ class Validator(Module):
 
             if isinstance(response, ChallengeMinerResponse):
                 network = response.network
+                version = response.version
+                graph_db = response.graph_db
                 connection, miner_metadata = miner_info
                 miner_address, miner_ip_port = connection
                 miner_key = miner_metadata['key']
@@ -219,7 +224,7 @@ class Validator(Module):
                 assert score <= 1
                 score_dict[uid] = score
 
-                await self.miner_discovery_manager.store_miner_metadata(uid, miner_key, miner_address, miner_ip_port, network)
+                await self.miner_discovery_manager.store_miner_metadata(uid, miner_key, miner_address, miner_ip_port, network, version, graph_db)
                 await self.miner_discovery_manager.update_miner_challenges(miner_key, response.get_failed_challenges(), 2)
 
         if not score_dict:

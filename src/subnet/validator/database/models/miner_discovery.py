@@ -28,13 +28,15 @@ class MinerDiscovery(OrmBase):
     failed_challenges = Column(Integer, nullable=False, default=0)
     total_challenges = Column(Integer, nullable=False, default=0)
     is_trusted = Column(Integer, nullable=False, default=0)
+    version = Column(Float, nullable=False, default=1.0)
+    graph_db = Column(String, nullable=False, default='neo4j')
 
 
 class MinerDiscoveryManager:
     def __init__(self, session_manager: DatabaseSessionManager):
         self.session_manager = session_manager
 
-    async def store_miner_metadata(self, uid: int, miner_key: str, miner_address: str, miner_ip_port: str, network: str):
+    async def store_miner_metadata(self, uid: int, miner_key: str, miner_address: str, miner_ip_port: str, network: str, version: float, graph_db: str):
         async with self.session_manager.session() as session:
             async with session.begin():
                 stmt = insert(MinerDiscovery).values(
@@ -43,7 +45,9 @@ class MinerDiscoveryManager:
                     miner_address=miner_address,
                     miner_ip_port=miner_ip_port,
                     network=network,
-                    timestamp=datetime.utcnow()
+                    timestamp=datetime.utcnow(),
+                    version=version,
+                    graph_db=graph_db
                 ).on_conflict_do_update(
                     index_elements=['miner_key'],
                     set_={
@@ -51,6 +55,8 @@ class MinerDiscoveryManager:
                         'miner_address': miner_address,
                         'miner_ip_port': miner_ip_port,
                         'network': network,
+                        'version': version,
+                        'graph_db': graph_db,
                         'timestamp': datetime.utcnow()
                     }
                 )

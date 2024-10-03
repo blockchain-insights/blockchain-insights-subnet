@@ -27,6 +27,8 @@ def get_networks():
 
 class Discovery(BaseModel):
     network: str = Field(NETWORK_BITCOIN, title="The network to discover")
+    version: float = Field(1.0, title="The version of the discovery")
+    graph_db: str = Field("neo4j", title="The graph database type")
 
 
 # Model types
@@ -57,6 +59,8 @@ class ChallengesResponse(BaseModel):
 
 class ChallengeMinerResponse(BaseModel):
     network: str
+    version: float
+    graph_db: str
 
     funds_flow_challenge_expected: str
     balance_tracking_challenge_expected: int
