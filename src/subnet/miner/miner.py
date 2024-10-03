@@ -25,7 +25,7 @@ class Miner(Module):
         self.balance_search_factory = BalanceSearchFactory()
 
     @endpoint
-    async def discovery(self, validator_version: float) -> dict:
+    async def discovery(self, validator_version: str) -> dict:
         """
         Returns the network, version and graph database type of the miner
         Returns:
@@ -37,7 +37,7 @@ class Miner(Module):
             }
         """
 
-        if validator_version != VERSION:
+        if float(validator_version) != VERSION:
             logger.error(f"Invalid version: {validator_version}, expected: {VERSION}")
             raise ValueError(f"Invalid version: {validator_version}, expected: {VERSION}")
 

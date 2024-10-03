@@ -113,7 +113,7 @@ class Validator(Module):
             discovery = await client.call(
                 "discovery",
                 miner_key,
-                {"validator_version": VERSION},
+                {"validator_version": str(VERSION)},
                 timeout=self.challenge_timeout,
             )
 
