@@ -25,7 +25,7 @@ class Miner(Module):
         self.balance_search_factory = BalanceSearchFactory()
 
     @endpoint
-    async def discovery(self, validator_version: str) -> dict:
+    async def discovery(self, validator_version: float) -> dict:
         """
         Returns the network, version and graph database type of the miner
         Returns:
