@@ -1,5 +1,5 @@
 from typing import Optional
-from src.subnet.protocol import NETWORK_BITCOIN, MODEL_TYPE_FUNDS_FLOW
+from src.subnet.protocol import NETWORK_BITCOIN, MODEL_TYPE_FUNDS_FLOW, MODEL_TYPE_BALANCE_TRACKING
 from src.subnet.validator.validator import Validator
 from src.subnet.validator_api.services import QueryApi
 
@@ -9,9 +9,9 @@ class BitcoinQueryApi(QueryApi):
         super().__init__()
         self.validator = validator
 
-    async def _execute_query(self, query: str) -> dict:
+    async def _execute_query(self, query: str, model_type=MODEL_TYPE_FUNDS_FLOW) -> dict:
         try:
-            data = await self.validator.query_miner(NETWORK_BITCOIN, MODEL_TYPE_FUNDS_FLOW, query, miner_key=None)
+            data = await self.validator.query_miner(NETWORK_BITCOIN, model_type, query, miner_key=None)
             return data
         except Exception as e:
             raise Exception(f"Error executing query: {str(e)}")
@@ -117,20 +117,66 @@ class BitcoinQueryApi(QueryApi):
                                    max_amount: Optional[int],
                                    start_block_height: Optional[int],
                                    end_block_height: Optional[int]) -> dict:
+
+        query = """
+            SELECT
+                bc.address,
+                bc.block,
+                bc.d_balance,
+                bc.block_timestamp,
+                b.timestamp
+            FROM
+                balance_changes bc
+            JOIN
+                blocks b ON bc.block = b.block_height
+            WHERE
+                1=1
         """
-        WITH ['INTERMEDIATE_ADDRESS_1', 'INTERMEDIATE_ADDRESS_2', 'INTERMEDIATE_ADDRESS_3'] AS intermediates
-        MATCH (start:Address {address: '1EkKwjuzYNk6YCDiMhSXjA7BLcgQp9GyCu'})<-[:SENT]-(t:Transaction)-[r:SENT]->(a:Address)
-        WHERE a.address = intermediates[0] // Ensuring first intermediate is matched
-        WITH start, t, r, a, intermediates
-        UNWIND RANGE(1, SIZE(intermediates)-1) AS idx
-        MATCH (prev:Address {address: intermediates[idx-1]})-[r2:SENT]->(next:Address {address: intermediates[idx]})
-        WITH start, t, r, prev, next, intermediates
-        MATCH path = (next)-[r3:SENT*1..5]->(final:Address) // Continue after final intermediate
-        RETURN start, t, r, prev, next, path
-        """
-        pass
+
+        if addresses:
+            formatted_addresses = ', '.join(f"'{address}'" for address in addresses)
+            query += f" AND bc.address IN ({formatted_addresses})"
+
+        if min_amount is not None:
+            query += f" AND bc.d_balance >= {min_amount}"
+
+        if max_amount is not None:
+            query += f" AND bc.d_balance <= {max_amount}"
+
+        if start_block_height is not None:
+            query += f" AND b.block_height >= {start_block_height}"
+
+        if end_block_height is not None:
+            query += f" AND b.block_height <= {end_block_height}"
+
+        query += " ORDER BY bc.block_timestamp;"
+
+        data = await self._execute_query(query, model_type=MODEL_TYPE_BALANCE_TRACKING)
+        transformed_data = data  # TODO: Transform the data if necessary
+
+        return transformed_data
 
     async def get_balance_tracking_timestamp(self,
                                              start_block_height: Optional[int],
                                              end_block_height: Optional[int]) -> dict:
-            pass
+        query = """
+            SELECT
+                block_height,
+                timestamp
+            FROM
+                blocks
+            WHERE
+                1=1
+        """
+
+        if start_block_height is not None:
+            query += f" AND block_height >= {start_block_height}"
+
+        if end_block_height is not None:
+            query += f" AND block_height <= {end_block_height}"
+
+        query += " ORDER BY timestamp;"
+
+        data = await self._execute_query(query, model_type=MODEL_TYPE_BALANCE_TRACKING)
+        transformed_data = data  # TODO: Transform the data if necessary
+        return transformed_data
