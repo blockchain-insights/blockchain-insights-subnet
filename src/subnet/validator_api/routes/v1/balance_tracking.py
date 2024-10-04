@@ -2,7 +2,7 @@ from typing import Optional
 from fastapi import Depends, APIRouter
 from pydantic import BaseModel
 
-from src.subnet.protocol import MODEL_TYPE_FUNDS_FLOW, MODEL_TYPE_BALANCE_TRACKING
+from src.subnet.protocol import MODEL_KIND_FUNDS_FLOW, MODEL_KIND_BALANCE_TRACKING
 from src.subnet.validator.validator import Validator
 from src.subnet.validator_api import get_validator, api_key_auth
 
@@ -18,7 +18,7 @@ async def query(network: str,
                              validator: Validator = Depends(get_validator),
                              api_key: str = Depends(api_key_auth)):
 
-    result = await validator.query_miner(network, MODEL_TYPE_BALANCE_TRACKING, "SELECT 1")
+    result = await validator.query_miner(network, MODEL_KIND_BALANCE_TRACKING, "SELECT 1")
     return result
 
 
@@ -27,5 +27,5 @@ async def get_timestamps(network: str,
                              validator: Validator = Depends(get_validator),
                              api_key: str = Depends(api_key_auth)):
 
-    result = await validator.query_miner(network, MODEL_TYPE_BALANCE_TRACKING, "SELECT 1")
+    result = await validator.query_miner(network, MODEL_KIND_BALANCE_TRACKING, "SELECT 1")
     return result

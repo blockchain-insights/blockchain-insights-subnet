@@ -3,7 +3,7 @@ import threading
 from src.subnet.validator._config import ValidatorSettings, load_environment
 from src.subnet.validator.database.session_manager import DatabaseSessionManager
 from src.subnet.validator.blockchain.common.challenge_generator_factory import ChallengeGeneratorFactory
-from src.subnet.protocol import MODEL_TYPE_FUNDS_FLOW, MODEL_TYPE_BALANCE_TRACKING
+from src.subnet.protocol import MODEL_KIND_FUNDS_FLOW, MODEL_KIND_BALANCE_TRACKING
 from loguru import logger
 
 
@@ -12,26 +12,25 @@ async def generate_challenge_and_store(settings: ValidatorSettings, network: str
     await challenge_generator.generate_and_store(challenge_manager, threshold)
 
 
-async def main(settings: ValidatorSettings, network: str, model: str, frequency: int, threshold: int, terminate_event: threading.Event):
+async def main(settings: ValidatorSettings, network: str, model_kind: str, frequency: int, threshold: int, terminate_event: threading.Event):
     session_manager = DatabaseSessionManager()
     session_manager.init(settings.DATABASE_URL)
 
-    # Choose the correct challenge manager based on model type
-    if model == MODEL_TYPE_FUNDS_FLOW:
+    if model_kind == MODEL_KIND_FUNDS_FLOW:
         from src.subnet.validator.database.models.challenge_funds_flow import ChallengeFundsFlowManager
         challenge_manager = ChallengeFundsFlowManager(session_manager)
-    elif model == MODEL_TYPE_BALANCE_TRACKING:
+    elif model_kind == MODEL_KIND_BALANCE_TRACKING:
         from src.subnet.validator.database.models.challenge_balance_tracking import ChallengeBalanceTrackingManager
         challenge_manager = ChallengeBalanceTrackingManager(session_manager)
     else:
-        raise ValueError(f"Unsupported model type: {model}")
+        raise ValueError(f"Unsupported model kind: {model_kind}")
 
     try:
         while not terminate_event.is_set():
             next_send_time = asyncio.get_event_loop().time() + (frequency * 60)
 
             try:
-                await generate_challenge_and_store(settings, network, model, challenge_manager, threshold)
+                await generate_challenge_and_store(settings, network, model_kind, challenge_manager, threshold)
 
                 while not terminate_event.is_set():
                     now = asyncio.get_event_loop().time()
@@ -42,7 +41,7 @@ async def main(settings: ValidatorSettings, network: str, model: str, frequency:
             except asyncio.TimeoutError:
                 logger.error("Timeout occurred while generating or storing the challenge.")
     except Exception as e:
-        logger.error(f"An error occurred while generating or storing the challenge: {e}")
+        logger.error(f"An error occurred while generating or storing the challenge: {e}", error=e)
 
 
 if __name__ == "__main__":
@@ -56,14 +55,14 @@ if __name__ == "__main__":
     # Parse command-line arguments
     environment = sys.argv[1]
     network = sys.argv[2]
-    model = sys.argv[3]  # 'funds_flow' or 'balance_tracking'
+    model_kind = sys.argv[3]  # 'funds_flow' or 'balance_tracking'
     frequency = int(sys.argv[4])
     threshold = int(sys.argv[5])
 
     # Configure logging
     logger.remove()
     logger.add(
-        f"../logs/challenge_utility_{network}_{model}.log",
+        f"../logs/challenge_utility_{network}_{model_kind}.log",
         rotation="500 MB",
         format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}"
     )
@@ -86,6 +85,6 @@ if __name__ == "__main__":
     signal.signal(signal.SIGTERM, signal_handler)
 
     # Run the main function
-    asyncio.run(main(settings, network, model, frequency, threshold, terminate_event))
+    asyncio.run(main(settings, network, model_kind, frequency, threshold, terminate_event))
 
     logger.info("Challenge Utility stopped.")

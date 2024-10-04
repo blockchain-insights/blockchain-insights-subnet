@@ -1,5 +1,5 @@
 from decimal import Decimal
-from src.subnet.protocol import Challenge, MODEL_TYPE_FUNDS_FLOW, MODEL_TYPE_BALANCE_TRACKING
+from src.subnet.protocol import Challenge, MODEL_KIND_FUNDS_FLOW, MODEL_KIND_BALANCE_TRACKING
 from .node_utils import initialize_tx_out_hash_table, get_tx_out_hash_table_sub_keys, construct_redeem_script, \
     hash_redeem_script, create_p2sh_address, pubkey_to_address, check_if_block_is_valid_for_challenge, parse_block_data, \
     Transaction, VIN, SATOSHI, VOUT
@@ -133,7 +133,7 @@ class BitcoinNode(Node):
 
             *_, in_total_amount, out_total_amount = self.process_in_memory_txn_for_indexing(tx)
             
-        challenge = Challenge(kind=MODEL_TYPE_FUNDS_FLOW,
+        challenge = Challenge(model_kind=MODEL_KIND_FUNDS_FLOW,
                               in_total_amount=in_total_amount,
                               out_total_amount=out_total_amount,
                               tx_id_last_6_chars=txn_id[-6:])
@@ -179,7 +179,7 @@ class BitcoinNode(Node):
                     changed_addresses.append(address)
                 balance_changes_by_address[address] += out_amount_by_address[address]
 
-        challenge = Challenge(kind=MODEL_TYPE_BALANCE_TRACKING, block_height=block_height)
+        challenge = Challenge(model_kind=MODEL_KIND_BALANCE_TRACKING, block_height=block_height)
         total_balance_change = sum(balance_changes_by_address.values())
         logger.info(f"Created balance tracking challenge", block_height=block_height)
 

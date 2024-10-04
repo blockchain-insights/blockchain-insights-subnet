@@ -12,7 +12,7 @@ from src.subnet import VERSION
 from src.subnet.miner._config import MinerSettings, load_environment
 from src.subnet.miner.blockchain import GraphSearchFactory
 from src.subnet.miner.blockchain import BalanceSearchFactory
-from src.subnet.protocol import Challenge, MODEL_TYPE_FUNDS_FLOW, MODEL_TYPE_BALANCE_TRACKING
+from src.subnet.protocol import Challenge, MODEL_KIND_FUNDS_FLOW, MODEL_KIND_BALANCE_TRACKING
 from src.subnet.validator.database import db_manager
 
 
@@ -25,7 +25,7 @@ class Miner(Module):
         self.balance_search_factory = BalanceSearchFactory()
 
     @endpoint
-    async def discovery(self, validator_version: str) -> dict:
+    async def discovery(self, validator_version: str, validator_key: str) -> dict:
         """
         Returns the network, version and graph database type of the miner
         Returns:
@@ -36,6 +36,8 @@ class Miner(Module):
                 "graph_db": "neo4j"
             }
         """
+
+        logger.debug(f"Received discovery request from {validator_key}", validator_key=validator_key)
 
         if float(validator_version) != VERSION:
             logger.error(f"Invalid version: {validator_version}, expected: {VERSION}")
@@ -48,31 +50,34 @@ class Miner(Module):
         }
 
     @endpoint
-    async def query(self, model_type: str, query: str) -> dict:
+    async def query(self, model_kind: str, query: str, validator_key: str) -> dict:
+
+        logger.debug(f"Received challenge request from {validator_key}", validator_key=validator_key)
+
         try:
 
-            if model_type == MODEL_TYPE_FUNDS_FLOW:
+            if model_kind == MODEL_KIND_FUNDS_FLOW:
                 search = GraphSearchFactory().create_graph_search(self.settings)
                 result = search.execute_query(query)
                 return result
 
-            elif model_type == MODEL_TYPE_BALANCE_TRACKING:
+            elif model_kind == MODEL_KIND_BALANCE_TRACKING:
                 search = BalanceSearchFactory().create_balance_search(self.settings.NETWORK)
                 result = await search.execute_query(query)
                 return result
             else:
-                raise ValueError(f"Invalid model type: {model_type}")
+                raise ValueError(f"Invalid model type: {model_kind}")
         except Exception as e:
             logger.error(f"Error executing query: {e}")
             return {"error": str(e)}
 
     @endpoint
-    async def challenge(self, challenge: Challenge) -> Challenge:
+    async def challenge(self, challenge: Challenge, validator_key: str) -> Challenge:
         """
         Solves the challenge and returns the output
         Args:
             challenge: {
-                "kind": "funds_flow",
+                "model_kind": "funds_flow",
                 "in_total_amount": 0.0,
                 "out_total_amount": 0.0,
                 "tx_id_last_6_chars": "string",
@@ -88,9 +93,11 @@ class Miner(Module):
 
         """
 
+        logger.debug(f"Received challenge request from {validator_key}", validator_key=validator_key)
+
         challenge = Challenge(**challenge)
 
-        if challenge.kind == MODEL_TYPE_FUNDS_FLOW:
+        if challenge.model_kind == MODEL_KIND_FUNDS_FLOW:
             search = GraphSearchFactory().create_graph_search(self.settings)
             tx_id = search.solve_challenge(
                 in_total_amount=challenge.in_total_amount,

@@ -2,7 +2,7 @@ from typing import Optional
 from fastapi import Depends, APIRouter
 from pydantic import BaseModel
 
-from src.subnet.protocol import MODEL_TYPE_FUNDS_FLOW, NETWORK_BITCOIN
+from src.subnet.protocol import MODEL_KIND_FUNDS_FLOW, NETWORK_BITCOIN
 from src.subnet.validator.validator import Validator
 from src.subnet.validator_api import get_validator, api_key_auth
 from src.subnet.validator_api.models import BitcoinGraphTransformer
@@ -42,7 +42,7 @@ async def get_block(network: str,
 async def get_transaction_by_tx_id(network: str,
                                    validator: Validator = Depends(get_validator),
                                    api_key: str = Depends(api_key_auth)):
-    result = await validator.query_miner(network, MODEL_TYPE_FUNDS_FLOW, "RETURN 1")
+    result = await validator.query_miner(network, MODEL_KIND_FUNDS_FLOW, "RETURN 1")
     return result
 
 
@@ -50,7 +50,7 @@ async def get_transaction_by_tx_id(network: str,
 async def get_address_transactions(network: str,
                                    validator: Validator = Depends(get_validator),
                                    api_key: str = Depends(api_key_auth)):
-    result = await validator.query_miner(network, MODEL_TYPE_FUNDS_FLOW, "RETURN 1")
+    result = await validator.query_miner(network, MODEL_KIND_FUNDS_FLOW, "RETURN 1")
     return result
 
 
@@ -58,5 +58,5 @@ async def get_address_transactions(network: str,
 async def query(network: str,
                 validator: Validator = Depends(get_validator),
                 api_key: str = Depends(api_key_auth)):
-    result = await validator.query_miner(network, MODEL_TYPE_FUNDS_FLOW, "RETURN 1")
+    result = await validator.query_miner(network, MODEL_KIND_FUNDS_FLOW, "RETURN 1")
     return result

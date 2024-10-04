@@ -32,16 +32,16 @@ class Discovery(BaseModel):
 
 
 # Model types
-MODEL_TYPE_FUNDS_FLOW = "funds_flow"
-MODEL_TYPE_BALANCE_TRACKING = "balance_tracking"
+MODEL_KIND_FUNDS_FLOW = "funds_flow"
+MODEL_KIND_BALANCE_TRACKING = "balance_tracking"
 
 
-def get_model_types():
-    return [MODEL_TYPE_FUNDS_FLOW, MODEL_TYPE_BALANCE_TRACKING]
+def get_model_kinds():
+    return [MODEL_KIND_FUNDS_FLOW, MODEL_KIND_BALANCE_TRACKING]
 
 
 class Challenge(BaseModel):
-    kind: str = Field(default=MODEL_TYPE_FUNDS_FLOW)
+    model_kind: str = Field(default=MODEL_KIND_FUNDS_FLOW)
     in_total_amount: Optional[int] = None
     out_total_amount: Optional[int] = None
     tx_id_last_6_chars: Optional[str] = None
