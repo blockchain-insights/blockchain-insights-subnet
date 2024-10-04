@@ -25,6 +25,7 @@ class MinerSettings(BaseSettings):
 
     DATABASE_URL: str
 
+    GRAPH_DB_TYPE: str = "neo4j"
     GRAPH_DATABASE_USER: str
     GRAPH_DATABASE_PASSWORD: str
     GRAPH_DATABASE_URL: str

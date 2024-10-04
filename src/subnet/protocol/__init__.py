@@ -27,19 +27,21 @@ def get_networks():
 
 class Discovery(BaseModel):
     network: str = Field(NETWORK_BITCOIN, title="The network to discover")
+    version: float = Field(1.0, title="The version of the discovery")
+    graph_db: str = Field("neo4j", title="The graph database type")
 
 
 # Model types
-MODEL_TYPE_FUNDS_FLOW = "funds_flow"
-MODEL_TYPE_BALANCE_TRACKING = "balance_tracking"
+MODEL_KIND_FUNDS_FLOW = "funds_flow"
+MODEL_KIND_BALANCE_TRACKING = "balance_tracking"
 
 
-def get_model_types():
-    return [MODEL_TYPE_FUNDS_FLOW, MODEL_TYPE_BALANCE_TRACKING]
+def get_model_kinds():
+    return [MODEL_KIND_FUNDS_FLOW, MODEL_KIND_BALANCE_TRACKING]
 
 
 class Challenge(BaseModel):
-    kind: str = Field(default=MODEL_TYPE_FUNDS_FLOW)
+    model_kind: str = Field(default=MODEL_KIND_FUNDS_FLOW)
     in_total_amount: Optional[int] = None
     out_total_amount: Optional[int] = None
     tx_id_last_6_chars: Optional[str] = None
@@ -57,6 +59,8 @@ class ChallengesResponse(BaseModel):
 
 class ChallengeMinerResponse(BaseModel):
     network: str
+    version: float
+    graph_db: str
 
     funds_flow_challenge_expected: str
     balance_tracking_challenge_expected: int

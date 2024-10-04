@@ -1,5 +1,5 @@
 from typing import Optional
-from src.subnet.protocol import NETWORK_BITCOIN, MODEL_TYPE_FUNDS_FLOW, MODEL_TYPE_BALANCE_TRACKING
+from src.subnet.protocol import NETWORK_BITCOIN, MODEL_KIND_FUNDS_FLOW, MODEL_KIND_BALANCE_TRACKING
 from src.subnet.validator.validator import Validator
 from src.subnet.validator_api.services import QueryApi
 
@@ -9,9 +9,9 @@ class BitcoinQueryApi(QueryApi):
         super().__init__()
         self.validator = validator
 
-    async def _execute_query(self, query: str, model_type=MODEL_TYPE_FUNDS_FLOW) -> dict:
+    async def _execute_query(self, query: str, model_kind=MODEL_KIND_FUNDS_FLOW) -> dict:
         try:
-            data = await self.validator.query_miner(NETWORK_BITCOIN, model_type, query, miner_key=None)
+            data = await self.validator.query_miner(NETWORK_BITCOIN, model_kind, query, miner_key=None)
             return data
         except Exception as e:
             raise Exception(f"Error executing query: {str(e)}")
@@ -151,7 +151,7 @@ class BitcoinQueryApi(QueryApi):
 
         query += " ORDER BY bc.block_timestamp;"
 
-        data = await self._execute_query(query, model_type=MODEL_TYPE_BALANCE_TRACKING)
+        data = await self._execute_query(query, model_kind=MODEL_KIND_BALANCE_TRACKING)
         transformed_data = data  # TODO: Transform the data if necessary
 
         return transformed_data
@@ -177,6 +177,6 @@ class BitcoinQueryApi(QueryApi):
 
         query += " ORDER BY timestamp;"
 
-        data = await self._execute_query(query, model_type=MODEL_TYPE_BALANCE_TRACKING)
+        data = await self._execute_query(query, model_kind=MODEL_KIND_BALANCE_TRACKING)
         transformed_data = data  # TODO: Transform the data if necessary
         return transformed_data

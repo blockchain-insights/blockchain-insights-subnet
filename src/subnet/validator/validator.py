@@ -25,6 +25,7 @@ from .weights_storage import WeightsStorage
 from src.subnet.validator.database.models.miner_discovery import MinerDiscoveryManager
 from src.subnet.validator.database.models.miner_receipt import MinerReceiptManager
 from src.subnet.protocol import Challenge, ChallengesResponse, ChallengeMinerResponse, Discovery
+from .. import VERSION
 
 
 class Validator(Module):
@@ -91,6 +92,8 @@ class Validator(Module):
                 return None
 
             return ChallengeMinerResponse(
+                version=discovery.version,
+                graph_db=discovery.graph_db,
                 network=discovery.network,
                 funds_flow_challenge_actual=challenge_response.funds_flow_challenge_actual,
                 funds_flow_challenge_expected=challenge_response.funds_flow_challenge_expected,
@@ -110,13 +113,13 @@ class Validator(Module):
             discovery = await client.call(
                 "discovery",
                 miner_key,
-                {},
+                {"validator_version": str(VERSION), "validator_key": self.key.ss58_address},
                 timeout=self.challenge_timeout,
             )
 
             return Discovery(**discovery)
         except Exception as e:
-            logger.info(f"Miner failed to get discovery", miner_key=miner_key)
+            logger.info(f"Miner failed to get discovery", miner_key=miner_key, error=e)
             return None
 
     async def _perform_challenges(self, client, miner_key, discovery, node) -> ChallengesResponse | None:
@@ -127,7 +130,7 @@ class Validator(Module):
             funds_flow_challenge = await client.call(
                 "challenge",
                 miner_key,
-                {"challenge": funds_flow_challenge.model_dump()},
+                {"challenge": funds_flow_challenge.model_dump(), "validator_key": self.key.ss58_address},
                 timeout=self.challenge_timeout,
             )
             funds_flow_challenge = Challenge(**funds_flow_challenge)
@@ -211,6 +214,8 @@ class Validator(Module):
 
             if isinstance(response, ChallengeMinerResponse):
                 network = response.network
+                version = response.version
+                graph_db = response.graph_db
                 connection, miner_metadata = miner_info
                 miner_address, miner_ip_port = connection
                 miner_key = miner_metadata['key']
@@ -219,7 +224,7 @@ class Validator(Module):
                 assert score <= 1
                 score_dict[uid] = score
 
-                await self.miner_discovery_manager.store_miner_metadata(uid, miner_key, miner_address, miner_ip_port, network)
+                await self.miner_discovery_manager.store_miner_metadata(uid, miner_key, miner_address, miner_ip_port, network, version, graph_db)
                 await self.miner_discovery_manager.update_miner_challenges(miner_key, response.get_failed_challenges(), 2)
 
         if not score_dict:
@@ -285,7 +290,7 @@ class Validator(Module):
                     logger.info("Terminating validation loop")
                     break
 
-    async def query_miner(self, network: str, model_type: str, query, miner_key: Optional[str]) -> dict:
+    async def query_miner(self, network: str, model_kind: str, query, miner_key: Optional[str]) -> dict:
         request_id = str(uuid.uuid4())
         timestamp = datetime.utcnow()
         query_hash = generate_hash(query)
@@ -298,19 +303,19 @@ class Validator(Module):
                     "timestamp": timestamp,
                     "miner_keys": None,
                     "query_hash": query_hash,
-                    "model_type": model_type,
+                    "model_kind": model_kind,
                     "query": query,
                     "response": []}
 
-            response = await self._query_miner(miner, model_type, query)
-            await self.miner_receipt_manager.store_miner_receipt(request_id, miner_key, model_type, query_hash, timestamp)
+            response = await self._query_miner(miner, model_kind, query)
+            await self.miner_receipt_manager.store_miner_receipt(request_id, miner_key, model_kind, query_hash, timestamp)
 
             return {
                 "request_id": request_id,
                 "timestamp": timestamp,
                 "miner_keys": [miner_key],
                 "query_hash": query_hash,
-                "model_type": model_type,
+                "model_kind": model_kind,
                 "query": query,
                 "response": response
             }
@@ -326,25 +331,25 @@ class Validator(Module):
 
             query_tasks = []
             for miner in top_miners:
-                query_tasks.append(self._query_miner(miner,  model_type, query))
+                query_tasks.append(self._query_miner(miner,  model_kind, query))
 
             responses = await asyncio.gather(*query_tasks)
 
             for miner, response in zip(top_miners, responses):
                 if response:
-                    await self.miner_receipt_manager.store_miner_receipt(request_id, miner['miner_key'], model_type, query_hash, timestamp)
+                    await self.miner_receipt_manager.store_miner_receipt(request_id, miner['miner_key'], model_kind, query_hash, timestamp)
 
             return {
                 "request_id": request_id,
                 "timestamp": timestamp,
                 "miner_keys": [miner['miner_key'] for miner in top_miners],
                 "query_hash": query_hash,
-                "model_type": model_type,
+                "model_kind": model_kind,
                 "query": query,
                 "response": responses
             }
 
-    async def _query_miner(self, miner, model_type, query):
+    async def _query_miner(self, miner, model_kind, query):
         miner_key = miner['miner_key']
         miner_network = miner['network']
         module_ip = miner['miner_address']
@@ -354,7 +359,7 @@ class Validator(Module):
             llm_query_result = await module_client.call(
                 "query",
                 miner_key,
-                {"model_type": model_type, "query": query},
+                {"model_kind": model_kind, "query": query, "validator_key": self.key.ss58_address},
                 timeout=self.query_timeout,
             )
             if not llm_query_result:
