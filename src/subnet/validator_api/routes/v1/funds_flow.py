@@ -42,7 +42,7 @@ async def get_block(network: str,
 async def get_transaction_by_tx_id(network: str,
                                    validator: Validator = Depends(get_validator),
                                    api_key: str = Depends(api_key_auth)):
-    result = await validator.query_miner(network, MODEL_KIND_FUNDS_FLOW, "RETURN 1")
+    result = await validator.query_miner(network, MODEL_KIND_FUNDS_FLOW, "RETURN 1", miner_key=None)
     return result
 
 
@@ -50,7 +50,7 @@ async def get_transaction_by_tx_id(network: str,
 async def get_address_transactions(network: str,
                                    validator: Validator = Depends(get_validator),
                                    api_key: str = Depends(api_key_auth)):
-    result = await validator.query_miner(network, MODEL_KIND_FUNDS_FLOW, "RETURN 1")
+    result = await validator.query_miner(network, MODEL_KIND_FUNDS_FLOW, "RETURN 1", miner_key=None)
     return result
 
 
@@ -58,5 +58,5 @@ async def get_address_transactions(network: str,
 async def query(network: str,
                 validator: Validator = Depends(get_validator),
                 api_key: str = Depends(api_key_auth)):
-    result = await validator.query_miner(network, MODEL_KIND_FUNDS_FLOW, "RETURN 1")
+    result = await validator.query_miner(network, MODEL_KIND_FUNDS_FLOW, "RETURN 1",  miner_key=None)
     return result
