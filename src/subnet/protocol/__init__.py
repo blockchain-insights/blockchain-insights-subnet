@@ -6,7 +6,6 @@ NETWORK_ETHEREUM = "ethereum"
 NETWORK_COMMUNE_AI = "commune_ai"
 
 
-
 def get_networks():
     return [NETWORK_BITCOIN, NETWORK_ETHEREUM, NETWORK_COMMUNE_AI]
 

@@ -7,11 +7,9 @@ from communex.module._rate_limiters.limiters import IpLimiterParams
 from keylimiter import TokenBucketLimiter
 from loguru import logger
 from starlette.middleware.cors import CORSMiddleware
-
 from src.subnet import VERSION
 from src.subnet.miner._config import MinerSettings, load_environment
-from src.subnet.miner.blockchain import GraphSearchFactory
-from src.subnet.miner.blockchain import BalanceSearchFactory
+from src.subnet.miner.blockchain.search import GraphSearchFactory, BalanceSearchFactory
 from src.subnet.protocol import Challenge, MODEL_KIND_FUNDS_FLOW, MODEL_KIND_BALANCE_TRACKING
 from src.subnet.validator.database import db_manager
 

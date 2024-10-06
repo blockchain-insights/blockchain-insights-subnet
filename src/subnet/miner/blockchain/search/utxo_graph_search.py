@@ -1,6 +1,5 @@
 import time
 from loguru import logger
-
 from src.subnet.miner.blockchain import GraphSearch
 
 

@@ -1,8 +1,6 @@
 import time
 from src.subnet.validator.database import db_manager
 from src.subnet.miner._config import MinerSettings
-from src.subnet.miner.blockchain.utxo_graph_search import UtxoGraphSearch
-from src.subnet.protocol import NETWORK_BITCOIN
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from loguru import logger
@@ -94,31 +92,3 @@ class BalanceSearch:
             end_time = time.time()
             execution_time = end_time - start_time
             logger.info(f"Execution time for solve_challenge: {execution_time} seconds")
-
-
-class GraphSearchFactory:
-    @classmethod
-    def create_graph_search(cls, settings: MinerSettings) -> GraphSearch:
-        graph_search_class = {
-            NETWORK_BITCOIN: UtxoGraphSearch,
-            # Add other networks and their corresponding classes as needed
-        }.get(settings.NETWORK)
-
-        if graph_search_class is None:
-            raise ValueError(f"Unsupported network Type: {settings.NETWORK}")
-
-        return graph_search_class(settings)
-
-
-class BalanceSearchFactory:
-    @classmethod
-    def create_balance_search(cls, network: str) -> BalanceSearch:
-        graph_search_class = {
-            NETWORK_BITCOIN: BalanceSearch,
-            # Add other networks and their corresponding classes as needed
-        }.get(network)
-
-        if graph_search_class is None:
-            raise ValueError(f"Unsupported network Type: {network}")
-
-        return graph_search_class()
