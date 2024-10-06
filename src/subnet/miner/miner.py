@@ -76,6 +76,7 @@ class Miner(Module):
         """
         Solves the challenge and returns the output
         Args:
+            validator_key:
             challenge: {
                 "model_kind": "funds_flow",
                 "in_total_amount": 0.0,
