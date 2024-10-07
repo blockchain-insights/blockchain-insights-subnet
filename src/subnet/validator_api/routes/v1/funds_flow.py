@@ -1,5 +1,5 @@
 from typing import Optional, List
-from fastapi import Depends, APIRouter, Query
+from fastapi import Depends, APIRouter, Query, HTTPException
 from pydantic import BaseModel
 
 from src.subnet.protocol import MODEL_KIND_FUNDS_FLOW, NETWORK_BITCOIN
@@ -19,9 +19,13 @@ class MinerMetadataRequest(BaseModel):
                                description="Get multiple blocks"
                                )
 async def get_blocks(network: str,
-                     block_heights: List[int] = Query(...),  # Accept list of block heights as query params
+                     block_heights: List[int] = Query(..., description="List of block heights (maximum 10)"),  # Accept list of block heights as query params
                      validator: Validator = Depends(get_validator),
                      api_key: str = Depends(api_key_auth)):
+
+    # Ensure the length of the block_heights list does not exceed 10
+    if len(block_heights) > 10:
+        raise HTTPException(status_code=400, detail="The maximum number of block heights allowed is 10.")
 
     if network == NETWORK_BITCOIN:
         query_api = BitcoinQueryApi(validator)
