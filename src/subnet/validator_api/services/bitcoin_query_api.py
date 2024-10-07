@@ -17,6 +17,10 @@ class BitcoinQueryApi(QueryApi):
             raise Exception(f"Error executing query: {str(e)}")
 
     async def get_blocks(self, block_heights: List[int]) -> dict:
+        # Ensure that the array has no more than 10 block heights
+        if len(block_heights) > 10:
+            raise ValueError("Cannot query more than 10 blocks at once")
+
         # Form a Cypher query that uses the array of block heights
         query = f"""
             MATCH (t1:Transaction)
@@ -26,7 +30,7 @@ class BitcoinQueryApi(QueryApi):
             RETURN t1, s1, a1, s2, a2
         """
 
-        # Execute the query and fetch the data9
+        # Execute the query and fetch the data
         data = await self._execute_query(query)
 
         # Transform data if necessary
@@ -34,15 +38,25 @@ class BitcoinQueryApi(QueryApi):
 
         return transformed_data
 
-    async def get_transaction_by_tx_id(self, tx_id: str) -> dict:
-        query = f"""MATCH (t1:Transaction {{tx_id: '{tx_id}' }})
-                    OPTIONAL MATCH (t1)-[s1:SENT]->(a1:Address)
-                    OPTIONAL MATCH (a2:Address)-[s2:SENT]->(t1)
-                    RETURN t1, s1, a1, s2, a2
-                """
+    async def get_blocks_around_transaction(self, tx_id: str, radius: int) -> dict:
+        # Ensure the radius is within the allowed limit (R <= 10)
+        if radius > 10:
+            raise ValueError("Radius cannot be more than 10 blocks")
+
+        query = f"""
+            MATCH (t1:Transaction {{tx_id: '{tx_id}'}})
+            WITH t1.block_height AS target_block_height
+            UNWIND range(target_block_height - {radius}, target_block_height + {radius}) AS block_height
+            MATCH (t:Transaction {{block_height: block_height}})-[s1:SENT]->(a1:Address)
+            OPTIONAL MATCH (t)-[s2:SENT]->(a2:Address)
+            RETURN t AS t1, t.block_height AS block_height, a1, s1, a2, s2
+            ORDER BY t.block_height
+        """
 
         data = await self._execute_query(query)
-        transformed_data = data  # TODO: Transform data here
+
+        # Optionally transform data if necessary
+        transformed_data = data  # Placeholder for any transformation logic
         return transformed_data
 
     async def get_address_transactions(self,

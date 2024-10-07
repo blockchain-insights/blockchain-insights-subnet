@@ -41,10 +41,27 @@ async def get_blocks(network: str,
 
 @funds_flow_bitcoin_router.get("/{network}/get_transaction_by_tx_id")
 async def get_transaction_by_tx_id(network: str,
+                                   tx_id: str,
+                                   radius: int = Query(0),  # Accept radius as query parameter
                                    validator: Validator = Depends(get_validator),
                                    api_key: str = Depends(api_key_auth)):
-    result = await validator.query_miner(network, MODEL_KIND_FUNDS_FLOW, "RETURN 1", miner_key=None)
-    return result
+
+    # Ensure that the radius does not exceed 10
+    if radius > 10:
+        raise ValueError("Radius cannot be greater than 10 blocks")
+
+    if network == NETWORK_BITCOIN:
+        query_api = BitcoinQueryApi(validator)
+        data = await query_api.get_blocks_around_transaction(tx_id, radius)
+
+        # Transform the results
+        transformer = BitcoinGraphTransformer()
+        data['results'] = transformer.transform_result(data['response'])
+
+        return data
+
+    return []
+
 
 
 @funds_flow_bitcoin_router.get("/{network}/get_address_transactions")
