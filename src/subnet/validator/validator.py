@@ -179,46 +179,44 @@ class Validator(Module):
         multiplier = min(1.0, receipt_miner_multiplier)
         score = score + (0.7 * multiplier)
 
-        weighted_score = 0
-        total_weight = sum(adjusted_weights.values())
-
-        for network, weight in adjusted_weights.items():
-            network_influence = weight / total_weight
-            weighted_score += score * network_influence
-
-        return weighted_score
+        return score
 
     @staticmethod
     def adjust_network_weights_with_min_threshold(organic_prompts, min_threshold_ratio=5):
         base_weights = load_base_weights()
+        total_base_weight = sum(base_weights.values())
+        normalized_base_weights = {k: (v / total_base_weight) * 100 for k, v in base_weights.items()}
         num_networks = len(base_weights)
-        min_threshold = 100 / min_threshold_ratio  # minimum threshold percentage
-
-        # Calculate total organic prompts
+        min_threshold = 100 / min_threshold_ratio  # Minimum threshold percentage
         total_prompts = sum(organic_prompts.values())
 
-        # Adjusted weights after applying minimum threshold
         adjusted_weights = {}
-        remaining_weight = 100
-        total_base_weight = sum(base_weights.values())
 
-        for network in base_weights.keys():
-            organic_ratio = organic_prompts.get(network, 0) / total_prompts if total_prompts > 0 else 0
-            adjusted_weight = base_weight = base_weights[network] * organic_ratio * (total_base_weight / 100)
+        if total_prompts == 0:
+            adjusted_weights = normalized_base_weights.copy()
+        else:
+            for network in normalized_base_weights.keys():
+                organic_ratio = organic_prompts.get(network, 0) / total_prompts
+                adjusted_weight = normalized_base_weights[network] * organic_ratio
 
-            if adjusted_weight < min_threshold:
-                adjusted_weights[network] = min_threshold
-                remaining_weight -= min_threshold
-            else:
-                adjusted_weights[network] = adjusted_weight
+                if adjusted_weight < min_threshold:
+                    adjusted_weights[network] = min_threshold
+                else:
+                    adjusted_weights[network] = adjusted_weight
 
-        # Recalculate the weights for networks above the minimum threshold
-        total_adjusted_weight = sum(adjusted_weights.values())
-        if total_adjusted_weight > 100:
-            excess = total_adjusted_weight - 100
-            scale_factor = (100 - remaining_weight) / (total_adjusted_weight - min_threshold * num_networks)
-            for network in adjusted_weights.keys():
-                adjusted_weights[network] = (adjusted_weights[network] - excess) * scale_factor
+            total_adjusted_weight = sum(adjusted_weights.values())
+
+            if total_adjusted_weight > 100:
+                weight_above_min = total_adjusted_weight - (min_threshold * num_networks)
+                if weight_above_min > 0:
+                    scale_factor = (100 - (min_threshold * num_networks)) / weight_above_min
+                    for network in adjusted_weights.keys():
+                        if adjusted_weights[network] > min_threshold:
+                            adjusted_weights[network] = min_threshold + (
+                                        adjusted_weights[network] - min_threshold) * scale_factor
+                else:
+                    for network in adjusted_weights.keys():
+                        adjusted_weights[network] = min_threshold
 
         return adjusted_weights
 
@@ -246,9 +244,6 @@ class Validator(Module):
         for _, miner_metadata in miners_module_info.values():
             await self.miner_discovery_manager.update_miner_rank(miner_metadata['key'], miner_metadata['emission'])
 
-        # i need to black list a miner here ... ?
-
-
         challenge_tasks = []
         for uid, miner_info in miners_module_info.items():
             challenge_tasks.append(self._challenge_miner(miner_info))
@@ -270,11 +265,19 @@ class Validator(Module):
 
                 organic_usage = await self.miner_receipt_manager.get_receipts_count_by_networks()
                 adjusted_weights = self.adjust_network_weights_with_min_threshold(organic_usage, min_threshold_ratio=5)
+                logger.debug(f"Adjusted weights", adjusted_weights=adjusted_weights, miner_key=miner_key)
 
                 receipt_miner_multiplier = await self.miner_receipt_manager.get_receipt_miner_multiplier(network, miner_key)
                 score = self._score_miner(response, receipt_miner_multiplier, adjusted_weights)
-                assert score <= 1
-                score_dict[uid] = score
+
+                weighted_score = 0
+                total_weight = sum(adjusted_weights.values())
+                weight = adjusted_weights[response.network]
+                network_influence = weight / total_weight
+                weighted_score += score * network_influence
+
+                assert weighted_score <= 1
+                score_dict[uid] = weighted_score
 
                 await self.miner_discovery_manager.store_miner_metadata(uid, miner_key, miner_address, miner_ip_port, network, version, graph_db)
                 await self.miner_discovery_manager.update_miner_challenges(miner_key, response.get_failed_challenges(), 2)

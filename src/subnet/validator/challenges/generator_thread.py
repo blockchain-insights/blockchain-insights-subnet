@@ -12,16 +12,16 @@ from src.subnet.validator.database.session_manager import DatabaseSessionManager
 
 class ChallengeGeneratorFactory:
     @classmethod
-    def create_challenge_generator(cls, network: str, settings) -> ChallengeGenerator:
+    def create_challenge_generator(cls, network: str, settings, terminate_event: threading.Event) -> ChallengeGenerator:
         challenge_generator_class = {
             NETWORK_BITCOIN: BitcoinChallengeGenerator,
             NETWORK_COMMUNE: CommuneChallengeGenerator
-        }.get((network))
+        }.get(network)
 
         if challenge_generator_class is None:
             raise ValueError(f"Unsupported combination of network: {network}")
 
-        return challenge_generator_class(settings=settings)
+        return challenge_generator_class(settings, terminate_event)
 
 
 class ChallengeGeneratorThread(threading.Thread):
@@ -48,7 +48,7 @@ class ChallengeGeneratorThread(threading.Thread):
                 for network in networks:
                     try:
                         factory = ChallengeGeneratorFactory()
-                        generator = factory.create_challenge_generator(network, self.settings)
+                        generator = factory.create_challenge_generator(network, self.settings, self.terminate_event)
                         if self.terminate_event.is_set():
                             break
                         await generator.funds_flow_generate_and_store(funds_flow_challenge_manager, self.threshold)

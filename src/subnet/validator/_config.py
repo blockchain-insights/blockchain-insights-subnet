@@ -142,6 +142,6 @@ class SettingsManager:
 
 
 def load_base_weights():
-    local_config_path = 'subnet/validator/config.json'
+    local_config_path = 'subnet/validator/base_weights.json'
     with open(local_config_path, 'r') as f:
         return json.load(f)
