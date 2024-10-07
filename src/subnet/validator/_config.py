@@ -46,10 +46,12 @@ class ValidatorSettings(BaseSettings):
     QUERY_TIMEOUT: int   # cross check query timeout
     CHALLENGE_TIMEOUT: int  # challenge and llm challenge time
 
-    FUNDS_FLOW_CHALLENGE_FREQUENCY: int
-    FUNDS_FLOW_CHALLENGE_THRESHOLD: int
-    BALANCE_TRACKING_CHALLENGE_FREQUENCY: int
-    BALANCE_TRACKING_CHALLENGE_THRESHOLD: int
+    CHALLENGE_FREQUENCY: int
+    CHALLENGE_THRESHOLD: int
+
+    BITCOIN_NODE_RPC_URL: str
+    COMMUNE_NODE_RPC: str
+
 
     model_config = ConfigDict(
         extra='ignore',

@@ -14,5 +14,5 @@ class Node(ABC):
         ...
 
     @abstractmethod
-    def create_funds_flow_challenge(self, start_block_height, last_block_height):
+    def create_funds_flow_challenge(self, last_block_height):
         ...

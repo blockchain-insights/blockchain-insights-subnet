@@ -106,11 +106,11 @@ class BitcoinNode(Node):
             address, amount = self.tx_out_hash_table[txn_id[:3]][(txn_id, vout_id)]
             return address, int(amount)
 
-    def create_funds_flow_challenge(self, start_block_height, last_block_height):
+    def create_funds_flow_challenge(self, last_block_height):
         num_retries = 10 # to prevent infinite loop
         is_valid_block = False
         while num_retries and not is_valid_block:
-            block_to_check = select_block(start_block_height, last_block_height)
+            block_to_check = select_block(0, last_block_height)
             is_valid_block = check_if_block_is_valid_for_challenge(block_to_check)
             num_retries -= 1
 

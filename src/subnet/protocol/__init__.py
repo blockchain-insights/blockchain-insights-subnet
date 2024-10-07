@@ -2,12 +2,11 @@ from typing import Optional, Dict
 from pydantic import BaseModel, Field
 
 NETWORK_BITCOIN = "bitcoin"
-NETWORK_ETHEREUM = "ethereum"
-NETWORK_COMMUNE_AI = "commune_ai"
+NETWORK_COMMUNE = "commune"
 
 
 def get_networks():
-    return [NETWORK_BITCOIN, NETWORK_ETHEREUM, NETWORK_COMMUNE_AI]
+    return [NETWORK_BITCOIN, NETWORK_COMMUNE]
 
 
 class Discovery(BaseModel):
