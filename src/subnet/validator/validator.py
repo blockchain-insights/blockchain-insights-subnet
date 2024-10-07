@@ -143,7 +143,7 @@ class Validator(Module):
             balance_tracking_challenge = await client.call(
                 "challenge",
                 miner_key,
-                {"challenge": balance_tracking_challenge.model_dump()},
+                {"challenge": balance_tracking_challenge.model_dump(), "validator_key": self.key.ss58_address},
                 timeout=self.challenge_timeout,
             )
             balance_tracking_challenge = Challenge(**balance_tracking_challenge)
