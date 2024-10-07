@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from threading import Event
 
 
 class Node(ABC):
@@ -14,5 +15,9 @@ class Node(ABC):
         ...
 
     @abstractmethod
-    def create_funds_flow_challenge(self, last_block_height):
+    def create_funds_flow_challenge(self, last_block_height, terminate_event: Event):
+        ...
+
+    @abstractmethod
+    def create_balance_tracking_challenge(self, block_height, terminate_event: Event):
         ...

@@ -246,6 +246,9 @@ class Validator(Module):
         for _, miner_metadata in miners_module_info.values():
             await self.miner_discovery_manager.update_miner_rank(miner_metadata['key'], miner_metadata['emission'])
 
+        # i need to black list a miner here ... ?
+
+
         challenge_tasks = []
         for uid, miner_info in miners_module_info.items():
             challenge_tasks.append(self._challenge_miner(miner_info))

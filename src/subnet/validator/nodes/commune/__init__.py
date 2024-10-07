@@ -1,3 +1,5 @@
+from threading import Event
+
 from Crypto.Hash import SHA256
 from loguru import logger
 from substrateinterface import SubstrateInterface
@@ -48,7 +50,10 @@ class CommuneNode(Node):
             logger.error(f"Error fetching block at height {block_height}: {e}", block_height=block_height, error=e)
             return None
 
-    def create_funds_flow_challenge(self, end_block: int):
+    def create_funds_flow_challenge(self, end_block: int, terminate_event: Event):
+        if terminate_event.is_set():
+            return None, None
+
         block_number = select_block(0, end_block)
         block = self.substrate.get_block(block_number=block_number)
 
@@ -77,7 +82,9 @@ class CommuneNode(Node):
 
         return None, None
 
-    def create_balance_tracking_challenge(self, block_height: int):
+    def create_balance_tracking_challenge(self, block_height: int, terminate_event: Event):
+        if terminate_event.is_set():
+            return None, None
 
         logger.info("Creating balance tracking challenge", block_height=block_height)
 
