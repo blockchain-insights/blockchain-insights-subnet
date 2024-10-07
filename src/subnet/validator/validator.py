@@ -14,7 +14,7 @@ from communex.module.module import Module  # type: ignore
 from communex.types import Ss58Address  # type: ignore
 from loguru import logger
 from substrateinterface import Keypair  # type: ignore
-from ._config import ValidatorSettings
+from ._config import ValidatorSettings, load_base_weights
 
 from .database.models.challenge_balance_tracking import ChallengeBalanceTrackingManager
 from .database.models.challenge_funds_flow import ChallengeFundsFlowManager
@@ -189,7 +189,8 @@ class Validator(Module):
         return weighted_score
 
     @staticmethod
-    def adjust_network_weights_with_min_threshold(base_weights, organic_prompts, min_threshold_ratio=5):
+    def adjust_network_weights_with_min_threshold(organic_prompts, min_threshold_ratio=5):
+        base_weights = load_base_weights()
         num_networks = len(base_weights)
         min_threshold = 100 / min_threshold_ratio  # minimum threshold percentage
 
@@ -264,13 +265,8 @@ class Validator(Module):
                 miner_address, miner_ip_port = connection
                 miner_key = miner_metadata['key']
 
-                base_weights = {
-                    NETWORK_BITCOIN: 67,
-                    NETWORK_COMMUNE: 33,
-                }
-
                 organic_usage = await self.miner_receipt_manager.get_receipts_count_by_networks()
-                adjusted_weights = self.adjust_network_weights_with_min_threshold(base_weights, organic_usage, min_threshold_ratio=5)
+                adjusted_weights = self.adjust_network_weights_with_min_threshold(organic_usage, min_threshold_ratio=5)
 
                 receipt_miner_multiplier = await self.miner_receipt_manager.get_receipt_miner_multiplier(network, miner_key)
                 score = self._score_miner(response, receipt_miner_multiplier, adjusted_weights)

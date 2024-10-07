@@ -139,3 +139,9 @@ class SettingsManager:
     def stop_reloader(self):
         self._stop_event.set()
         self._thread.join()
+
+
+def load_base_weights():
+    local_config_path = 'subnet/validator/config.json'
+    with open(local_config_path, 'r') as f:
+        return json.load(f)
