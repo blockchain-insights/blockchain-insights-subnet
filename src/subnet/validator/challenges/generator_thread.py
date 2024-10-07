@@ -1,5 +1,7 @@
 import asyncio
 import threading
+import traceback
+
 from loguru import logger
 from src.subnet.protocol import get_networks, NETWORK_BITCOIN, NETWORK_COMMUNE
 from src.subnet.validator.challenges import ChallengeGenerator
@@ -67,7 +69,8 @@ class ChallengeGeneratorThread(threading.Thread):
                     await asyncio.sleep(1)
 
         except Exception as e:
-            logger.error(f"An error occurred while generating or storing the challenge", error=e)
+            tb = traceback.format_exc()
+            logger.error(f"An error occurred while generating or storing the challenge", error=e, traceback=tb)
 
     def run(self):
         loop = asyncio.new_event_loop()
