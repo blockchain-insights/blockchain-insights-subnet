@@ -29,10 +29,10 @@ async def get_receipts(miner_key: str, page: int = 1, page_size: int = 10,
 
 
 @miner_router.get("/miner/multiplier")
-async def get_receipt_multiplier(miner_key: Optional[str],
+async def get_receipt_multiplier(miner_key: Optional[str], network: Optional[str] = None,
                                        validator: Validator = Depends(get_validator),
                                        api_key: str = Depends(api_key_auth)):
-    results = validator.miner_receipt_manager.get_receipt_miner_multiplier(miner_key)
+    results = validator.miner_receipt_manager.get_receipt_miner_multiplier(network, miner_key)
     return results
 
 

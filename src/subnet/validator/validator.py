@@ -24,7 +24,8 @@ from .nodes.factory import NodeFactory
 from .weights_storage import WeightsStorage
 from src.subnet.validator.database.models.miner_discovery import MinerDiscoveryManager
 from src.subnet.validator.database.models.miner_receipt import MinerReceiptManager
-from src.subnet.protocol import Challenge, ChallengesResponse, ChallengeMinerResponse, Discovery
+from src.subnet.protocol import Challenge, ChallengesResponse, ChallengeMinerResponse, Discovery, NETWORK_BITCOIN, \
+    NETWORK_COMMUNE
 from .. import VERSION
 
 
@@ -159,7 +160,9 @@ class Validator(Module):
             return None
 
     @staticmethod
-    def _score_miner(response: ChallengeMinerResponse, receipt_miner_multiplier: float) -> float:
+    def _score_miner(response: ChallengeMinerResponse, receipt_miner_multiplier: float,
+                     adjusted_weights: dict) -> float:
+
         if not response:
             logger.debug(f"Skipping empty response")
             return 0
@@ -175,7 +178,48 @@ class Validator(Module):
 
         multiplier = min(1.0, receipt_miner_multiplier)
         score = score + (0.7 * multiplier)
-        return score
+
+        weighted_score = 0
+        total_weight = sum(adjusted_weights.values())
+
+        for network, weight in adjusted_weights.items():
+            network_influence = weight / total_weight
+            weighted_score += score * network_influence
+
+        return weighted_score
+
+    @staticmethod
+    def adjust_network_weights_with_min_threshold(base_weights, organic_prompts, min_threshold_ratio=5):
+        num_networks = len(base_weights)
+        min_threshold = 100 / min_threshold_ratio  # minimum threshold percentage
+
+        # Calculate total organic prompts
+        total_prompts = sum(organic_prompts.values())
+
+        # Adjusted weights after applying minimum threshold
+        adjusted_weights = {}
+        remaining_weight = 100
+        total_base_weight = sum(base_weights.values())
+
+        for network in base_weights.keys():
+            organic_ratio = organic_prompts.get(network, 0) / total_prompts if total_prompts > 0 else 0
+            adjusted_weight = base_weight = base_weights[network] * organic_ratio * (total_base_weight / 100)
+
+            if adjusted_weight < min_threshold:
+                adjusted_weights[network] = min_threshold
+                remaining_weight -= min_threshold
+            else:
+                adjusted_weights[network] = adjusted_weight
+
+        # Recalculate the weights for networks above the minimum threshold
+        total_adjusted_weight = sum(adjusted_weights.values())
+        if total_adjusted_weight > 100:
+            excess = total_adjusted_weight - 100
+            scale_factor = (100 - remaining_weight) / (total_adjusted_weight - min_threshold * num_networks)
+            for network in adjusted_weights.keys():
+                adjusted_weights[network] = (adjusted_weights[network] - excess) * scale_factor
+
+        return adjusted_weights
 
     async def validate_step(self, netuid: int, settings: ValidatorSettings) -> None:
 
@@ -219,8 +263,17 @@ class Validator(Module):
                 connection, miner_metadata = miner_info
                 miner_address, miner_ip_port = connection
                 miner_key = miner_metadata['key']
-                receipt_miner_multiplier = await self.miner_receipt_manager.get_receipt_miner_multiplier(miner_key)
-                score = self._score_miner(response, receipt_miner_multiplier)
+
+                base_weights = {
+                    NETWORK_BITCOIN: 67,
+                    NETWORK_COMMUNE: 33,
+                }
+
+                organic_usage = await self.miner_receipt_manager.get_receipts_count_by_networks()
+                adjusted_weights = self.adjust_network_weights_with_min_threshold(base_weights, organic_usage, min_threshold_ratio=5)
+
+                receipt_miner_multiplier = await self.miner_receipt_manager.get_receipt_miner_multiplier(network, miner_key)
+                score = self._score_miner(response, receipt_miner_multiplier, adjusted_weights)
                 assert score <= 1
                 score_dict[uid] = score
 
