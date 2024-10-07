@@ -6,7 +6,7 @@ NETWORK_COMMUNE = "commune"
 
 
 def get_networks():
-    return [NETWORK_BITCOIN, NETWORK_COMMUNE]
+    return [NETWORK_COMMUNE, NETWORK_BITCOIN]
 
 
 class Discovery(BaseModel):

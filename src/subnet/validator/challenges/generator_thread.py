@@ -25,11 +25,10 @@ class ChallengeGeneratorFactory:
 
 
 class ChallengeGeneratorThread(threading.Thread):
-    def __init__(self, settings, environment, network, frequency, threshold, terminate_event, *args, **kwargs):
+    def __init__(self, settings, environment, frequency, threshold, terminate_event, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.settings = settings
         self.environment = environment
-        self.network = network
         self.frequency = frequency
         self.threshold = threshold
         self.terminate_event = terminate_event
@@ -58,18 +57,17 @@ class ChallengeGeneratorThread(threading.Thread):
                         await generator.balance_tracking_generate_and_store(balance_tracking_challenge_manager, self.threshold)
                         if self.terminate_event.is_set():
                             break
-
-                        while not self.terminate_event.is_set():
-                            now = asyncio.get_event_loop().time()
-                            if now >= next_send_time:
-                                break
-                            await asyncio.sleep(1)
-
                     except asyncio.TimeoutError:
                         logger.error("Timeout occurred while generating or storing the challenge.")
 
+                while not self.terminate_event.is_set():
+                    now = asyncio.get_event_loop().time()
+                    if now >= next_send_time:
+                        break
+                    await asyncio.sleep(1)
+
         except Exception as e:
-            logger.error(f"An error occurred while generating or storing the challenge: {e}", error=e)
+            logger.error(f"An error occurred while generating or storing the challenge", error=e)
 
     def run(self):
         loop = asyncio.new_event_loop()

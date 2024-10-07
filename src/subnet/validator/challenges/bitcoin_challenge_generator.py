@@ -1,3 +1,5 @@
+import json
+
 from loguru import logger
 from src.subnet.protocol import NETWORK_BITCOIN
 from src.subnet.validator.challenges import ChallengeGenerator
@@ -18,15 +20,15 @@ class BitcoinChallengeGenerator(ChallengeGenerator):
 
         funds_flow_challenge, tx_id = self.node.create_funds_flow_challenge(last_block_height)
 
-        challenge_json = funds_flow_challenge.json()
-        logger.debug(f"Generated Funds Flow Challenge: {challenge_json}")
+        challenge_json = json.dumps(funds_flow_challenge.model_dump())
+        logger.debug(f"Generated Funds Flow Challenge", network=self.network, challenge=funds_flow_challenge.model_dump())
 
         current_challenge_count = await challenge_manager.get_challenge_count(self.network)
         if current_challenge_count >= threshold:
             await challenge_manager.try_delete_oldest_challenge(self.network)
 
         await challenge_manager.store_challenge(challenge_json, tx_id, self.network)
-        logger.info(f"Challenge stored in the database successfully.")
+        logger.info(f"Challenge stored in the database successfully.", network=self.network)
 
     async def balance_tracking_generate_and_store(self, challenge_manager: ChallengeBalanceTrackingManager, threshold: int):
         last_block = self.node.get_current_block_height() - 6
@@ -34,11 +36,11 @@ class BitcoinChallengeGenerator(ChallengeGenerator):
 
         balance_tracking_challenge, balance_tracking_expected_response = self.node.create_balance_tracking_challenge(random_balance_tracking_block)
         challenge_json = balance_tracking_challenge.json()
-        logger.debug(f"Generated Balance Tracking Challenge: {challenge_json}")
+        logger.debug(f"Generated Balance Tracking Challenge", network=self.network, challenge=balance_tracking_challenge.model_dump())
 
         current_challenge_count = await challenge_manager.get_challenge_count(self.network)
         if current_challenge_count >= threshold:
             await challenge_manager.try_delete_oldest_challenge(self.network)
 
         await challenge_manager.store_challenge(challenge_json, random_balance_tracking_block, balance_tracking_expected_response, self.network)
-        logger.info(f"Challenge stored in the database successfully.")
+        logger.info(f"Challenge stored in the database successfully.", network=self.network)

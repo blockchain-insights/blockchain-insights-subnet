@@ -37,8 +37,8 @@ class CommuneNode(Node):
         )
 
     def get_current_block_height(self):
-        metadata = self.substrate.get_block_metadata()
-        return metadata['blockNumber']
+        header = self.substrate.get_block_header()
+        return header['header']['number']
 
     def get_block_by_height(self, block_height):
         try:
