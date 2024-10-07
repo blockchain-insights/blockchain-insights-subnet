@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from src.subnet.protocol import NETWORK_BITCOIN, MODEL_KIND_FUNDS_FLOW, MODEL_KIND_BALANCE_TRACKING
 from src.subnet.validator.validator import Validator
 from src.subnet.validator_api.services import QueryApi
@@ -16,17 +16,22 @@ class BitcoinQueryApi(QueryApi):
         except Exception as e:
             raise Exception(f"Error executing query: {str(e)}")
 
-    async def get_block(self, block_height: int) -> dict:
+    async def get_blocks(self, block_heights: List[int]) -> dict:
+        # Form a Cypher query that uses the array of block heights
         query = f"""
             MATCH (t1:Transaction)
-            WHERE t1.block_height IN [{block_height - 1}, {block_height}, {block_height + 1}]
+            WHERE t1.block_height IN {block_heights}
             OPTIONAL MATCH (t1)-[s1:SENT]->(a1:Address)
             OPTIONAL MATCH (a2:Address)-[s2:SENT]->(t1)
             RETURN t1, s1, a1, s2, a2
         """
 
+        # Execute the query and fetch the data9
         data = await self._execute_query(query)
-        transformed_data = data  # TODO: Transform the data if necessary
+
+        # Transform data if necessary
+        transformed_data = data  # TODO: Add any data transformation here if needed
+
         return transformed_data
 
     async def get_transaction_by_tx_id(self, tx_id: str) -> dict:

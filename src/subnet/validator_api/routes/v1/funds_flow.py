@@ -1,5 +1,5 @@
-from typing import Optional
-from fastapi import Depends, APIRouter
+from typing import Optional, List
+from fastapi import Depends, APIRouter, Query
 from pydantic import BaseModel
 
 from src.subnet.protocol import MODEL_KIND_FUNDS_FLOW, NETWORK_BITCOIN
@@ -10,33 +10,30 @@ from src.subnet.validator_api.services.bitcoin_query_api import BitcoinQueryApi
 
 funds_flow_bitcoin_router = APIRouter(prefix="/v1/funds-flow", tags=["funds-flow"])
 
-
 class MinerMetadataRequest(BaseModel):
     network: Optional[str] = None
 
 
-@funds_flow_bitcoin_router.get("/{network}/get_block",
-                               summary="Get block",
-                               description="Get block"
+@funds_flow_bitcoin_router.get("/{network}/get_blocks",
+                               summary="Get multiple blocks",
+                               description="Get multiple blocks"
                                )
-async def get_block(network: str,
-                    block_height: int,
-                    validator: Validator = Depends(get_validator),
-                    api_key: str = Depends(api_key_auth)):
+async def get_blocks(network: str,
+                     block_heights: List[int] = Query(...),  # Accept list of block heights as query params
+                     validator: Validator = Depends(get_validator),
+                     api_key: str = Depends(api_key_auth)):
 
     if network == NETWORK_BITCOIN:
         query_api = BitcoinQueryApi(validator)
-        data = await query_api.get_block(block_height)
+        data = await query_api.get_blocks(block_heights)
 
-        data['results'] = []
-        for response in data['response']:
-            result = BitcoinGraphTransformer().transform_result(response)
-            data['results'].append(result)
+        # Transform the results
+        transformer = BitcoinGraphTransformer()
+        data['results'] = transformer.transform_result(data['response'])
 
         return data
 
     return []
-
 
 @funds_flow_bitcoin_router.get("/{network}/get_transaction_by_tx_id")
 async def get_transaction_by_tx_id(network: str,
