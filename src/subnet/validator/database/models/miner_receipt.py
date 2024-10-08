@@ -1,4 +1,4 @@
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Union
 from pydantic import BaseModel
 from sqlalchemy import Column, String, DateTime, update, insert, BigInteger, Boolean, UniqueConstraint, Text, select, \
     func, text
@@ -132,46 +132,52 @@ class MinerReceiptManager:
             result = result.fetchall()
             return {row['network']: row['count'] for row in result}
 
-
-    async def get_receipt_miner_multiplier(self, network: str, miner_key: Optional[str] = None) -> List[Dict[str, float]] | float:
+    async def get_receipt_miner_multiplier(self, network: Optional[str] = None, miner_key: Optional[str] = None) -> List[Dict]:
         async with self.session_manager.session() as session:
-            query = text("""
+            miner_key_filter = "AND miner_receipts.miner_key = :miner_key" if miner_key else ""
+            network_filter = "AND miner_receipts.network = :network" if network else ""
+
+            query = text(f"""
                 WITH total_receipts AS (
-                    SELECT COUNT(*) AS total_count
+                    SELECT network, COUNT(*) AS total_count
                     FROM miner_receipts
                     WHERE timestamp >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month'
+                    GROUP BY network
                 ),
                 miner_accepted_counts AS (
                     SELECT 
                         miner_key,
+                        network,
                         COUNT(CASE WHEN accepted = True THEN 1 END) AS accepted_true_count
                     FROM 
                         miner_receipts
                     WHERE 
-                        timestamp >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month' AND network = :network
+                        timestamp >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month'
                         {miner_key_filter}
+                        {network_filter}
                     GROUP BY 
-                        miner_key
+                        miner_key, network
                 )
                 SELECT 
                     mac.miner_key,
+                    mac.network,
                     CASE 
-                        WHEN tr.total_count = 0 THEN NULL  -- or you can use 0 instead of NULL
+                        WHEN tr.total_count = 0 THEN 0
                         ELSE POWER(mac.accepted_true_count::float / tr.total_count, 2)
                     END AS multiplier
                 FROM 
-                    miner_accepted_counts mac, total_receipts tr
+                    miner_accepted_counts mac
+                JOIN
+                    total_receipts tr ON mac.network = tr.network
                 ORDER BY multiplier DESC;
-            """.format(miner_key_filter="AND miner_key = :miner_key" if miner_key else ""))
+            """)
 
-            params = {'miner_key': miner_key} if miner_key else {}
-            params['network'] = network
+            params = {}
+            if miner_key:
+                params['miner_key'] = miner_key
+            if network:
+                params['network'] = network
+
             result = await session.execute(query, params)
-
-            if miner_key is not None:
-                result = result.fetchone()
-                if result is None:
-                    return 0.0
-                return result[1]
 
             return [dict(row) for row in result.fetchall()]
