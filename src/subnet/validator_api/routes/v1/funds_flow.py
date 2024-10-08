@@ -31,13 +31,20 @@ async def get_blocks(network: str,
         query_api = BitcoinQueryApi(validator)
         data = await query_api.get_blocks(block_heights)
 
-        # Transform the results
-        transformer = BitcoinGraphTransformer()
-        data['results'] = transformer.transform_result(data['response'])
+        # Check if data['response'] exists and is not None, otherwise set it to an empty list
+        if not data.get('response'):
+            data['response'] = []
+            data['results'] = []
+
+        # Transform the results if response data exists
+        if data['response']:
+            transformer = BitcoinGraphTransformer()
+            data['results'] = transformer.transform_result(data['response'])
 
         return data
 
-    return []
+    return {"results": [], "response": [], "message": "Invalid network."}
+
 
 @funds_flow_bitcoin_router.get("/{network}/get_transaction_by_tx_id")
 async def get_transaction_by_tx_id(network: str,
@@ -54,13 +61,19 @@ async def get_transaction_by_tx_id(network: str,
         query_api = BitcoinQueryApi(validator)
         data = await query_api.get_blocks_around_transaction(tx_id, radius)
 
-        # Transform the results
-        transformer = BitcoinGraphTransformer()
-        data['results'] = transformer.transform_result(data['response'])
+        # Check if data['response'] exists and is not None, otherwise set it to an empty list
+        if not data.get('response'):
+            data['response'] = []
+            data['results'] = []
+
+        # Transform the results if response data exists
+        if data['response']:
+            transformer = BitcoinGraphTransformer()
+            data['results'] = transformer.transform_result(data['response'])
 
         return data
 
-    return []
+    return {"results": [], "response": [], "message": "Invalid network."}
 
 
 @funds_flow_bitcoin_router.get("/{network}/get_address_transactions")
@@ -71,6 +84,7 @@ async def get_address_transactions(network: str,
                                    limit: Optional[int] = Query(100),
                                    validator: Validator = Depends(get_validator),
                                    api_key: str = Depends(api_key_auth)):
+
     # Ensure that the network is Bitcoin
     if network == NETWORK_BITCOIN:
         query_api = BitcoinQueryApi(validator)
@@ -81,13 +95,20 @@ async def get_address_transactions(network: str,
             limit=limit
         )
 
-        # Transform the results
-        transformer = BitcoinGraphTransformer()
-        data['results'] = transformer.transform_result(data['response'])
+        # Check if data['response'] exists and is not None, otherwise set it to an empty list
+        if not data.get('response'):
+            data['response'] = []
+            data['results'] = []
+
+        # Transform the results if response data exists
+        if data['response']:
+            transformer = BitcoinGraphTransformer()
+            data['results'] = transformer.transform_result(data['response'])
 
         return data
 
-    return []
+    return {"results": [], "response": [], "message": "Invalid network."}
+
 
 
 @funds_flow_bitcoin_router.get("/{network}/funds-flow")
