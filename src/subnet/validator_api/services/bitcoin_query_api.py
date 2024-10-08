@@ -65,24 +65,41 @@ class BitcoinQueryApi(QueryApi):
                                        end_block_height: Optional[int],
                                        limit: Optional[int] = 100) -> dict:
 
+        # Start with the base query to find transactions for a given address
         query = f"""
             MATCH (a1:Address {{address: '{address}'}})-[:SENT]-(t1:Transaction)
             OPTIONAL MATCH (t1)-[s2:SENT]->(a2:Address)
             OPTIONAL MATCH (a1)-[s1:SENT]->(t1)
         """
 
-        where_clauses = []
-        if start_block_height is not None:
-            where_clauses.append(f"t1.block_height >= {start_block_height}")
-        if end_block_height is not None:
-            where_clauses.append(f"t1.block_height <= {end_block_height}")
+        # Use range for block height filtering if start_block_height and end_block_height are provided
+        if start_block_height is not None and end_block_height is not None:
+            query += f"""
+                WITH t1, a1, s1, s2, a2, range({start_block_height}, {end_block_height}) AS block_range
+                WHERE t1.block_height IN block_range
+            """
+        elif start_block_height is not None:
+            # If only the start_block_height is provided, use a range starting from the start_block_height
+            query += f"""
+                WITH t1, a1, s1, s2, a2, range({start_block_height}, t1.block_height) AS block_range
+                WHERE t1.block_height IN block_range
+            """
+        elif end_block_height is not None:
+            # If only the end_block_height is provided, use a range from block 0 to end_block_height
+            query += f"""
+                WITH t1, a1, s1, s2, a2, range(0, {end_block_height}) AS block_range
+                WHERE t1.block_height IN block_range
+            """
 
-        if where_clauses:
-            query += " WHERE " + " AND ".join(where_clauses)
-        query += f" RETURN t1, s1, a1, s2, a2 LIMIT {limit}"
+        # Final query to return the results
+        query += f"""
+            RETURN t1, s1, a1, s2, a2 
+            LIMIT {limit}
+        """
 
+        # Execute the query and optionally transform the data
         data = await self._execute_query(query)
-        transformed_data = data  # TODO: Transform the data if necessary
+        transformed_data = data  # Optionally transform the data if necessary
 
         return transformed_data
 

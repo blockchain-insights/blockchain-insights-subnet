@@ -63,13 +63,31 @@ async def get_transaction_by_tx_id(network: str,
     return []
 
 
-
 @funds_flow_bitcoin_router.get("/{network}/get_address_transactions")
 async def get_address_transactions(network: str,
+                                   address: str = Query(...),
+                                   start_block_height: Optional[int] = Query(None),
+                                   end_block_height: Optional[int] = Query(None),
+                                   limit: Optional[int] = Query(100),
                                    validator: Validator = Depends(get_validator),
                                    api_key: str = Depends(api_key_auth)):
-    result = await validator.query_miner(network, MODEL_KIND_FUNDS_FLOW, "RETURN 1", miner_key=None)
-    return result
+    # Ensure that the network is Bitcoin
+    if network == NETWORK_BITCOIN:
+        query_api = BitcoinQueryApi(validator)
+        data = await query_api.get_address_transactions(
+            address=address,
+            start_block_height=start_block_height,
+            end_block_height=end_block_height,
+            limit=limit
+        )
+
+        # Transform the results
+        transformer = BitcoinGraphTransformer()
+        data['results'] = transformer.transform_result(data['response'])
+
+        return data
+
+    return []
 
 
 @funds_flow_bitcoin_router.get("/{network}/funds-flow")
