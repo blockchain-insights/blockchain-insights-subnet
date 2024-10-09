@@ -105,45 +105,61 @@ class BitcoinQueryApi(QueryApi):
 
     async def get_funds_flow(self,
                              address: str,
-                             intermediate_addresses: Optional[list[str]],
-                             hops: Optional[int],
-                             start_block_height: Optional[int],
-                             end_block_height: Optional[int]) -> dict:
+                             direction: str,
+                             intermediate_addresses: Optional[list[str]] = None,
+                             hops: Optional[int] = 5,
+                             start_block_height: Optional[int] = None,
+                             end_block_height: Optional[int] = None) -> dict:
 
         query_elements = []
+
+        # Handle intermediate addresses
         if intermediate_addresses:
             query_elements.append(f"WITH {intermediate_addresses} AS intermediates")
 
-        base_query = f"MATCH (a0:Address {{address: '{address}'}})<-[:SENT]-(t0:Transaction)-[s0:SENT]->(a1:Address)"
+        # Base query depending on direction ('left' for incoming, 'right' for outgoing)
+        if direction == 'right':
+            # Flowing out of the address
+            base_query = f"MATCH (a0:Address {{address: '{address}'}})-[:SENT]->(t0:Transaction)-[:SENT]->(a1:Address)"
+        elif direction == 'left':
+            # Flowing into the address
+            base_query = f"MATCH (a0:Address {{address: '{address}'}})<-[:SENT]-(t0:Transaction)<-[:SENT]-(a1:Address)"
+        else:
+            raise ValueError("Direction must be either 'left' or 'right'")
+
         query_elements.append(base_query)
 
+        # Add block height filters using `range` for Memgraph compatibility
         where_clauses = []
-        if start_block_height is not None:
-            where_clauses.append(f"t0.block_height >= {start_block_height}")
-        if end_block_height is not None:
-            where_clauses.append(f"t0.block_height <= {end_block_height}")
+        if start_block_height is not None and end_block_height is not None:
+            where_clauses.append(f"t0.block_height IN range({start_block_height}, {end_block_height})")
 
-        if where_clauses:
-            query_elements.append(f"WHERE {' AND '.join(where_clauses)}")
-
+        # Add intermediate addresses match if provided
         if intermediate_addresses:
             query_elements.append(f"WHERE a1.address = intermediates[0]")
             query_elements.append(f"""
-                WITH a0, t0, s0, a1, intermediates
+                WITH a0, t0, a1, intermediates
                 UNWIND RANGE(1, SIZE(intermediates)-1) AS idx
-                MATCH (a{{idx-1}}:Address {{address: intermediates[idx-1]}})-[s{{idx}}:SENT]->(a{{idx}}:Address {{address: intermediates[idx]}})
+                MATCH (a{{idx-1}}:Address {{address: intermediates[idx-1]}})-[:SENT]->(a{{idx}}:Address {{address: intermediates[idx]}})
             """)
 
-        if hops is not None:
-            query_elements.append(f"MATCH path = (a1)-[s1:SENT*1..{hops}]->(an:Address)")
-        else:
-            query_elements.append(f"MATCH path = (a1)-[s1:SENT*1..5]->(an:Address)")
+        # Add where clause if applicable
+        if where_clauses:
+            query_elements.append(f"WHERE {' AND '.join(where_clauses)}")
 
-        query_elements.append(f"RETURN a0, t0, s0, a1, path")
+        # Handle hops and create the path based on direction
+        if hops is not None:
+            if direction == 'right':
+                query_elements.append(f"MATCH path = (a1)-[:SENT*1..{hops}]->(an:Address)")
+            elif direction == 'left':
+                query_elements.append(f"MATCH path = (a1)<-[:SENT*1..{hops}]-(an:Address)")
+
+        query_elements.append("RETURN a0, t0, a1, path")
         final_query = "\n".join(query_elements)
 
+        # Execute the query
         data = await self._execute_query(final_query)
-        transformed_data = data  # TODO: Transform the data if necessary
+        transformed_data = data  # Transform the data if necessary
 
         return transformed_data
 

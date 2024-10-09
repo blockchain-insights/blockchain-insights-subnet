@@ -110,10 +110,39 @@ async def get_address_transactions(network: str,
     return {"results": [], "response": [], "message": "Invalid network."}
 
 
-
 @funds_flow_bitcoin_router.get("/{network}/funds-flow")
-async def query(network: str,
-                validator: Validator = Depends(get_validator),
-                api_key: str = Depends(api_key_auth)):
-    result = await validator.query_miner(network, MODEL_KIND_FUNDS_FLOW, "RETURN 1",  miner_key=None)
-    return result
+async def get_funds_flow(network: str,
+                         address: str = Query(...),
+                         direction: str = Query(...,
+                                                description="Direction of flow ('left' for incoming, 'right' for outgoing)"),
+                         intermediate_addresses: Optional[List[str]] = Query(None),
+                         hops: Optional[int] = Query(None),
+                         start_block_height: Optional[int] = Query(None),
+                         end_block_height: Optional[int] = Query(None),
+                         validator: Validator = Depends(get_validator),
+                         api_key: str = Depends(api_key_auth)):
+    # Ensure that the network is Bitcoin
+    if network == NETWORK_BITCOIN:
+        query_api = BitcoinQueryApi(validator)
+        data = await query_api.get_funds_flow(
+            address=address,
+            direction=direction,
+            intermediate_addresses=intermediate_addresses,
+            hops=hops,
+            start_block_height=start_block_height,
+            end_block_height=end_block_height
+        )
+
+        # Check if data['response'] exists and is not None, otherwise set it to an empty list
+        if not data.get('response'):
+            data['response'] = []
+            data['results'] = []
+
+        # Transform the results if response data exists
+        if data['response']:
+            transformer = BitcoinGraphTransformer()
+            data['results'] = transformer.transform_result(data['response'])
+
+        return data
+
+    return {"results": [], "response": [], "message": "Invalid network."}
