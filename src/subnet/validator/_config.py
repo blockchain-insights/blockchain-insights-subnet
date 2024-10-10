@@ -46,10 +46,12 @@ class ValidatorSettings(BaseSettings):
     QUERY_TIMEOUT: int   # cross check query timeout
     CHALLENGE_TIMEOUT: int  # challenge and llm challenge time
 
-    FUNDS_FLOW_CHALLENGE_FREQUENCY: int
-    FUNDS_FLOW_CHALLENGE_THRESHOLD: int
-    BALANCE_TRACKING_CHALLENGE_FREQUENCY: int
-    BALANCE_TRACKING_CHALLENGE_THRESHOLD: int
+    CHALLENGE_FREQUENCY: int
+    CHALLENGE_THRESHOLD: int
+
+    BITCOIN_NODE_RPC_URL: str
+    COMMUNE_NODE_RPC: str
+
 
     model_config = ConfigDict(
         extra='ignore',
@@ -137,3 +139,9 @@ class SettingsManager:
     def stop_reloader(self):
         self._stop_event.set()
         self._thread.join()
+
+
+def load_base_weights():
+    local_config_path = 'subnet/validator/base_weights.json'
+    with open(local_config_path, 'r') as f:
+        return json.load(f)

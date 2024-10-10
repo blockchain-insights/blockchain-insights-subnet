@@ -1,5 +1,6 @@
 import random
 
+
 def select_block(first_block, last_block, chunks=16):
     total_blocks = last_block - first_block + 1
     num_parts = chunks

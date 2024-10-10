@@ -14,7 +14,7 @@ from communex.module.module import Module  # type: ignore
 from communex.types import Ss58Address  # type: ignore
 from loguru import logger
 from substrateinterface import Keypair  # type: ignore
-from ._config import ValidatorSettings
+from ._config import ValidatorSettings, load_base_weights
 
 from .database.models.challenge_balance_tracking import ChallengeBalanceTrackingManager
 from .database.models.challenge_funds_flow import ChallengeFundsFlowManager
@@ -24,7 +24,8 @@ from .nodes.factory import NodeFactory
 from .weights_storage import WeightsStorage
 from src.subnet.validator.database.models.miner_discovery import MinerDiscoveryManager
 from src.subnet.validator.database.models.miner_receipt import MinerReceiptManager
-from src.subnet.protocol import Challenge, ChallengesResponse, ChallengeMinerResponse, Discovery
+from src.subnet.protocol import Challenge, ChallengesResponse, ChallengeMinerResponse, Discovery, NETWORK_BITCOIN, \
+    NETWORK_COMMUNE
 from .. import VERSION
 
 
@@ -142,7 +143,7 @@ class Validator(Module):
             balance_tracking_challenge = await client.call(
                 "challenge",
                 miner_key,
-                {"challenge": balance_tracking_challenge.model_dump()},
+                {"challenge": balance_tracking_challenge.model_dump(), "validator_key": self.key.ss58_address},
                 timeout=self.challenge_timeout,
             )
             balance_tracking_challenge = Challenge(**balance_tracking_challenge)
@@ -160,6 +161,7 @@ class Validator(Module):
 
     @staticmethod
     def _score_miner(response: ChallengeMinerResponse, receipt_miner_multiplier: float) -> float:
+
         if not response:
             logger.debug(f"Skipping empty response")
             return 0
@@ -175,7 +177,47 @@ class Validator(Module):
 
         multiplier = min(1.0, receipt_miner_multiplier)
         score = score + (0.7 * multiplier)
+
         return score
+
+    @staticmethod
+    def adjust_network_weights_with_min_threshold(organic_prompts, min_threshold_ratio=5):
+        base_weights = load_base_weights()
+        total_base_weight = sum(base_weights.values())
+        normalized_base_weights = {k: (v / total_base_weight) * 100 for k, v in base_weights.items()}
+        num_networks = len(base_weights)
+        min_threshold = 100 / min_threshold_ratio  # Minimum threshold percentage
+        total_prompts = sum(organic_prompts.values())
+
+        adjusted_weights = {}
+
+        if total_prompts == 0:
+            adjusted_weights = normalized_base_weights.copy()
+        else:
+            for network in normalized_base_weights.keys():
+                organic_ratio = organic_prompts.get(network, 0) / total_prompts
+                adjusted_weight = normalized_base_weights[network] * organic_ratio
+
+                if adjusted_weight < min_threshold:
+                    adjusted_weights[network] = min_threshold
+                else:
+                    adjusted_weights[network] = adjusted_weight
+
+            total_adjusted_weight = sum(adjusted_weights.values())
+
+            if total_adjusted_weight > 100:
+                weight_above_min = total_adjusted_weight - (min_threshold * num_networks)
+                if weight_above_min > 0:
+                    scale_factor = (100 - (min_threshold * num_networks)) / weight_above_min
+                    for network in adjusted_weights.keys():
+                        if adjusted_weights[network] > min_threshold:
+                            adjusted_weights[network] = min_threshold + (
+                                        adjusted_weights[network] - min_threshold) * scale_factor
+                else:
+                    for network in adjusted_weights.keys():
+                        adjusted_weights[network] = min_threshold
+
+        return adjusted_weights
 
     async def validate_step(self, netuid: int, settings: ValidatorSettings) -> None:
 
@@ -219,10 +261,27 @@ class Validator(Module):
                 connection, miner_metadata = miner_info
                 miner_address, miner_ip_port = connection
                 miner_key = miner_metadata['key']
-                receipt_miner_multiplier = await self.miner_receipt_manager.get_receipt_miner_multiplier(miner_key)
+
+                organic_usage = await self.miner_receipt_manager.get_receipts_count_by_networks()
+                adjusted_weights = self.adjust_network_weights_with_min_threshold(organic_usage, min_threshold_ratio=5)
+                logger.debug(f"Adjusted weights", adjusted_weights=adjusted_weights, miner_key=miner_key)
+
+                receipt_miner_multiplier_result = await self.miner_receipt_manager.get_receipt_miner_multiplier(network, miner_key)
+                if not receipt_miner_multiplier_result:
+                    receipt_miner_multiplier = 1
+                else:
+                    receipt_miner_multiplier = receipt_miner_multiplier_result[0]['multiplier']
+
                 score = self._score_miner(response, receipt_miner_multiplier)
-                assert score <= 1
-                score_dict[uid] = score
+
+                weighted_score = 0
+                total_weight = sum(adjusted_weights.values())
+                weight = adjusted_weights[response.network]
+                network_influence = weight / total_weight
+                weighted_score += score * network_influence
+
+                assert weighted_score <= 1
+                score_dict[uid] = weighted_score
 
                 await self.miner_discovery_manager.store_miner_metadata(uid, miner_key, miner_address, miner_ip_port, network, version, graph_db)
                 await self.miner_discovery_manager.update_miner_challenges(miner_key, response.get_failed_challenges(), 2)
