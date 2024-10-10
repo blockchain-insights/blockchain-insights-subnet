@@ -18,7 +18,7 @@ async def query(network: str,
                              validator: Validator = Depends(get_validator),
                              api_key: str = Depends(api_key_auth)):
 
-    result = await validator.query_miner(network, MODEL_KIND_BALANCE_TRACKING, "SELECT 1")
+    result = await validator.query_miner(network, MODEL_KIND_BALANCE_TRACKING, "SELECT 1", miner_key=None)
     return result
 
 
@@ -27,5 +27,5 @@ async def get_timestamps(network: str,
                              validator: Validator = Depends(get_validator),
                              api_key: str = Depends(api_key_auth)):
 
-    result = await validator.query_miner(network, MODEL_KIND_BALANCE_TRACKING, "SELECT 1")
+    result = await validator.query_miner(network, MODEL_KIND_BALANCE_TRACKING, "SELECT 1", miner_key=None)
     return result
