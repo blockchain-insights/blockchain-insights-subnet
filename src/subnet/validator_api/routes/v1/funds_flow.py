@@ -23,6 +23,10 @@ class MinerMetadataRequest(BaseModel):
     network: Optional[str] = None
 
 
+from fastapi.responses import JSONResponse, PlainTextResponse
+from datetime import datetime
+
+
 def format_response(data: dict, response_type: ResponseType):
     """Helper function to format response based on response_type."""
 
@@ -41,22 +45,18 @@ def format_response(data: dict, response_type: ResponseType):
         else:
             return serialize_datetime(data)
 
-    processed_data = process_data(data)
+    processed_data = process_data(data)  # Ensure that datetime objects are handled for JSON or graph response
 
     if response_type == ResponseType.text:
-        # Generate text summary, e.g., total transactions, incoming/outgoing BTC
-        total_incoming = sum([satoshi_to_btc(t['in_total_amount']) for t in processed_data.get('response', [])])
-        total_outgoing = sum([satoshi_to_btc(t['out_total_amount']) for t in processed_data.get('response', [])])
-        summary_text = f"You have {len(processed_data['response'])} transactions, total incoming: {total_incoming:.8f} BTC, total outgoing: {total_outgoing:.8f} BTC."
-        return PlainTextResponse(content=summary_text)
+        # No need to process datetime for plain text, just return stringified version of the original data
+        return PlainTextResponse(str(data))
 
-    elif response_type == ResponseType.graph:
-        # Assume the 'data' is already transformed to the graph format
+    if response_type == ResponseType.graph:
+        # For graph format, use the processed data and a custom media type
         return JSONResponse(content=processed_data, media_type="application/vnd.graph+json")
 
-    else:
-        # Default to JSON response
-        return JSONResponse(content=processed_data)
+    # Default to JSON response
+    return JSONResponse(content=processed_data)
 
 
 @funds_flow_bitcoin_router.get("/{network}/get_blocks",
