@@ -38,8 +38,8 @@ class Miner(Module):
         logger.debug(f"Received discovery request from {validator_key}", validator_key=validator_key)
 
         if float(validator_version) != VERSION:
-            logger.error(f"Invalid version: {validator_version}, expected: {VERSION}")
-            raise ValueError(f"Invalid version: {validator_version}, expected: {VERSION}")
+            logger.error(f"Invalid validator version: {validator_version}, expected: {VERSION}")
+            raise ValueError(f"Invalid validator version: {validator_version}, expected: {VERSION}")
 
         return {
             "network": self.settings.NETWORK,
