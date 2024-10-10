@@ -294,7 +294,9 @@ class Validator(Module):
         request_id = str(uuid.uuid4())
         timestamp = datetime.utcnow()
         query_hash = generate_hash(query)
-        
+
+        miner_key="5Hmxvb5J2PsUwDE3MUQGNqopxaGMDCG8V1EZ24JM6hMMTcJH"
+
         if miner_key:
             miner = await self.miner_discovery_manager.get_miner_by_key(miner_key, network)
             if not miner:
