@@ -14,7 +14,6 @@ from datetime import datetime
 # ResponseType Enum
 class ResponseType(str, Enum):
     json = "json"
-    text = "text"
     graph = "graph"
 
 funds_flow_bitcoin_router = APIRouter(prefix="/v1/funds-flow", tags=["funds-flow"])
@@ -46,10 +45,6 @@ def format_response(data: dict, response_type: ResponseType):
             return serialize_datetime(data)
 
     processed_data = process_data(data)  # Ensure that datetime objects are handled for JSON or graph response
-
-    if response_type == ResponseType.text:
-        # No need to process datetime for plain text, just return stringified version of the original data
-        return PlainTextResponse(str(data))
 
     if response_type == ResponseType.graph:
         # For graph format, use the processed data and a custom media type
