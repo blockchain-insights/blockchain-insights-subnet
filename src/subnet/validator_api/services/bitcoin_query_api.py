@@ -120,10 +120,14 @@ class BitcoinQueryApi(QueryApi):
         # Base query depending on direction ('left' for incoming, 'right' for outgoing)
         if direction == 'right':
             # Flowing out of the address
-            base_query = f"MATCH (a0:Address {{address: '{address}'}})-[:SENT]->(t0:Transaction)-[:SENT]->(a1:Address)"
+            base_query = f"""
+            MATCH (a1:Address {{address: '{address}'}})-[s1:SENT]->(t1:Transaction)-[s2:SENT]->(a2:Address)
+            """
         elif direction == 'left':
             # Flowing into the address
-            base_query = f"MATCH (a0:Address {{address: '{address}'}})<-[:SENT]-(t0:Transaction)<-[:SENT]-(a1:Address)"
+            base_query = f"""
+            MATCH (a1:Address {{address: '{address}'}})<-[s1:SENT]-(t1:Transaction)<-[s2:SENT]-(a2:Address)
+            """
         else:
             raise ValueError("Direction must be either 'left' or 'right'")
 
@@ -132,15 +136,18 @@ class BitcoinQueryApi(QueryApi):
         # Add block height filters using `range` for Memgraph compatibility
         where_clauses = []
         if start_block_height is not None and end_block_height is not None:
-            where_clauses.append(f"t0.block_height IN range({start_block_height}, {end_block_height})")
+            where_clauses.append(f"t1.block_height IN range({start_block_height}, {end_block_height})")
 
         # Add intermediate addresses match if provided
         if intermediate_addresses:
-            query_elements.append(f"WHERE a1.address = intermediates[0]")
+            query_elements.append(f"WHERE a2.address = intermediates[0]")
             query_elements.append(f"""
-                WITH a0, t0, a1, intermediates
+                WITH a1, t1, a2, s1, s2, intermediates
                 UNWIND RANGE(1, SIZE(intermediates)-1) AS idx
                 MATCH (a{{idx-1}}:Address {{address: intermediates[idx-1]}})-[:SENT]->(a{{idx}}:Address {{address: intermediates[idx]}})
+                WITH a1, t1, a2, s1, s2, intermediates, idx
+                MATCH (a{{idx}})-[s:SENT]->(an:Address)
+                RETURN a1, t1, a2, s1, s2, s, an, intermediates
             """)
 
         # Add where clause if applicable
@@ -150,16 +157,17 @@ class BitcoinQueryApi(QueryApi):
         # Handle hops and create the path based on direction
         if hops is not None:
             if direction == 'right':
-                query_elements.append(f"MATCH path = (a1)-[:SENT*1..{hops}]->(an:Address)")
+                query_elements.append(f"MATCH path = (a2)-[s:SENT*1..{hops}]->(an:Address)")
             elif direction == 'left':
-                query_elements.append(f"MATCH path = (a1)<-[:SENT*1..{hops}]-(an:Address)")
+                query_elements.append(f"MATCH path = (a2)<-[s:SENT*1..{hops}]-(an:Address)")
 
-        query_elements.append("RETURN a0, t0, a1, path")
+        query_elements.append("RETURN a1, t1, a2, s1, s2, path")
         final_query = "\n".join(query_elements)
 
         # Execute the query
         data = await self._execute_query(final_query)
-        transformed_data = data  # Transform the data if necessary
+
+        transformed_data = data  # Apply any transformations if necessary
 
         return transformed_data
 
