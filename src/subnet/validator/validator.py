@@ -160,8 +160,7 @@ class Validator(Module):
             return None
 
     @staticmethod
-    def _score_miner(response: ChallengeMinerResponse, receipt_miner_multiplier: float,
-                     adjusted_weights: dict) -> float:
+    def _score_miner(response: ChallengeMinerResponse, receipt_miner_multiplier: float) -> float:
 
         if not response:
             logger.debug(f"Skipping empty response")
@@ -267,8 +266,13 @@ class Validator(Module):
                 adjusted_weights = self.adjust_network_weights_with_min_threshold(organic_usage, min_threshold_ratio=5)
                 logger.debug(f"Adjusted weights", adjusted_weights=adjusted_weights, miner_key=miner_key)
 
-                receipt_miner_multiplier = await self.miner_receipt_manager.get_receipt_miner_multiplier(network, miner_key)
-                score = self._score_miner(response, receipt_miner_multiplier, adjusted_weights)
+                receipt_miner_multiplier_result = await self.miner_receipt_manager.get_receipt_miner_multiplier(network, miner_key)
+                if not receipt_miner_multiplier_result:
+                    receipt_miner_multiplier = 1
+                else:
+                    receipt_miner_multiplier = receipt_miner_multiplier_result[0]['multiplier']
+
+                score = self._score_miner(response, receipt_miner_multiplier)
 
                 weighted_score = 0
                 total_weight = sum(adjusted_weights.values())
