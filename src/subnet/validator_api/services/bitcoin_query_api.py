@@ -172,11 +172,28 @@ class BitcoinQueryApi(QueryApi):
         return transformed_data
 
     async def get_balance_tracking(self,
-                                   addresses: Optional[list[str]],
-                                   min_amount: Optional[int],
-                                   max_amount: Optional[int],
-                                   start_block_height: Optional[int],
-                                   end_block_height: Optional[int]) -> dict:
+                                   addresses: Optional[list[str]] = None,
+                                   min_amount: Optional[int] = None,
+                                   max_amount: Optional[int] = None,
+                                   start_block_height: Optional[int] = None,
+                                   end_block_height: Optional[int] = None,
+                                   start_timestamp: Optional[int] = None,
+                                   end_timestamp: Optional[int] = None) -> dict:
+        """
+        Get balance tracking data filtered by addresses, amount range, block range, and timestamp range.
+
+        Parameters:
+        - addresses: List of addresses to filter (optional)
+        - min_amount: Minimum balance amount to filter (optional)
+        - max_amount: Maximum balance amount to filter (optional)
+        - start_block_height: Start block height to filter (optional)
+        - end_block_height: End block height to filter (optional)
+        - start_timestamp: Start timestamp to filter (optional)
+        - end_timestamp: End timestamp to filter (optional)
+
+        Returns:
+        - A dictionary with the results of the balance tracking query
+        """
 
         query = """
             SELECT
@@ -193,26 +210,37 @@ class BitcoinQueryApi(QueryApi):
                 1=1
         """
 
+        # Filter by addresses if provided
         if addresses:
             formatted_addresses = ', '.join(f"'{address}'" for address in addresses)
             query += f" AND bc.address IN ({formatted_addresses})"
 
+        # Filter by balance amount range if provided
         if min_amount is not None:
             query += f" AND bc.d_balance >= {min_amount}"
-
         if max_amount is not None:
             query += f" AND bc.d_balance <= {max_amount}"
 
+        # Filter by block height range if provided
         if start_block_height is not None:
             query += f" AND b.block_height >= {start_block_height}"
-
         if end_block_height is not None:
             query += f" AND b.block_height <= {end_block_height}"
 
+        # Filter by timestamp range if provided
+        if start_timestamp is not None:
+            query += f" AND b.timestamp >= {start_timestamp}"
+        if end_timestamp is not None:
+            query += f" AND b.timestamp <= {end_timestamp}"
+
+        # Finalize the query with ordering
         query += " ORDER BY bc.block_timestamp;"
 
+        # Execute the query and retrieve data
         data = await self._execute_query(query, model_kind=MODEL_KIND_BALANCE_TRACKING)
-        transformed_data = data  # TODO: Transform the data if necessary
+
+        # Transform the data if needed
+        transformed_data = data  # TODO: Apply transformation logic if required
 
         return transformed_data
 
