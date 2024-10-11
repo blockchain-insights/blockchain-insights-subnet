@@ -354,8 +354,6 @@ class Validator(Module):
         timestamp = datetime.utcnow()
         query_hash = generate_hash(query)
 
-        miner_key="5Hmxvb5J2PsUwDE3MUQGNqopxaGMDCG8V1EZ24JM6hMMTcJH"
-
         if miner_key:
             miner = await self.miner_discovery_manager.get_miner_by_key(miner_key, network)
             if not miner:
@@ -398,7 +396,7 @@ class Validator(Module):
 
             for miner, response in zip(top_miners, responses):
                 if response:
-                    await self.miner_receipt_manager.store_miner_receipt(request_id, miner['miner_key'], model_kind, query_hash, timestamp)
+                    await self.miner_receipt_manager.store_miner_receipt(request_id, miner['miner_key'], model_kind, network, query_hash, timestamp)
 
             return {
                 "request_id": request_id,

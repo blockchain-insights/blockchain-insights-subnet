@@ -98,8 +98,19 @@ async def get_balance_tracking(network: str,
 
 @balance_tracking_bitcoin_router.get("/{network}/timestamps")
 async def get_timestamps(network: str,
+                         start_date: Optional[str] = Query(None, description="Start date in YYYY-MM-DD format"),
+                         end_date: Optional[str] = Query(None, description="End date in YYYY-MM-DD format"),
                          validator: Validator = Depends(get_validator),
                          api_key: str = Depends(api_key_auth)):
-    result = await validator.query_miner(network, MODEL_KIND_BALANCE_TRACKING, "SELECT block_timestamp FROM blocks",
-                                         miner_key=None)
-    return result
+
+    if network == "bitcoin":  # Assuming "bitcoin" is the correct network identifier
+        query_api = BitcoinQueryApi(validator)
+        data = await query_api.get_balance_tracking_timestamp(
+            start_date=start_date,
+            end_date=end_date
+        )
+
+        # Directly return the JSON response
+        return data
+
+    return {"results": [], "response": [], "message": "Invalid network."}
