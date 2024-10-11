@@ -369,7 +369,7 @@ class Validator(Module):
                     "response": []}
 
             response = await self._query_miner(miner, model_kind, query)
-            await self.miner_receipt_manager.store_miner_receipt(request_id, miner_key, model_kind, query_hash, timestamp)
+            await self.miner_receipt_manager.store_miner_receipt(request_id, miner_key, model_kind, network, query_hash, timestamp)
 
             return {
                 "request_id": request_id,
