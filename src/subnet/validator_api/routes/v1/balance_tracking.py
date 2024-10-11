@@ -6,7 +6,7 @@ from enum import Enum
 from src.subnet.protocol import MODEL_KIND_BALANCE_TRACKING
 from src.subnet.validator.validator import Validator
 from src.subnet.validator_api import get_validator, api_key_auth
-from src.subnet.validator_api.models import BitcoinGraphTransformer
+from src.subnet.validator_api.models.tabular_result_transformer import BitcoinTabularTransformer
 from src.subnet.validator_api.services.bitcoin_query_api import BitcoinQueryApi
 from fastapi.responses import JSONResponse, PlainTextResponse
 from datetime import datetime
@@ -82,7 +82,7 @@ async def get_balance_tracking(network: str,
 
         # Transform the results if response data exists
         if data['response']:
-            transformer = BitcoinGraphTransformer()
+            transformer = BitcoinTabularTransformer()
             data['results'] = transformer.transform_result(data['response'])
 
         # Handle response based on the response_type

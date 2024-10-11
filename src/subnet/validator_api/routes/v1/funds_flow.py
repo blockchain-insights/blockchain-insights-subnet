@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse, PlainTextResponse
 from src.subnet.protocol import MODEL_KIND_FUNDS_FLOW, NETWORK_BITCOIN
 from src.subnet.validator.validator import Validator
 from src.subnet.validator_api import get_validator, api_key_auth
-from src.subnet.validator_api.models import BitcoinGraphTransformer, satoshi_to_btc
+from src.subnet.validator_api.models.graph_result_transformer import BitcoinGraphTransformer
 from src.subnet.validator_api.services.bitcoin_query_api import BitcoinQueryApi
 from datetime import datetime
 
