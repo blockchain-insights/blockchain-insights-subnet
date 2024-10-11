@@ -62,6 +62,8 @@ async def get_balance_tracking(network: str,
                                max_amount: Optional[int] = Query(None),
                                start_block_height: Optional[int] = Query(None),
                                end_block_height: Optional[int] = Query(None),
+                               start_timestamp: Optional[int] = Query(None),
+                               end_timestamp: Optional[int] = Query(None),
                                response_type: ResponseType = Query(ResponseType.json),  # New response type parameter
                                validator: Validator = Depends(get_validator),
                                api_key: str = Depends(api_key_auth)):
@@ -72,7 +74,9 @@ async def get_balance_tracking(network: str,
             min_amount=min_amount,
             max_amount=max_amount,
             start_block_height=start_block_height,
-            end_block_height=end_block_height
+            end_block_height=end_block_height,
+            start_timestamp=start_timestamp,
+            end_timestamp=end_timestamp
         )
 
         # Check if data['response'] exists and is not None, otherwise set it to an empty list
@@ -82,7 +86,7 @@ async def get_balance_tracking(network: str,
 
         # Transform the results if response data exists
         if data['response']:
-            transformer = BitcoinTabularTransformer()
+            transformer = BitcoinTabularTransformer()  # Assuming a transformer is needed to process the results
             data['results'] = transformer.transform_result(data['response'])
 
         # Handle response based on the response_type
@@ -91,10 +95,22 @@ async def get_balance_tracking(network: str,
     return {"results": [], "response": [], "message": "Invalid network."}
 
 
+
 @balance_tracking_bitcoin_router.get("/{network}/timestamps")
 async def get_timestamps(network: str,
+                         start_date: Optional[str] = Query(None, description="Start date in YYYY-MM-DD format"),
+                         end_date: Optional[str] = Query(None, description="End date in YYYY-MM-DD format"),
                          validator: Validator = Depends(get_validator),
                          api_key: str = Depends(api_key_auth)):
-    result = await validator.query_miner(network, MODEL_KIND_BALANCE_TRACKING, "SELECT block_timestamp FROM blocks",
-                                         miner_key=None)
-    return result
+
+    if network == "bitcoin":  # Assuming "bitcoin" is the correct network identifier
+        query_api = BitcoinQueryApi(validator)
+        data = await query_api.get_balance_tracking_timestamp(
+            start_date=start_date,
+            end_date=end_date
+        )
+
+        # Directly return the JSON response
+        return data
+
+    return {"results": [], "response": [], "message": "Invalid network."}

@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional, List
 from src.subnet.protocol import NETWORK_BITCOIN, MODEL_KIND_FUNDS_FLOW, MODEL_KIND_BALANCE_TRACKING
 from src.subnet.validator.validator import Validator
@@ -172,11 +173,28 @@ class BitcoinQueryApi(QueryApi):
         return transformed_data
 
     async def get_balance_tracking(self,
-                                   addresses: Optional[list[str]],
-                                   min_amount: Optional[int],
-                                   max_amount: Optional[int],
-                                   start_block_height: Optional[int],
-                                   end_block_height: Optional[int]) -> dict:
+                                   addresses: Optional[list[str]] = None,
+                                   min_amount: Optional[int] = None,
+                                   max_amount: Optional[int] = None,
+                                   start_block_height: Optional[int] = None,
+                                   end_block_height: Optional[int] = None,
+                                   start_timestamp: Optional[int] = None,
+                                   end_timestamp: Optional[int] = None) -> dict:
+        """
+        Get balance tracking data filtered by addresses, amount range, block range, and timestamp range.
+
+        Parameters:
+        - addresses: List of addresses to filter (optional)
+        - min_amount: Minimum balance amount to filter (optional)
+        - max_amount: Maximum balance amount to filter (optional)
+        - start_block_height: Start block height to filter (optional)
+        - end_block_height: End block height to filter (optional)
+        - start_timestamp: Start timestamp to filter (optional)
+        - end_timestamp: End timestamp to filter (optional)
+
+        Returns:
+        - A dictionary with the results of the balance tracking query
+        """
 
         query = """
             SELECT
@@ -193,50 +211,79 @@ class BitcoinQueryApi(QueryApi):
                 1=1
         """
 
+        # Filter by addresses if provided
         if addresses:
             formatted_addresses = ', '.join(f"'{address}'" for address in addresses)
             query += f" AND bc.address IN ({formatted_addresses})"
 
+        # Filter by balance amount range if provided
         if min_amount is not None:
             query += f" AND bc.d_balance >= {min_amount}"
-
         if max_amount is not None:
             query += f" AND bc.d_balance <= {max_amount}"
 
+        # Filter by block height range if provided
         if start_block_height is not None:
             query += f" AND b.block_height >= {start_block_height}"
-
         if end_block_height is not None:
             query += f" AND b.block_height <= {end_block_height}"
 
+        # Filter by timestamp range if provided
+        if start_timestamp is not None:
+            query += f" AND b.timestamp >= {start_timestamp}"
+        if end_timestamp is not None:
+            query += f" AND b.timestamp <= {end_timestamp}"
+
+        # Finalize the query with ordering
         query += " ORDER BY bc.block_timestamp;"
 
+        # Execute the query and retrieve data
         data = await self._execute_query(query, model_kind=MODEL_KIND_BALANCE_TRACKING)
-        transformed_data = data  # TODO: Transform the data if necessary
+
+        # Transform the data if needed
+        transformed_data = data  # TODO: Apply transformation logic if required
 
         return transformed_data
 
     async def get_balance_tracking_timestamp(self,
-                                             start_block_height: Optional[int],
-                                             end_block_height: Optional[int]) -> dict:
+                                             start_date: Optional[str] = None,
+                                             end_date: Optional[str] = None) -> dict:
+        # Base query to fetch block height and timestamp
         query = """
             SELECT
                 block_height,
                 timestamp
             FROM
                 blocks
-            WHERE
-                1=1
         """
 
-        if start_block_height is not None:
-            query += f" AND block_height >= {start_block_height}"
+        # Initialize conditions list
+        conditions = []
 
-        if end_block_height is not None:
-            query += f" AND block_height <= {end_block_height}"
+        # Process start and end dates to filter the query
+        if start_date:
+            try:
+                start_datetime = datetime.strptime(start_date, "%Y-%m-%d")
+                conditions.append(f"timestamp >= '{start_datetime}'")
+            except ValueError:
+                raise ValueError("Invalid start_date format. Use YYYY-MM-DD.")
 
+        if end_date:
+            try:
+                end_datetime = datetime.strptime(end_date, "%Y-%m-%d")
+                conditions.append(f"timestamp <= '{end_datetime}'")
+            except ValueError:
+                raise ValueError("Invalid end_date format. Use YYYY-MM-DD.")
+
+        # If there are any conditions, append them to the query
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
+
+        # Order the result by timestamp
         query += " ORDER BY timestamp;"
 
+        # Execute the query and return the result
         data = await self._execute_query(query, model_kind=MODEL_KIND_BALANCE_TRACKING)
-        transformed_data = data  # TODO: Transform the data if necessary
-        return transformed_data
+
+        # Directly return the data as JSON (no transformation required for now)
+        return data
