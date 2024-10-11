@@ -1,4 +1,6 @@
 from decimal import Decimal
+from threading import Event
+
 from src.subnet.protocol import Challenge, MODEL_KIND_FUNDS_FLOW, MODEL_KIND_BALANCE_TRACKING
 from .node_utils import initialize_tx_out_hash_table, get_tx_out_hash_table_sub_keys, construct_redeem_script, \
     hash_redeem_script, create_p2sh_address, pubkey_to_address, check_if_block_is_valid_for_challenge, parse_block_data, \
@@ -106,11 +108,14 @@ class BitcoinNode(Node):
             address, amount = self.tx_out_hash_table[txn_id[:3]][(txn_id, vout_id)]
             return address, int(amount)
 
-    def create_funds_flow_challenge(self, start_block_height, last_block_height):
+    def create_funds_flow_challenge(self, last_block_height, terminate_event: Event):
         num_retries = 10 # to prevent infinite loop
         is_valid_block = False
         while num_retries and not is_valid_block:
-            block_to_check = select_block(start_block_height, last_block_height)
+            if terminate_event.is_set():
+                return None, None
+
+            block_to_check = select_block(0, last_block_height)
             is_valid_block = check_if_block_is_valid_for_challenge(block_to_check)
             num_retries -= 1
 
@@ -125,6 +130,8 @@ class BitcoinNode(Node):
 
         out_total_amount = 0
         while out_total_amount == 0:
+            if terminate_event.is_set():
+                return None, None
             selected_txn = block_data["tx"][random.randint(0, num_transactions - 1)]
             txn_id = selected_txn.get('txid')
         
@@ -152,7 +159,7 @@ class BitcoinNode(Node):
         *_, in_total_amount, out_total_amount = self.process_in_memory_txn_for_indexing(tx)
         return challenge.in_total_amount == in_total_amount and challenge.out_total_amount == out_total_amount
 
-    def create_balance_tracking_challenge(self, block_height):
+    def create_balance_tracking_challenge(self, block_height, terminate_event: Event):
 
         logger.info(f"Creating balance tracking challenge", block_height=block_height)
 
@@ -164,8 +171,10 @@ class BitcoinNode(Node):
         changed_addresses = []
 
         for tx in transactions:
-            in_amount_by_address, out_amount_by_address, input_addresses, output_addresses, in_total_amount, out_total_amount = self.process_in_memory_txn_for_indexing(
-                tx)
+            if terminate_event.is_set() is True:
+                return None, None
+
+            in_amount_by_address, out_amount_by_address, input_addresses, output_addresses, in_total_amount, out_total_amount = self.process_in_memory_txn_for_indexing(tx)
 
             for address in input_addresses:
                 if not address in balance_changes_by_address:

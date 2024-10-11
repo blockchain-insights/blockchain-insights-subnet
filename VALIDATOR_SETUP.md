@@ -63,35 +63,20 @@ cp ./env/.env.validator.example ./env/.env.validator.mainnet
 
 Now edit the `.env.validator.mainnet` file to set the appropriate configurations.
 ```shell
-ITERATION_INTERVAL=512
-MAX_ALLOWED_WEIGHTS=32
-NET_UID=20
 VALIDATOR_KEY=<your_validator_comx_key>
-LLM_QUERY_TIMEOUT=120
-QUERY_TIMEOUT=120
-CHALLENGE_TIMEOUT=120
 
 POSTGRES_DB=validator1
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=changeit456$
 
 BITCOIN_NODE_RPC_URL=http://{put_proper_value_here}:{put_proper_value_here}@{put_proper_value_here}:8332
-DATABASE_URL=postgresql+asyncpg://postgres:changeit456$@localhost:5432/validator1
+COMMUNE_NODE_RPC=wss://api.communeai.net
 
-API_RATE_LIMIT=1000
+DATABASE_URL=postgresql+asyncpg://postgres:changeit456$@localhost:5432/validator1
 REDIS_URL=redis://localhost:6379/0
-LLM_API_KEY={put_proper_value_here}
-LLM_TYPE=openai
+
 PORT=9900
 WORKERS=4
-
-PROMPT_FREQUENCY=100
-PROMPT_THRESHOLD=100
-
-FUNDS_FLOW_CHALLENGE_FREQUENCY=10
-FUNDS_FLOW_CHALLENGE_THRESHOLD=100
-BALANCE_TRACKING_CHALLENGE_FREQUENCY=10
-BALANCE_TRACKING_CHALLENGE_THRESHOLD=100
 ```
 
 #### Validator wallet creation
@@ -121,24 +106,10 @@ pm2 start ./scripts/run_validator.sh --name validator
 pm2 save
 ```
 
-Or run the validator in auto update mode:
-```shell
-cd ~/validator1
-pm2 start ./scripts/run_validator_auto_update.sh --name validator -- mainnet validator
-pm2 save
-```
-
 ### Running the validator api
 
 ```shell
 cd ~/validator1
 pm2 start ./scripts/run_validator_api.sh --name validator-api
-pm2 save
-```
-
-Or run the validator api in auto update mode:
-```shell
-cd ~/validator1
-pm2 start ./scripts/run_validator_api_auto_update.sh --name validator-api -- mainnet validator-api
 pm2 save
 ```

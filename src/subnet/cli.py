@@ -1,64 +1,21 @@
 import asyncio
 import signal
 import sys
-import threading
 from datetime import datetime
-
 from communex._common import get_node_url
 from communex.client import CommuneClient
 from communex.compat.key import classic_load_key
 from loguru import logger
 
+from src.subnet.validator.challenges.generator_thread import ChallengeGeneratorThread
 from src.subnet.validator.database.models.challenge_balance_tracking import ChallengeBalanceTrackingManager
 from src.subnet.validator.database.models.challenge_funds_flow import ChallengeFundsFlowManager
-from src.subnet.protocol import get_networks, MODEL_KIND_FUNDS_FLOW, MODEL_KIND_BALANCE_TRACKING
 from src.subnet.validator.database.models.miner_discovery import MinerDiscoveryManager
 from src.subnet.validator.database.models.miner_receipt import MinerReceiptManager
 from src.subnet.validator.database.session_manager import DatabaseSessionManager, run_migrations
 from src.subnet.validator.weights_storage import WeightsStorage
 from src.subnet.validator._config import load_environment, SettingsManager
 from src.subnet.validator.validator import Validator
-from src.subnet.validator.challenge_utility import main as funds_flow_main, main as balance_tracking_main
-
-
-class FundsFlowChallengeGeneratorThread(threading.Thread):
-    def __init__(self, settings, environment, network, frequency, threshold, terminate_event, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.settings = settings
-        self.environment = environment
-        self.network = network
-        self.model_kind = MODEL_KIND_FUNDS_FLOW
-        self.frequency = frequency
-        self.threshold = threshold
-        self.terminate_event = terminate_event
-
-    def run(self):
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            loop.run_until_complete(funds_flow_main(self.settings, self.network, self.model_kind, self.frequency, self.threshold, self.terminate_event))
-        finally:
-            loop.close()
-
-
-class BalanceTrackingChallengeGeneratorThread(threading.Thread):
-    def __init__(self, settings, environment, network, frequency, threshold, terminate_event, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.settings = settings
-        self.environment = environment
-        self.network = network
-        self.model_kind = MODEL_KIND_BALANCE_TRACKING
-        self.frequency = frequency
-        self.threshold = threshold
-        self.terminate_event = terminate_event
-
-    def run(self):
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            loop.run_until_complete(balance_tracking_main(self.settings, self.network, self.model_kind, self.frequency, self.threshold, self.terminate_event))
-        finally:
-            loop.close()
 
 
 if __name__ == "__main__":
@@ -135,42 +92,19 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, shutdown_handler)
     signal.signal(signal.SIGTERM, shutdown_handler)
 
-    networks = get_networks()
-    prompt_generator_threads = []
-    funds_flow_challenge_generator_threads = []
-    balance_tracking_challenge_generator_threads = []
-
-    for network in networks:
-        funds_flow_thread = FundsFlowChallengeGeneratorThread(
-            settings=settings,
-            environment=environment,
-            network=network,
-            frequency=settings.FUNDS_FLOW_CHALLENGE_FREQUENCY,
-            threshold=settings.FUNDS_FLOW_CHALLENGE_THRESHOLD,
-            terminate_event=validator.terminate_event
-        )
-        funds_flow_challenge_generator_threads.append(funds_flow_thread)
-        funds_flow_thread.start()
-
-    for network in networks:
-        balance_tracking_thread = BalanceTrackingChallengeGeneratorThread(
-            settings=settings,
-            environment=environment,
-            network=network,
-            frequency=settings.BALANCE_TRACKING_CHALLENGE_FREQUENCY,
-            threshold=settings.BALANCE_TRACKING_CHALLENGE_THRESHOLD,
-            terminate_event=validator.terminate_event
-        )
-        balance_tracking_challenge_generator_threads.append(balance_tracking_thread)
-        balance_tracking_thread.start()
+    challenge_generator_thread = ChallengeGeneratorThread(
+        settings=settings,
+        environment=environment,
+        frequency=settings.CHALLENGE_FREQUENCY,
+        threshold=settings.CHALLENGE_THRESHOLD,
+        terminate_event=validator.terminate_event)
+    challenge_generator_thread.start()
 
     try:
         asyncio.run(validator.validation_loop(settings))
     except KeyboardInterrupt:
         logger.info("Validator loop interrupted")
 
-    for thread in funds_flow_challenge_generator_threads + balance_tracking_challenge_generator_threads:
-        thread.join()
-        logger.info(f"Generator for {thread.network} ({getattr(thread, 'model', 'prompt')}) stopped successfully.")
+    challenge_generator_thread.join()
+    logger.info(f"Challenge generator stopped successfully.")
 
-    logger.info("Validator, Prompt Generator, and Challenge Generator stopped successfully.")
