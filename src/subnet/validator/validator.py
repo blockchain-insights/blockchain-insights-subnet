@@ -23,7 +23,6 @@ from .database.models.challenge_balance_tracking import ChallengeBalanceTracking
 from .database.models.challenge_funds_flow import ChallengeFundsFlowManager
 from .encryption import generate_hash
 from .helpers import raise_exception_if_not_registered, get_ip_port, cut_to_max_allowed_weights
-from .nodes.factory import NodeFactory
 from .weights_storage import WeightsStorage
 from src.subnet.validator.database.models.miner_discovery import MinerDiscoveryManager
 from src.subnet.validator.database.models.miner_receipt import MinerReceiptManager
@@ -90,8 +89,7 @@ class Validator(Module):
             logger.debug(f"Got discovery for miner", miner_key=miner_key)
 
             # Challenge Phase
-            node = NodeFactory.create_node(discovery.network)
-            challenge_response = await self._perform_challenges(client, miner_key, discovery, node)
+            challenge_response = await self._perform_challenges(client, miner_key, discovery)
             if not challenge_response:
                 return None
 
@@ -126,44 +124,71 @@ class Validator(Module):
             logger.info(f"Miner failed to get discovery", miner_key=miner_key, error=e)
             return None
 
-    async def _perform_challenges(self, client, miner_key, discovery, node) -> ChallengesResponse | None:
+    async def _perform_challenges(self, client, miner_key, discovery) -> ChallengesResponse | None:
+
+        async def execute_funds_flow_challenge(funds_flow_challenge):
+            funds_flow_challenge_actual = "0x"
+            try:
+                funds_flow_challenge = Challenge.model_validate_json(funds_flow_challenge)
+                funds_flow_challenge = await client.call(
+                    "challenge",
+                    miner_key,
+                    {"challenge": funds_flow_challenge.model_dump(), "validator_key": self.key.ss58_address},
+                    timeout=self.challenge_timeout,
+                )
+
+                if funds_flow_challenge is not None:
+                    funds_flow_challenge = Challenge(**funds_flow_challenge)
+                    funds_flow_challenge_actual = funds_flow_challenge.output['tx_id']
+                    logger.debug(f"Funds flow challenge result", funds_flow_challenge_output=funds_flow_challenge.output, miner_key=miner_key)
+                return funds_flow_challenge_actual
+
+            except NetworkTimeoutError:
+                logger.error(f"Miner failed to perform challenges - timeout", miner_key=miner_key)
+            except Exception as e:
+                logger.error(f"Miner failed to perform challenges", error=e, miner_key=miner_key, traceback=traceback.format_exc())
+            finally:
+                return funds_flow_challenge_actual
+
+        async def execute_balance_tracking_challenge(balance_tracking_challenge):
+            balance_tracking_challenge_actual = 0
+            try:
+                balance_tracking_challenge = Challenge.model_validate_json(balance_tracking_challenge)
+                balance_tracking_challenge = await client.call(
+                    "challenge",
+                    miner_key,
+                    {"challenge": balance_tracking_challenge.model_dump(), "validator_key": self.key.ss58_address},
+                    timeout=self.challenge_timeout,
+                )
+
+                if balance_tracking_challenge is not None:
+                    balance_tracking_challenge = Challenge(**balance_tracking_challenge)
+                    balance_tracking_challenge_actual = balance_tracking_challenge.output['balance']
+                    logger.debug(f"Balance tracking challenge result", balance_tracking_challenge_output=balance_tracking_challenge.output, miner_key=miner_key)
+            except NetworkTimeoutError:
+                logger.error(f"Miner failed to perform challenges - timeout", miner_key=miner_key)
+            except Exception as e:
+                logger.error(f"Miner failed to perform challenges", error=e, miner_key=miner_key, traceback=traceback.format_exc())
+            finally:
+                return balance_tracking_challenge_actual
+
         try:
-            # Funds flow challenge
             funds_flow_challenge, tx_id = await self.challenge_funds_flow_manager.get_random_challenge(discovery.network)
             if funds_flow_challenge is None:
                 logger.warning(f"Failed to get funds flow challenge", miner_key=miner_key)
                 return None
+            funds_flow_challenge_actual = await execute_funds_flow_challenge(funds_flow_challenge)
 
-            funds_flow_challenge = Challenge.model_validate_json(funds_flow_challenge)
-            funds_flow_challenge = await client.call(
-                "challenge",
-                miner_key,
-                {"challenge": funds_flow_challenge.model_dump(), "validator_key": self.key.ss58_address},
-                timeout=self.challenge_timeout,
-            )
-            funds_flow_challenge = Challenge(**funds_flow_challenge)
-            logger.debug(f"Funds flow challenge result",  funds_flow_challenge_output=funds_flow_challenge.output, miner_key=miner_key)
-
-            # Balance tracking challenge
             balance_tracking_challenge, balance_tracking_expected_response = await self.challenge_balance_tracking_manager.get_random_challenge(discovery.network)
             if balance_tracking_challenge is None:
                 logger.warning(f"Failed to get balance tracking challenge", miner_key=miner_key)
                 return None
-
-            balance_tracking_challenge = Challenge.model_validate_json(balance_tracking_challenge)
-            balance_tracking_challenge = await client.call(
-                "challenge",
-                miner_key,
-                {"challenge": balance_tracking_challenge.model_dump(), "validator_key": self.key.ss58_address},
-                timeout=self.challenge_timeout,
-            )
-            balance_tracking_challenge = Challenge(**balance_tracking_challenge)
-            logger.debug(f"Balance tracking challenge result", balance_tracking_challenge_output=balance_tracking_challenge.output, miner_key=miner_key)
+            balance_tracking_challenge_actual = await execute_balance_tracking_challenge(balance_tracking_challenge)
 
             return ChallengesResponse(
-                funds_flow_challenge_actual=funds_flow_challenge.output['tx_id'],
+                funds_flow_challenge_actual=funds_flow_challenge_actual,
                 funds_flow_challenge_expected=tx_id,
-                balance_tracking_challenge_actual=balance_tracking_challenge.output['balance'],
+                balance_tracking_challenge_actual=balance_tracking_challenge_actual,
                 balance_tracking_challenge_expected=balance_tracking_expected_response,
             )
         except NetworkTimeoutError as e:
@@ -413,6 +438,9 @@ class Validator(Module):
                     await self.miner_receipt_manager.store_miner_receipt(request_id, miner['miner_key'], model_kind, network, query_hash, timestamp)
 
             random_response = random.choice(responses)
+
+            # ??
+            await self.miner_receipt_manager.accept_receipt(request_id, miner['miner_key'])
 
             return {
                 "request_id": request_id,

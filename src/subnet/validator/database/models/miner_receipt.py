@@ -130,7 +130,7 @@ class MinerReceiptManager:
 
             result = await session.execute(query)
             result = result.fetchall()
-            return {row['network']: row['count'] for row in result}
+            return {row[0]: row[1] for row in result}
 
     async def get_receipt_miner_multiplier(self, network: Optional[str] = None, miner_key: Optional[str] = None) -> List[Dict]:
         async with self.session_manager.session() as session:
@@ -179,5 +179,6 @@ class MinerReceiptManager:
                 params['network'] = network
 
             result = await session.execute(query, params)
+            result = result.fetchall()
 
-            return [dict(row) for row in result.fetchall()]
+            return [{ 'miner_key': row[0], 'network': row[1], 'multiplier': row[2]} for row in result]
