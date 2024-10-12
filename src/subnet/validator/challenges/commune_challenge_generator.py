@@ -19,7 +19,12 @@ class CommuneChallengeGenerator(ChallengeGenerator):
         self.node = CommuneNode(settings)
 
     async def funds_flow_generate_and_store(self, challenge_manager: ChallengeFundsFlowManager, threshold: int):
-        last_block_height = self.node.get_current_block_height()
+        try:
+            last_block_height = self.node.get_current_block_height()
+        except NotImplementedError as e:
+            logger.error(f"Failed to fetch block height, skipping")
+            return
+
         funds_flow_challenge, tx_id = self.node.create_funds_flow_challenge(last_block_height, self.terminate_event)
         if funds_flow_challenge is None:
             return
@@ -35,7 +40,12 @@ class CommuneChallengeGenerator(ChallengeGenerator):
         logger.info(f"Funds Flow Challenge stored in the database successfully.", network=self.network)
 
     async def balance_tracking_generate_and_store(self, challenge_manager: ChallengeBalanceTrackingManager, threshold: int):
-        last_block_height = self.node.get_current_block_height()
+        try:
+            last_block_height = self.node.get_current_block_height()
+        except NotImplementedError as e:
+            logger.error(f"Failed to fetch block height, skipping")
+            return
+
         random_balance_tracking_block = randint(1, last_block_height)
 
         balance_tracking_challenge, balance_tracking_expected_response = self.node.create_balance_tracking_challenge(random_balance_tracking_block, self.terminate_event)

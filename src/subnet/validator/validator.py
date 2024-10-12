@@ -1,13 +1,16 @@
 import asyncio
 import json
+import random
 import threading
 import time
+import traceback
 import uuid
 from datetime import datetime
 from random import sample
 from typing import cast, Dict, Optional
 
 from communex.client import CommuneClient  # type: ignore
+from communex.errors import NetworkTimeoutError
 from communex.misc import get_map_modules
 from communex.module.client import ModuleClient  # type: ignore
 from communex.module.module import Module  # type: ignore
@@ -127,6 +130,10 @@ class Validator(Module):
         try:
             # Funds flow challenge
             funds_flow_challenge, tx_id = await self.challenge_funds_flow_manager.get_random_challenge(discovery.network)
+            if funds_flow_challenge is None:
+                logger.warning(f"Failed to get funds flow challenge", miner_key=miner_key)
+                return None
+
             funds_flow_challenge = Challenge.model_validate_json(funds_flow_challenge)
             funds_flow_challenge = await client.call(
                 "challenge",
@@ -139,6 +146,10 @@ class Validator(Module):
 
             # Balance tracking challenge
             balance_tracking_challenge, balance_tracking_expected_response = await self.challenge_balance_tracking_manager.get_random_challenge(discovery.network)
+            if balance_tracking_challenge is None:
+                logger.warning(f"Failed to get balance tracking challenge", miner_key=miner_key)
+                return None
+
             balance_tracking_challenge = Challenge.model_validate_json(balance_tracking_challenge)
             balance_tracking_challenge = await client.call(
                 "challenge",
@@ -155,8 +166,11 @@ class Validator(Module):
                 balance_tracking_challenge_actual=balance_tracking_challenge.output['balance'],
                 balance_tracking_challenge_expected=balance_tracking_expected_response,
             )
+        except NetworkTimeoutError as e:
+            logger.error(f"Miner failed to perform challenges - timeout", error=e, miner_key=miner_key)
+            return None
         except Exception as e:
-            logger.error(f"Miner failed to perform challenges", error=e, miner_key=miner_key)
+            logger.error(f"Miner failed to perform challenges", error=e, miner_key=miner_key, traceback=traceback.format_exc())
             return None
 
     @staticmethod
@@ -398,6 +412,8 @@ class Validator(Module):
                 if response:
                     await self.miner_receipt_manager.store_miner_receipt(request_id, miner['miner_key'], model_kind, network, query_hash, timestamp)
 
+            random_response = random.choice(responses)
+
             return {
                 "request_id": request_id,
                 "timestamp": timestamp,
@@ -405,7 +421,7 @@ class Validator(Module):
                 "query_hash": query_hash,
                 "model_kind": model_kind,
                 "query": query,
-                "response": responses
+                "response": random_response
             }
 
     async def _query_miner(self, miner, model_kind, query):
