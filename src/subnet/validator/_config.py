@@ -1,4 +1,6 @@
 import sys
+from typing import Optional
+
 from loguru import logger
 from pydantic import ConfigDict
 from dotenv import load_dotenv
@@ -38,7 +40,8 @@ class ValidatorSettings(BaseSettings):
     ITERATION_INTERVAL: int
     MAX_ALLOWED_WEIGHTS: int
     NET_UID: int
-    VALIDATOR_KEY: str
+    VALIDATOR_KEY: Optional[str] = None
+    VALIDATOR_PRIVATE_KEY: Optional[str] = None
 
     PORT: int = 9900
     WORKERS: int = 4

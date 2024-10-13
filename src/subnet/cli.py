@@ -6,6 +6,7 @@ from communex._common import get_node_url
 from communex.client import CommuneClient
 from communex.compat.key import classic_load_key
 from loguru import logger
+from substrateinterface import Keypair
 
 from src.subnet.validator.challenges.generator_thread import ChallengeGeneratorThread
 from src.subnet.validator.database.models.challenge_balance_tracking import ChallengeBalanceTrackingManager
@@ -29,7 +30,15 @@ if __name__ == "__main__":
 
     settings_manager = SettingsManager.get_instance()
     settings = settings_manager.get_settings()
-    keypair = classic_load_key(settings.VALIDATOR_KEY)
+
+    if settings.VALIDATOR_KEY is None:
+        keypair = Keypair.create_from_private_key(settings.VALIDATOR_PRIVATE_KEY, ss58_format=42)
+    elif settings.VALIDATOR_PRIVATE_KEY is None:
+        keypair = classic_load_key(settings.VALIDATOR_KEY)
+    else:
+        logger.error("Both VALIDATOR_KEY and VALIDATOR_PRIVATE_KEY are set, only one should be set")
+        sys.exit(1)
+
 
     def patch_record(record):
         record["extra"]["validator_key"] = keypair.ss58_address
