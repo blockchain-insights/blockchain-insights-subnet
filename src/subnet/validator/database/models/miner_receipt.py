@@ -50,6 +50,16 @@ class MinerReceiptManager:
                 )
                 await session.execute(stmt)
 
+    async def accept_miner_receipt(self, request_id: str, miner_key: str):
+        async with self.session_manager.session() as session:
+            async with session.begin():
+                stmt = update(MinerReceipt).where(
+                    MinerReceipt.request_id == request_id
+                ).where(
+                    MinerReceipt.miner_key == miner_key
+                ).values(accepted=True)
+                await session.execute(stmt)
+
     async def get_receipts_by_miner_key(self, miner_key: str, page: int = 1, page_size: int = 10):
         async with self.session_manager.session() as session:
             # Calculate offset

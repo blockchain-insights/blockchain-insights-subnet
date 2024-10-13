@@ -433,14 +433,14 @@ class Validator(Module):
 
             responses = await asyncio.gather(*query_tasks)
 
-            for miner, response in zip(top_miners, responses):
+            combined_responses = list(zip(top_miners, responses))
+
+            for miner, response in combined_responses:
                 if response:
                     await self.miner_receipt_manager.store_miner_receipt(request_id, miner['miner_key'], model_kind, network, query_hash, timestamp)
 
-            random_response = random.choice(responses)
-
-            # ??
-            await self.miner_receipt_manager.accept_receipt(request_id, miner['miner_key'])
+            miner, random_response = random.choice(combined_responses)
+            await self.miner_receipt_manager.accept_miner_receipt(request_id, miner['miner_key'])
 
             return {
                 "request_id": request_id,
