@@ -1,58 +1,18 @@
 from typing import Optional, List
 from fastapi import Depends, APIRouter, Query, HTTPException
 from pydantic import BaseModel
-from enum import Enum
-from fastapi.responses import JSONResponse, PlainTextResponse
 
 from src.subnet.protocol import MODEL_KIND_FUNDS_FLOW, NETWORK_BITCOIN
 from src.subnet.validator.validator import Validator
 from src.subnet.validator_api import get_validator, api_key_auth
 from src.subnet.validator_api.models.graph_result_transformer import BitcoinGraphTransformer
 from src.subnet.validator_api.services.bitcoin_query_api import BitcoinQueryApi
-from datetime import datetime
-
-# ResponseType Enum
-class ResponseType(str, Enum):
-    json = "json"
-    graph = "graph"
+from src.subnet.validator_api.helpers.reponse_formatter import format_response, ResponseType
 
 funds_flow_bitcoin_router = APIRouter(prefix="/v1/funds-flow", tags=["funds-flow"])
 
 class MinerMetadataRequest(BaseModel):
     network: Optional[str] = None
-
-
-from fastapi.responses import JSONResponse, PlainTextResponse
-from datetime import datetime
-
-
-def format_response(data: dict, response_type: ResponseType):
-    """Helper function to format response based on response_type."""
-
-    def serialize_datetime(obj):
-        """Helper function to convert datetime objects to string."""
-        if isinstance(obj, datetime):
-            return obj.isoformat()
-        return obj
-
-    # Recursively walk through the data and convert datetime to string
-    def process_data(data):
-        if isinstance(data, dict):
-            return {key: process_data(value) for key, value in data.items()}
-        elif isinstance(data, list):
-            return [process_data(item) for item in data]
-        else:
-            return serialize_datetime(data)
-
-    processed_data = process_data(data)  # Ensure that datetime objects are handled for JSON or graph response
-
-    if response_type == ResponseType.graph:
-        # For graph format, use the processed data and a custom media type
-        return JSONResponse(content=processed_data, media_type="application/vnd.graph+json")
-
-    # Default to JSON response
-    return JSONResponse(content=processed_data)
-
 
 @funds_flow_bitcoin_router.get("/{network}/get_blocks",
                                summary="Get multiple blocks",
