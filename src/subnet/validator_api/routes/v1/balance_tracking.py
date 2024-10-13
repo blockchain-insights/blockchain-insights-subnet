@@ -8,49 +8,10 @@ from src.subnet.validator.validator import Validator
 from src.subnet.validator_api import get_validator, api_key_auth
 from src.subnet.validator_api.models.tabular_result_transformer import BitcoinTabularTransformer
 from src.subnet.validator_api.services.bitcoin_query_api import BitcoinQueryApi
-from fastapi.responses import JSONResponse, PlainTextResponse
-from datetime import datetime
-
-
-# Define the ResponseType Enum
-class ResponseType(str, Enum):
-    json = "json"
-    graph = "graph"
-
+from src.subnet.validator_api.helpers.reponse_formatter import format_response, ResponseType
 
 # Router for balance tracking
 balance_tracking_bitcoin_router = APIRouter(prefix="/v1/balance-tracking", tags=["balance-tracking"])
-
-
-# Function to format the response based on response type
-def format_response(data: dict, response_type: ResponseType):
-    """Helper function to format response based on response_type."""
-
-    def serialize_datetime(obj):
-        """Helper function to convert datetime objects to string."""
-        if isinstance(obj, datetime):
-            return obj.isoformat()
-        return obj
-
-    # Recursively walk through the data and convert datetime to string
-    def process_data(data):
-        if isinstance(data, dict):
-            return {key: process_data(value) for key, value in data.items()}
-        elif isinstance(data, list):
-            return [process_data(item) for item in data]
-        else:
-            return serialize_datetime(data)
-
-    processed_data = process_data(data)  # Ensure that datetime objects are handled for JSON or graph response
-
-    if response_type == ResponseType.graph:
-        # For graph format, use the processed data and a custom media type
-        return JSONResponse(content=processed_data, media_type="application/vnd.graph+json")
-
-    # Default to JSON response
-    return JSONResponse(content=processed_data)
-
-
 
 class MinerMetadataRequest(BaseModel):
     network: Optional[str] = None
@@ -100,6 +61,7 @@ async def get_balance_tracking(network: str,
 async def get_timestamps(network: str,
                          start_date: Optional[str] = Query(None, description="Start date in YYYY-MM-DD format"),
                          end_date: Optional[str] = Query(None, description="End date in YYYY-MM-DD format"),
+                         response_type: ResponseType = Query(ResponseType.json),  # Add response type parameter
                          validator: Validator = Depends(get_validator),
                          api_key: str = Depends(api_key_auth)):
 
@@ -110,7 +72,17 @@ async def get_timestamps(network: str,
             end_date=end_date
         )
 
-        # Directly return the JSON response
-        return data
+        # Check if data['response'] exists and is not None, otherwise set it to an empty list
+        if not data.get('response'):
+            data['response'] = []
+            data['results'] = []
+
+        # Transform the results if response data exists
+        if data['response']:
+            transformer = BitcoinTabularTransformer()  # Assuming a transformer is needed to process the results
+            data['results'] = transformer.transform_result(data['response'])
+
+        # Handle response based on the response_type
+        return format_response(data, response_type)
 
     return {"results": [], "response": [], "message": "Invalid network."}
