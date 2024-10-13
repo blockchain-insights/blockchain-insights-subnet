@@ -162,7 +162,10 @@ class BitcoinQueryApi(QueryApi):
             elif direction == 'left':
                 query_elements.append(f"MATCH path = (a2)<-[s:SENT*1..{hops}]-(an:Address)")
 
-        query_elements.append("RETURN a1, t1, a2, s1, s2, path")
+        if hops is not None:
+            query_elements.append("RETURN a1, t1, a2, s1, s2, path")
+        else:
+            query_elements.append("RETURN a1, t1, a2, s1, s2")
         final_query = "\n".join(query_elements)
 
         # Execute the query
