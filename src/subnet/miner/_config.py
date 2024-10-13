@@ -11,7 +11,10 @@ def load_environment(env: str):
     else:
         raise ValueError(f"Unknown environment: {env}")
 
-    load_dotenv(dotenv_path=dotenv_path)
+    if os.path.exists(dotenv_path):
+        load_dotenv(dotenv_path=dotenv_path)
+    else:
+        load_dotenv()
 
 
 class MinerSettings(BaseSettings):

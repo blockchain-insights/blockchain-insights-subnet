@@ -20,6 +20,11 @@ def load_environment(env: str):
 
     load_dotenv(dotenv_path=dotenv_path)
 
+    if os.path.exists(dotenv_path):
+        load_dotenv(dotenv_path=dotenv_path)
+    else:
+        load_dotenv()
+
 
 logger.remove()
 logger.add(
