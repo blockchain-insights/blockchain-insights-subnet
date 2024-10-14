@@ -33,10 +33,17 @@ class GraphSearch:
                 for record in result_data:
                     processed_record = {}
                     for key, value in record.items():
-                        if hasattr(value, 'items'):
+                        # Check if the value is a node, relationship, or primitive value
+                        if isinstance(value, dict) or hasattr(value, 'items'):
                             processed_record[key] = dict(value)
-                        else:
+                        elif isinstance(value, str) or isinstance(value, (int, float)):
                             processed_record[key] = value
+                        else:
+                            # Handle relationships and their properties
+                            if hasattr(value, "properties"):
+                                processed_record[key] = dict(value.properties)
+                            else:
+                                processed_record[key] = value
                     results_data.append(processed_record)
                 return results_data
 

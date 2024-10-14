@@ -1,6 +1,8 @@
 from typing import List, Dict, Any, Set
 from src.subnet.validator_api.models import BaseGraphTransformer, satoshi_to_btc
 from loguru import logger
+
+
 class BitcoinGraphTransformer(BaseGraphTransformer):
     def __init__(self):
         self.output_data: List[Dict[str, Any]] = []
@@ -56,8 +58,8 @@ class BitcoinGraphTransformer(BaseGraphTransformer):
         recipient = recipient_node.get('address')
 
         # Process edges from sender to transaction and transaction to recipient
-        sent_transactions1 = self.validate_list_entry(entry.get('s1'), 's1')
-        sent_transactions2 = self.validate_list_entry(entry.get('s2'), 's2')
+        sent_transactions1 = self.validate_dict_entry(entry.get('s1'), 's1')
+        sent_transactions2 = self.validate_dict_entry(entry.get('s2'), 's2')
 
         self.process_sent_edges(sent_transactions1, address, tx_id)
         self.process_sent_edges(sent_transactions2, tx_id, recipient)
@@ -73,7 +75,7 @@ class BitcoinGraphTransformer(BaseGraphTransformer):
 
         prev_node = None
         prev_tx = None
-        for i, element in enumerate(path):
+        for element in path:
             if isinstance(element, dict):
                 if 'address' in element:
                     # It's an address node
@@ -125,21 +127,21 @@ class BitcoinGraphTransformer(BaseGraphTransformer):
             self.address_ids.add(address)
 
     def process_sent_edges(self, sent_transactions: List[Any], from_id: str, to_id: str) -> None:
-        if not sent_transactions:
+        """Process a list of SENT edges and add them to the output."""
+        if not sent_transactions or not isinstance(sent_transactions, list):
             logger.warning(f"Skipping edge creation due to invalid sent transactions.")
             return
 
-        edge_label = "SENT"  # Default edge label
-
+        # Iterate over the sent transactions in the list and extract relevant data
         for sent_transaction in sent_transactions:
             if isinstance(sent_transaction, dict):
                 block_height = sent_transaction.get('block_height')
                 tx_id = sent_transaction.get('tx_id')
-                value_satoshi = sent_transaction.get('out_total_amount')
+                value_satoshi = sent_transaction.get('value_satoshi')
 
                 edge_id = f"{from_id}-{to_id}"
                 if from_id and to_id and edge_id not in self.edge_ids:
-                    edge_label = f"{satoshi_to_btc(value_satoshi):.8f} BTC" if value_satoshi else edge_label
+                    edge_label = f"{satoshi_to_btc(value_satoshi):.8f} BTC" if value_satoshi else "SENT"
 
                     self.output_data.append({
                         "id": edge_id,
@@ -148,16 +150,24 @@ class BitcoinGraphTransformer(BaseGraphTransformer):
                         "from_id": from_id,
                         "to_id": to_id,
                         "block_height": block_height,
-                        "tx_id": tx_id
+                        "tx_id": tx_id,
+                        "satoshi_value": value_satoshi,  # Include satoshi value in the output
+                        "btc_value": satoshi_to_btc(value_satoshi)  # Include BTC value conversion in the output
                     })
                     self.edge_ids.add(edge_id)
 
-                    logger.debug(f"Processed Edge: {edge_id}, Label: {edge_label}, Block: {block_height}, Tx: {tx_id}")
+                    logger.debug(
+                        f"Processed Edge: {edge_id}, Label: {edge_label}, Block: {block_height}, Tx: {tx_id}, BTC Value: {satoshi_to_btc(value_satoshi):.8f}")
+
+            elif isinstance(sent_transaction, list):
+                # Handle case where a transaction is nested within a list
+                for tx in sent_transaction:
+                    if isinstance(tx, dict):
+                        self.process_sent_edges([tx], from_id, to_id)
+
             elif isinstance(sent_transaction, str):
-                # Update the label if a string like 'SENT' is encountered
-                edge_label = sent_transaction
-            else:
-                logger.warning(f"Invalid transaction type: {sent_transaction}")
+                # This could be an edge label like "SENT", ignore for now
+                continue
 
     def validate_dict_entry(self, entry: Any, entry_name: str) -> Dict[str, Any]:
         """Validates that the given entry is a dictionary."""
@@ -172,5 +182,3 @@ class BitcoinGraphTransformer(BaseGraphTransformer):
             logger.warning(f"Invalid format for '{entry_name}': Expected list, got {type(entry)}")
             return []
         return entry
-
-
