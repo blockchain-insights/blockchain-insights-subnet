@@ -1,4 +1,5 @@
 import contextlib
+import os
 from typing import AsyncIterator, Optional
 from sqlalchemy.ext.asyncio import (
     AsyncConnection,
@@ -82,11 +83,13 @@ async def get_session() -> AsyncIterator[AsyncSession]:
 
 def run_migrations(execution_path='../'):
     import subprocess
-    backup_result = subprocess.run(['docker', 'start', 'postgres_backup'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    if backup_result.stdout:
-        logger.warning(backup_result.stdout)
+    if os.getenv('SKIP_BACKUP', 'False') == 'False':
+        backup_result = subprocess.run(['docker', 'start', 'postgres_backup'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        if backup_result.stdout:
+            logger.warning(backup_result.stdout)
 
-    command = 'alembic upgrade head'
-    migration_result = subprocess.run(command, shell=True, capture_output=True, text=True, cwd=execution_path)
-    if migration_result.stdout:
-        logger.warning(migration_result.stdout)
+    if os.getenv('SKIP_MIGRATIONS', 'False') == 'False':
+        command = 'alembic upgrade head'
+        migration_result = subprocess.run(command, shell=True, capture_output=True, text=True, cwd=execution_path)
+        if migration_result.stdout:
+            logger.warning(migration_result.stdout)
