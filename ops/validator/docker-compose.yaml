@@ -35,5 +35,26 @@ services:
       - "6379:6379"
     restart: unless-stopped
 
+  validator:
+    build:
+      context: ../../
+      dockerfile: Dockerfile
+    command: >
+      /bin/bash -c "
+      export PYTHONPATH=$(pwd) && cd src && python3 subnet/cli.py $${NETWORK_TYPE}
+      "
+    env_file:
+      - ../../env/.env.validator.testnet
+    environment:
+      SKIP_BACKUP: "True"
+      VALIDATOR_PRIVATE_KEY: ""
+      NETWORK_TYPE: "testnet"
+    ports:
+      - "9900:9900"
+    depends_on:
+      - postgres
+      - redis
+
+
 volumes:
   postgres-data-validator:
