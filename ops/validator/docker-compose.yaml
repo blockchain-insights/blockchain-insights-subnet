@@ -53,7 +53,26 @@ services:
       - "9900:9900"
     depends_on:
       - postgres
-      - redis
+
+  validator-api:
+      build:
+        context: ../../
+        dockerfile: Dockerfile
+      command: >
+        /bin/bash -c "
+        export PYTHONPATH=$(pwd) && cd src && python3 subnet/validator_api/main.py $${NETWORK_TYPE}
+        "
+      env_file:
+        - ../../env/.env.validator.testnet
+      environment:
+        SKIP_BACKUP: "True"
+        VALIDATOR_PRIVATE_KEY: ""
+        NETWORK_TYPE: "testnet"
+      ports:
+        - "9901:9901"
+      depends_on:
+        - postgres
+        - redis
 
 
 volumes:
