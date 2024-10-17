@@ -55,12 +55,11 @@ if __name__ == "__main__":
     def shutdown_handler(signal, frame):
         logger.debug("Shutdown handler started")
         settings_manager.stop_reloader()
-        uvicorn_server.should_exit = True
-        uvicorn_server.force_exit = True
+        uvicorn.should_exit = True
+        uvicorn.force_exit = True
         logger.debug("Shutdown handler finished")
 
     signal.signal(signal.SIGINT, shutdown_handler)
     signal.signal(signal.SIGTERM, shutdown_handler)
 
-    uvicorn_server = uvicorn.Server(config=uvicorn.Config(app, host="0.0.0.0", port=settings.PORT, workers=settings.WORKERS))
-    uvicorn_server.run()
+    uvicorn.run("main:app", host="0.0.0.0", port=settings.PORT, workers=settings.WORKERS)
