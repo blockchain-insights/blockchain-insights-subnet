@@ -44,20 +44,24 @@ class BitcoinQueryApi(QueryApi):
         if radius > 10:
             raise ValueError("Radius cannot be more than 10 blocks")
 
+        # Query to retrieve both incoming and outgoing SENT edges with relevant transactions and addresses
         query = f"""
             MATCH (t1:Transaction {{tx_id: '{tx_id}'}})
             WITH t1.block_height AS target_block_height
             UNWIND range(target_block_height - {radius}, target_block_height + {radius}) AS block_height
-            MATCH (t:Transaction {{block_height: block_height}})-[s1:SENT]->(a1:Address)
-            OPTIONAL MATCH (t)-[s2:SENT]->(a2:Address)
-            RETURN t AS t1, t.block_height AS block_height, a1, s1, a2, s2
+            MATCH (t:Transaction {{block_height: block_height}})
+            OPTIONAL MATCH (a1:Address)-[s1:SENT]->(t)  // Incoming relationships
+            OPTIONAL MATCH (t)-[s2:SENT]->(a2:Address)  // Outgoing relationships
+            RETURN a1, s1, t AS t1, s2, a2
             ORDER BY t.block_height
         """
 
+        # Execute the query and retrieve data
         data = await self._execute_query(query)
 
-        # Optionally transform data if necessary
-        transformed_data = data  # Placeholder for any transformation logic
+        # Transform data if necessary
+        transformed_data = data
+
         return transformed_data
 
     async def get_address_transactions(self,
