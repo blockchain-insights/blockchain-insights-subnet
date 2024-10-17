@@ -17,6 +17,7 @@ class GraphSearch:
             connection_timeout=60,
             max_connection_lifetime=60,
             max_connection_pool_size=128,
+            fetch_size=1000,
             encrypted=False,
         )
 
@@ -24,20 +25,45 @@ class GraphSearch:
         with self.driver.session(default_access_mode=READ_ACCESS) as session:
             try:
                 result = session.run(query)
+
+                # Check if there are no results
                 if not result:
                     return None
 
-                result_data = result.data()
                 results_data = []
 
-                for record in result_data:
+                # Iterate through the result to access keys and their corresponding values
+                for record in result:
                     processed_record = {}
-                    for key, value in record.items():
-                        if hasattr(value, 'items'):
-                            processed_record[key] = dict(value)
+
+                    # Iterate through each key-value pair in the record
+                    for key in record.keys():
+                        value = record[key]
+
+                        # Process nodes
+                        if hasattr(value, "id") and hasattr(value, "labels"):
+                            processed_record[key] = {
+                                "id": value.id,
+                                "labels": list(value.labels),
+                                "properties": dict(value),
+                            }
+
+                        # Process relationships
+                        elif hasattr(value, "id") and hasattr(value, "type"):
+                            processed_record[key] = {
+                                "id": value.id,
+                                "start": value.start_node.id,
+                                "end": value.end_node.id,
+                                "label": value.type,
+                                "properties": dict(value),
+                            }
+
+                        # Handle primitive or unexpected values gracefully
                         else:
                             processed_record[key] = value
+
                     results_data.append(processed_record)
+
                 return results_data
 
             except Neo4jError as e:

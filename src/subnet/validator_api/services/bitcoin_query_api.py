@@ -22,13 +22,13 @@ class BitcoinQueryApi(QueryApi):
         if len(block_heights) > 10:
             raise ValueError("Cannot query more than 10 blocks at once")
 
-        # Form a Cypher query that uses the array of block heights
+        # Corrected Cypher query with value_satoshi and optional matching for coinbase transactions
         query = f"""
             MATCH (t1:Transaction)
             WHERE t1.block_height IN {block_heights}
-            OPTIONAL MATCH (t1)-[s1:SENT]->(a1:Address)
-            OPTIONAL MATCH (a2:Address)-[s2:SENT]->(t1)
-            RETURN t1, s1, a1, s2, a2
+            OPTIONAL MATCH (a1:Address)-[s1:SENT]->(t1)
+            OPTIONAL MATCH (t1)-[s2:SENT]->(a2:Address)
+            RETURN a1,s1,t1,s2,a2
         """
 
         # Execute the query and fetch the data
