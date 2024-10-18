@@ -66,45 +66,48 @@ class BitcoinQueryApi(QueryApi):
 
     async def get_address_transactions(self,
                                        address: str,
-                                       start_block_height: Optional[int],
-                                       end_block_height: Optional[int],
+                                       start_block_height: Optional[int] = None,
+                                       end_block_height: Optional[int] = None,
                                        limit: Optional[int] = 100) -> dict:
-
-        # Start with the base query to find transactions for a given address
+        # Query to capture only the relevant transactions related to the given address
         query = f"""
-            MATCH (a1:Address {{address: '{address}'}})-[:SENT]-(t1:Transaction)
+            MATCH (a:Address {{address: '{address}'}})
+            OPTIONAL MATCH (a)-[s1:SENT]->(t1:Transaction)
             OPTIONAL MATCH (t1)-[s2:SENT]->(a2:Address)
-            OPTIONAL MATCH (a1)-[s1:SENT]->(t1)
+            OPTIONAL MATCH (t2:Transaction)-[s4:SENT]->(a)
+            OPTIONAL MATCH (a3:Address)-[s3:SENT]->(t2)
+            OPTIONAL MATCH (t2)-[s5:SENT]->(a4:Address)
         """
 
-        # Use range for block height filtering if start_block_height and end_block_height are provided
+        # Add block height filtering if necessary
         if start_block_height is not None and end_block_height is not None:
             query += f"""
-                WITH t1, a1, s1, s2, a2, range({start_block_height}, {end_block_height}) AS block_range
-                WHERE t1.block_height IN block_range
+                WITH a, s1, t1, s2, a2, a3, s3, t2, s4, s5, a4, 
+                     range({start_block_height}, {end_block_height}) AS block_range
+                WHERE t1.block_height IN block_range OR t2.block_height IN block_range
             """
         elif start_block_height is not None:
-            # If only the start_block_height is provided, use a range starting from the start_block_height
             query += f"""
-                WITH t1, a1, s1, s2, a2, range({start_block_height}, t1.block_height) AS block_range
-                WHERE t1.block_height IN block_range
+                WITH a, s1, t1, s2, a2, a3, s3, t2, s4, s5, a4
+                WHERE t1.block_height >= {start_block_height} OR t2.block_height >= {start_block_height}
             """
         elif end_block_height is not None:
-            # If only the end_block_height is provided, use a range from block 0 to end_block_height
             query += f"""
-                WITH t1, a1, s1, s2, a2, range(0, {end_block_height}) AS block_range
-                WHERE t1.block_height IN block_range
+                WITH a, s1, t1, s2, a2, a3, s3, t2, s4, s5, a4
+                WHERE t1.block_height <= {end_block_height} OR t2.block_height <= {end_block_height}
             """
 
-        # Final query to return the results
+        # Final RETURN and LIMIT statements
         query += f"""
-            RETURN t1, s1, a1, s2, a2 
+            RETURN a, s1, t1, s2, a2, a3, s3, t2, s4, s5, a4
             LIMIT {limit}
         """
 
-        # Execute the query and optionally transform the data
+        # Execute the query
         data = await self._execute_query(query)
-        transformed_data = data  # Optionally transform the data if necessary
+
+        # Optional: Transform the data if needed
+        transformed_data = data
 
         return transformed_data
 
