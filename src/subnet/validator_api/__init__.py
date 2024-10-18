@@ -20,8 +20,10 @@ from src.subnet.validator_api.rate_limiter import RateLimiterMiddleware
 from src.subnet.validator.validator import Validator
 from src.subnet.validator.weights_storage import WeightsStorage
 
-
-env = sys.argv[1]
+if len(sys.argv) != 2:
+    env = 'mainnet'
+else:
+    env = sys.argv[1]
 use_testnet = env == 'testnet'
 load_environment(env)
 
