@@ -11,96 +11,97 @@ class BitcoinGraphTransformer(BaseGraphTransformer):
 
     def transform_result(self, result: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         logger.debug("Transforming result")
-        self.output_data = []
-        self.transaction_ids = set()
-        self.address_ids = set()
-        self.edge_ids = set()
+        self.output_data.clear()
+        self.transaction_ids.clear()
+        self.address_ids.clear()
+        self.edge_ids.clear()
 
         for entry in result:
             try:
-                self.process_transaction_entry(entry)
+                self.process_entry(entry)
             except Exception as e:
                 logger.error(f"Error processing entry: {e}, Entry: {entry}")
 
         return self.output_data
 
-    def process_transaction_entry(self, entry: Dict[str, Any]) -> None:
+    def process_entry(self, entry: Dict[str, Any]) -> None:
         logger.debug(f"Processing Entry: {entry}")
 
-        # Extract nodes and relationships from the entry
-        address_node = self.validate_dict_entry(entry.get('a1'), 'a1')
-        recipient_node = self.validate_dict_entry(entry.get('a2'), 'a2')
-        transaction_node = self.validate_dict_entry(entry.get('t1'), 't1')
+        # Process address nodes, transaction nodes, and SENT edges
+        self.process_address_nodes(entry)
+        self.process_transaction_nodes(entry)
+        self.process_sent_edges(entry)
 
-        sent_edge1 = self.validate_dict_entry(entry.get('s1'), 's1')
-        sent_edge2 = self.validate_dict_entry(entry.get('s2'), 's2')
+    def process_address_nodes(self, entry: Dict[str, Any]) -> None:
+        """Add all address nodes to the output."""
+        for key, value in entry.items():
+            if key.startswith("a") and value:
+                address_id = value['id']
+                address = value['properties'].get('address')
 
-        # Process the nodes and edges if valid
-        if transaction_node:
-            self.process_transaction_node(transaction_node)
+                if address_id not in self.address_ids:
+                    self.output_data.append({
+                        "id": address_id,
+                        "type": "node",
+                        "label": "address",
+                        "address": address
+                    })
+                    self.address_ids.add(address_id)
 
-        self.add_address_node(address_node, 'address')
-        self.add_address_node(recipient_node, 'recipient')
+    def process_transaction_nodes(self, entry: Dict[str, Any]) -> None:
+        """Add all transaction nodes to the output."""
+        for key, value in entry.items():
+            if key.startswith("t") and value:
+                tx_id = value['properties'].get('tx_id')
 
-        address = address_node.get('properties', {}).get('address')
-        recipient = recipient_node.get('properties', {}).get('address')
+                if tx_id not in self.transaction_ids:
+                    self.output_data.append({
+                        "id": tx_id,
+                        "type": "node",
+                        "label": "transaction",
+                        "balance": satoshi_to_btc(value['properties'].get('out_total_amount', 0)),
+                        "timestamp": value['properties'].get('timestamp'),
+                        "block_height": value['properties'].get('block_height')
+                    })
+                    self.transaction_ids.add(tx_id)
 
-        # Process the SENT edges
-        self.process_sent_edge(sent_edge1, address, transaction_node.get('properties', {}).get('tx_id'))
-        self.process_sent_edge(sent_edge2, transaction_node.get('properties', {}).get('tx_id'), recipient)
+    def process_sent_edges(self, entry: Dict[str, Any]) -> None:
+        """Add SENT edges with proper IDs."""
+        for key, value in entry.items():
+            if key.startswith("s") and value:
+                from_id = value['start']
+                to_id = value['end']
+                value_satoshi = value['properties'].get('value_satoshi')
 
-    def process_transaction_node(self, transaction_node: Dict[str, Any]) -> None:
-        tx_id = transaction_node.get('properties', {}).get('tx_id')
+                # Determine if it's an address-to-tx or tx-to-address edge
+                from_node = self.get_node_by_id(entry, from_id)
+                to_node = self.get_node_by_id(entry, to_id)
 
-        if tx_id and tx_id not in self.transaction_ids:
-            self.output_data.append({
-                "id": tx_id,
-                "type": "node",
-                "label": "transaction",
-                "balance": satoshi_to_btc(transaction_node['properties'].get('out_total_amount', 0)),
-                "timestamp": transaction_node['properties'].get('timestamp'),
-                "block_height": transaction_node['properties'].get('block_height')
-            })
-            self.transaction_ids.add(tx_id)
+                if from_node["type"] == "address" and to_node["type"] == "transaction":
+                    edge_id = f"{from_node['address']}-{to_node['id']}"
+                elif from_node["type"] == "transaction" and to_node["type"] == "address":
+                    edge_id = f"{from_node['id']}-{to_node['address']}"
+                else:
+                    edge_id = f"{from_id}-{to_id}"  # Fallback to ensure uniqueness
 
-    def add_address_node(self, address_node: Dict[str, Any], label: str) -> None:
-        address = address_node.get('properties', {}).get('address')
+                if edge_id not in self.edge_ids:
+                    self.output_data.append({
+                        "id": edge_id,
+                        "type": "edge",
+                        "label": f"{satoshi_to_btc(value_satoshi):.8f} BTC",
+                        "from_id": from_id,
+                        "to_id": to_id,
+                        "satoshi_value": value_satoshi,
+                        "btc_value": satoshi_to_btc(value_satoshi)
+                    })
+                    self.edge_ids.add(edge_id)
 
-        if address and address not in self.address_ids:
-            self.output_data.append({
-                "id": address,
-                "type": "node",
-                "label": label,
-                "name": address_node['properties'].get('address')
-            })
-            self.address_ids.add(address)
-
-    def process_sent_edge(self, sent_edge: Dict[str, Any], from_id: str, to_id: str) -> None:
-        if not sent_edge:
-            logger.warning("Skipping invalid sent edge.")
-            return
-
-        edge_id = f"{from_id}-{to_id}"
-        if edge_id not in self.edge_ids:
-            value_satoshi = sent_edge['properties'].get('value_satoshi')
-            edge_label = f"{satoshi_to_btc(value_satoshi):.8f} BTC" if value_satoshi else "SENT"
-
-            self.output_data.append({
-                "id": edge_id,
-                "type": "edge",
-                "label": edge_label,
-                "from_id": from_id,
-                "to_id": to_id,
-                "block_height": sent_edge['properties'].get('block_height'),
-                "tx_id": sent_edge['properties'].get('tx_id'),
-                "satoshi_value": value_satoshi,
-                "btc_value": satoshi_to_btc(value_satoshi)
-            })
-            self.edge_ids.add(edge_id)
-
-    def validate_dict_entry(self, entry: Any, entry_name: str) -> Dict[str, Any]:
-        """Ensures the entry is a valid dictionary."""
-        if not isinstance(entry, dict):
-            logger.warning(f"Invalid format for '{entry_name}': Expected dict, got {type(entry)}")
-            return {}
-        return entry
+    def get_node_by_id(self, entry: Dict[str, Any], node_id: Any) -> Dict[str, Any]:
+        """Helper to retrieve a node (address or transaction) by ID."""
+        for key, value in entry.items():
+            if value and value["id"] == node_id:
+                if key.startswith("a"):
+                    return {"type": "address", "address": value["properties"]["address"]}
+                if key.startswith("t"):
+                    return {"type": "transaction", "id": value["properties"]["tx_id"]}
+        return {"type": "unknown", "id": node_id}
