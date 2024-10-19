@@ -69,36 +69,42 @@ class BitcoinQueryApi(QueryApi):
                                        start_block_height: Optional[int] = None,
                                        end_block_height: Optional[int] = None,
                                        limit: Optional[int] = 100) -> dict:
-        # Query to capture only the relevant transactions related to the given address
+        # Start with the original query structure
         query = f"""
             MATCH (a:Address {{address: '{address}'}})
             OPTIONAL MATCH (a)-[s1:SENT]->(t1:Transaction)
-            OPTIONAL MATCH (t1)-[s2:SENT]->(a2:Address)
-            OPTIONAL MATCH (t2:Transaction)-[s4:SENT]->(a)
-            OPTIONAL MATCH (a3:Address)-[s3:SENT]->(t2)
-            OPTIONAL MATCH (t2)-[s5:SENT]->(a4:Address)
         """
 
-        # Add block height filtering if necessary
-        if start_block_height is not None and end_block_height is not None:
-            query += f"""
-                WITH a, s1, t1, s2, a2, a3, s3, t2, s4, s5, a4, 
-                     range({start_block_height}, {end_block_height}) AS block_range
-                WHERE t1.block_height IN block_range OR t2.block_height IN block_range
-            """
-        elif start_block_height is not None:
-            query += f"""
-                WITH a, s1, t1, s2, a2, a3, s3, t2, s4, s5, a4
-                WHERE t1.block_height >= {start_block_height} OR t2.block_height >= {start_block_height}
-            """
-        elif end_block_height is not None:
-            query += f"""
-                WITH a, s1, t1, s2, a2, a3, s3, t2, s4, s5, a4
-                WHERE t1.block_height <= {end_block_height} OR t2.block_height <= {end_block_height}
-            """
+        # Add block height condition for t1 if provided
+        if start_block_height is not None or end_block_height is not None:
+            t1_conditions = []
+            if start_block_height is not None:
+                t1_conditions.append(f"t1.block_height >= {start_block_height}")
+            if end_block_height is not None:
+                t1_conditions.append(f"t1.block_height <= {end_block_height}")
+            query += f"WHERE {' AND '.join(t1_conditions)}\n"
 
-        # Final RETURN and LIMIT statements
+        # Continue building the query with the rest of the structure
         query += f"""
+            OPTIONAL MATCH (t1)-[s2:SENT]->(a2:Address)
+            OPTIONAL MATCH (t2:Transaction)-[s4:SENT]->(a)
+        """
+
+        # Add block height condition for t2 if provided
+        if start_block_height is not None or end_block_height is not None:
+            t2_conditions = []
+            if start_block_height is not None:
+                t2_conditions.append(f"t2.block_height >= {start_block_height}")
+            if end_block_height is not None:
+                t2_conditions.append(f"t2.block_height <= {end_block_height}")
+            query += f"WHERE {' AND '.join(t2_conditions)}\n"
+
+        # Add remaining structure
+        query += f"""
+            OPTIONAL MATCH (a3:Address)-[s3:SENT]->(t2)
+            OPTIONAL MATCH (t2)-[s5:SENT]->(a4:Address)
+            WITH a, s1, t1, s2, a2, a3, s3, t2, s4, s5, a4
+            WHERE t1 IS NOT NULL OR t2 IS NOT NULL
             RETURN a, s1, t1, s2, a2, a3, s3, t2, s4, s5, a4
             LIMIT {limit}
         """
