@@ -1,0 +1,74 @@
+name: Create/Update Tag, Release, and Build Docker Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      semver:
+        description: 'Semantic Version (e.g., 1.2.3)'
+        required: true
+      release_notes:
+        description: 'Release notes'
+        required: true
+      additional_tag:
+        description: 'Additional tag (optional)'
+        required: false
+        default: ''
+
+jobs:
+  tag-release-and-docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Create/Update and push tag
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git tag -f v${{ github.event.inputs.semver }}
+          git push origin v${{ github.event.inputs.semver }} --force
+
+      - name: Create/Update Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ github.event.inputs.semver }}
+          release_name: Release v${{ github.event.inputs.semver }}
+          body: ${{ github.event.inputs.release_notes }}
+          draft: false
+          prerelease: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.ACTIONS_TOKEN }}
+
+      - name: Generate date tag
+        id: date
+        run: echo "date=$(date +'%Y-%m-%d-%H')" >> $GITHUB_OUTPUT
+
+      - name: Set tags
+        id: set_tags
+        run: |
+          TAGS="ghcr.io/${{ github.repository }}:latest,ghcr.io/${{ github.repository }}:v${{ github.event.inputs.semver }}"
+          if [ -n "${{ github.event.inputs.additional_tag }}" ]; then
+            TAGS="$TAGS,ghcr.io/${{ github.repository }}:${{ github.event.inputs.additional_tag }}"
+          else
+            TAGS="$TAGS,ghcr.io/${{ github.repository }}:${{ steps.date.outputs.date }}"
+          fi
+          echo "tags=$TAGS" >> $GITHUB_OUTPUT
+
+      - name: Build and push
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.set_tags.outputs.tags }}
