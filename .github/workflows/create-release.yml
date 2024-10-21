@@ -27,7 +27,7 @@ jobs:
           git tag -f v${{ github.event.inputs.semver }}
           git push https://$TOKEN@github.com/${{ github.repository }}.git v${{ github.event.inputs.semver }} --force
         env:
-          TOKEN: ${{ secrets.PAT_TOKEN }}
+          TOKEN: ${{ secrets.ACTIONS_TOKEN }}
 
 
       - name: Generate Release Notes
@@ -46,7 +46,7 @@ jobs:
         id: create_release
         uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Ensure authentication
+          GITHUB_TOKEN: ${{ secrets.ACTIONS_TOKEN }}  # Ensure authentication
         with:
           tag_name: v${{ github.event.inputs.semver }}
           release_name: Release v${{ github.event.inputs.semver }}
@@ -62,7 +62,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}  # Use GITHUB_TOKEN for authentication
+          password: ${{ secrets.ACTIONS_TOKEN }}
 
       - name: Generate date tag
         id: date
