@@ -25,7 +25,7 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git tag -f v${{ github.event.inputs.semver }}
-          git push https://$TOKEN@github.com/your-username/blockchain-insights-subnet.git v${{ github.event.inputs.semver }} --force
+          git push https://$TOKEN@github.com/${{ github.repository }}.git v${{ github.event.inputs.semver }} --force
         env:
           TOKEN: ${{ secrets.PAT_TOKEN }}
 
