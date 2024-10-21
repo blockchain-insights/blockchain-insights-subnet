@@ -1,0 +1,62 @@
+name: Manually Build and Publish Final Docker Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      semver:
+        description: 'Semantic Version (e.g., 1.2.3)'
+        required: false
+        default: ''
+      tag:
+        description: 'Additional tag (default: current date)'
+        required: false
+        default: ''
+      base_image_tag:
+        description: 'Base image tag (default: latest)'
+        required: false
+        default: 'latest'
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate date tag
+        id: date
+        run: echo "date=$(date +'%Y-%m-%d-%H')" >> $GITHUB_OUTPUT
+
+      - name: Set tags
+        id: set_tags
+        run: |
+          TAGS="ghcr.io/${{ github.repository }}/final-image:latest"
+          if [ -n "${{ github.event.inputs.semver }}" ]; then
+            TAGS="$TAGS,ghcr.io/${{ github.repository }}/final-image:${{ github.event.inputs.semver }}"
+          fi
+          if [ -n "${{ github.event.inputs.tag }}" ]; then
+            TAGS="$TAGS,ghcr.io/${{ github.repository }}/final-image:${{ github.event.inputs.tag }}"
+          else
+            TAGS="$TAGS,ghcr.io/${{ github.repository }}/final-image:${{ steps.date.outputs.date }}"
+          fi
+          echo "tags=$TAGS" >> $GITHUB_OUTPUT
+
+      - name: Build and push final image
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          build-args: |
+            BASE_IMAGE=ghcr.io/${{ github.repository }}/base-image:${{ github.event.inputs.base_image_tag }}
+          tags: ${{ steps.set_tags.outputs.tags }}
