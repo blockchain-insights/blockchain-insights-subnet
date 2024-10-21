@@ -11,7 +11,7 @@ from src.subnet.validator_api.services.commune_query_api import CommuneQueryApi 
 from src.subnet.validator_api.helpers.reponse_formatter import format_response, ResponseType
 
 # Router for balance tracking
-balance_tracking_router = APIRouter(prefix="/v1/balance-tracking", tags=["balance-tracking"])
+balance_tracking_bitcoin_router = APIRouter(prefix="/v1/balance-tracking", tags=["balance-tracking"])
 
 
 class MinerMetadataRequest(BaseModel):
@@ -27,7 +27,7 @@ def select_query_api(network: str, validator: Validator):
     raise HTTPException(status_code=400, detail="Invalid network.")
 
 
-@balance_tracking_router.get("/{network}")
+@balance_tracking_bitcoin_router.get("/{network}")
 async def get_balance_tracking(
     network: str,
     addresses: Optional[List[str]] = Query(None),
@@ -63,7 +63,7 @@ async def get_balance_tracking(
     return format_response(data, response_type)
 
 
-@balance_tracking_router.get("/{network}/timestamps")
+@balance_tracking_bitcoin_router.get("/{network}/timestamps")
 async def get_timestamps(
     network: str,
     start_date: Optional[str] = Query(None, description="Start date in YYYY-MM-DD format"),
