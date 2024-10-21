@@ -22,10 +22,12 @@ jobs:
 
       - name: Create/Update and push tag
         run: |
-          git config user.name github-actions
-          git config user.email github-actions@github.com
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
           git tag -f v${{ github.event.inputs.semver }}
           git push origin v${{ github.event.inputs.semver }} --force
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Ensure authentication
 
       - name: Generate Release Notes
         id: generate_release_notes
@@ -38,13 +40,12 @@ jobs:
             echo "EOF" >> $GITHUB_OUTPUT
           else
             echo "RELEASE_NOTES=Initial release" >> $GITHUB_OUTPUT
-          fi
 
       - name: Create/Update Release
         id: create_release
         uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.ACTIONS_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Ensure authentication
         with:
           tag_name: v${{ github.event.inputs.semver }}
           release_name: Release v${{ github.event.inputs.semver }}
@@ -60,7 +61,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.ACTIONS_TOKEN }}
+          password: ${{ secrets.GITHUB_TOKEN }}  # Use GITHUB_TOKEN for authentication
 
       - name: Generate date tag
         id: date
