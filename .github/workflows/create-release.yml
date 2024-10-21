@@ -1,13 +1,10 @@
-name: Create/Update Tag, Release, and Build Docker Image
+name: Create/Update Tag, Auto-Release, and Build Docker Image
 
 on:
   workflow_dispatch:
     inputs:
       semver:
         description: 'Semantic Version (e.g., 1.2.3)'
-        required: true
-      release_notes:
-        description: 'Release notes'
         required: true
       additional_tag:
         description: 'Additional tag (optional)'
@@ -20,6 +17,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+        with:
+          fetch-depth: 0  # Fetch all history for generating release notes
 
       - name: Create/Update and push tag
         run: |
@@ -27,6 +26,19 @@ jobs:
           git config user.email github-actions@github.com
           git tag -f v${{ github.event.inputs.semver }}
           git push origin v${{ github.event.inputs.semver }} --force
+
+      - name: Generate Release Notes
+        id: generate_release_notes
+        run: |
+          if git rev-parse --verify v${{ github.event.inputs.semver }}^ >/dev/null 2>&1; then
+            previous_tag=$(git describe --tags --abbrev=0 v${{ github.event.inputs.semver }}^)
+            echo "RELEASE_NOTES<<EOF" >> $GITHUB_OUTPUT
+            echo "Changes since $previous_tag:" >> $GITHUB_OUTPUT
+            git log $previous_tag..v${{ github.event.inputs.semver }} --pretty=format:'- %s' >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "RELEASE_NOTES=Initial release" >> $GITHUB_OUTPUT
+          fi
 
       - name: Create/Update Release
         id: create_release
@@ -36,7 +48,7 @@ jobs:
         with:
           tag_name: v${{ github.event.inputs.semver }}
           release_name: Release v${{ github.event.inputs.semver }}
-          body: ${{ github.event.inputs.release_notes }}
+          body: ${{ steps.generate_release_notes.outputs.RELEASE_NOTES }}
           draft: false
           prerelease: false
 
