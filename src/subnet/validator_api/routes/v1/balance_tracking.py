@@ -2,16 +2,15 @@ from typing import Optional, List
 from fastapi import Depends, APIRouter, Query, HTTPException
 from pydantic import BaseModel
 
-from src.subnet.protocol import MODEL_KIND_BALANCE_TRACKING
 from src.subnet.validator.validator import Validator
 from src.subnet.validator_api import get_validator, api_key_auth
-from src.subnet.validator_api.models.tabular_result_transformer import BitcoinTabularTransformer
+from src.subnet.validator_api.models.factories import get_tabular_transformer
 from src.subnet.validator_api.services.bitcoin_query_api import BitcoinQueryApi
-from src.subnet.validator_api.services.commune_query_api import CommuneQueryApi  # Import CommuneQueryApi
+from src.subnet.validator_api.services.commune_query_api import CommuneQueryApi
 from src.subnet.validator_api.helpers.reponse_formatter import format_response, ResponseType
 
 # Router for balance tracking
-balance_tracking_bitcoin_router = APIRouter(prefix="/v1/balance-tracking", tags=["balance-tracking"])
+balance_tracking_router = APIRouter(prefix="/v1/balance-tracking", tags=["balance-tracking"])
 
 
 class MinerMetadataRequest(BaseModel):
@@ -27,7 +26,7 @@ def select_query_api(network: str, validator: Validator):
     raise HTTPException(status_code=400, detail="Invalid network.")
 
 
-@balance_tracking_bitcoin_router.get("/{network}")
+@balance_tracking_router.get("/{network}")
 async def get_balance_tracking(
     network: str,
     addresses: Optional[List[str]] = Query(None),
@@ -57,13 +56,13 @@ async def get_balance_tracking(
         data["results"] = []
 
     if data["response"]:
-        transformer = BitcoinTabularTransformer()
+        transformer = get_tabular_transformer(network)  # Use the factory here
         data["results"] = transformer.transform_result(data["response"])
 
     return format_response(data, response_type)
 
 
-@balance_tracking_bitcoin_router.get("/{network}/timestamps")
+@balance_tracking_router.get("/{network}/timestamps")
 async def get_timestamps(
     network: str,
     start_date: Optional[str] = Query(None, description="Start date in YYYY-MM-DD format"),
@@ -82,7 +81,7 @@ async def get_timestamps(
         data["results"] = []
 
     if data["response"]:
-        transformer = BitcoinTabularTransformer()
+        transformer = get_tabular_transformer(network)  # Use the factory here
         data["results"] = transformer.transform_result(data["response"])
 
     return format_response(data, response_type)

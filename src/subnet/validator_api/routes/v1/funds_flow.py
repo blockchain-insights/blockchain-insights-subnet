@@ -2,15 +2,15 @@ from typing import Optional, List
 from fastapi import Depends, APIRouter, Query, HTTPException
 from pydantic import BaseModel
 
-from src.subnet.protocol import MODEL_KIND_FUNDS_FLOW, NETWORK_BITCOIN, NETWORK_COMMUNE
+from src.subnet.protocol import NETWORK_BITCOIN, NETWORK_COMMUNE
 from src.subnet.validator.validator import Validator
 from src.subnet.validator_api import get_validator, api_key_auth
-from src.subnet.validator_api.models.graph_result_transformer import GraphTransformer
+from src.subnet.validator_api.models.factories import get_graph_transformer  # Import the factory
 from src.subnet.validator_api.services.bitcoin_query_api import BitcoinQueryApi
-from src.subnet.validator_api.services.commune_query_api import CommuneQueryApi  # Import the CommuneQueryApi
+from src.subnet.validator_api.services.commune_query_api import CommuneQueryApi
 from src.subnet.validator_api.helpers.reponse_formatter import format_response, ResponseType
 
-funds_flow_bitcoin_router = APIRouter(prefix="/v1/funds-flow", tags=["funds-flow"])
+funds_flow_router = APIRouter(prefix="/v1/funds-flow", tags=["funds-flow"])
 
 
 class MinerMetadataRequest(BaseModel):
@@ -26,7 +26,7 @@ def select_query_api(network: str, validator: Validator):
     raise HTTPException(status_code=400, detail="Invalid network.")
 
 
-@funds_flow_bitcoin_router.get("/{network}/get_blocks")
+@funds_flow_router.get("/{network}/get_blocks")
 async def get_blocks(
     network: str,
     block_heights: List[int] = Query(..., description="List of block heights (maximum 10)"),
@@ -45,13 +45,13 @@ async def get_blocks(
         data["results"] = []
 
     if data["response"]:
-        transformer = GraphTransformer(network=network)
+        transformer = get_graph_transformer(network)  # Use the factory here
         data["results"] = transformer.transform_result(data["response"])
 
     return format_response(data, response_type)
 
 
-@funds_flow_bitcoin_router.get("/{network}/get_transaction_by_tx_id")
+@funds_flow_router.get("/{network}/get_transaction_by_tx_id")
 async def get_transaction_by_tx_id(
     network: str,
     tx_id: str,
@@ -61,7 +61,7 @@ async def get_transaction_by_tx_id(
     api_key: str = Depends(api_key_auth),
 ):
     if radius > 10:
-        raise ValueError("Radius cannot be greater than 10 blocks")
+        raise HTTPException(status_code=400, detail="Radius cannot be greater than 10 blocks")
 
     query_api = select_query_api(network, validator)
     data = await query_api.get_blocks_around_transaction(tx_id, radius)
@@ -71,13 +71,13 @@ async def get_transaction_by_tx_id(
         data["results"] = []
 
     if data["response"]:
-        transformer = GraphTransformer(network=network)
+        transformer = get_graph_transformer(network)  # Use the factory here
         data["results"] = transformer.transform_result(data["response"])
 
     return format_response(data, response_type)
 
 
-@funds_flow_bitcoin_router.get("/{network}/get_address_transactions")
+@funds_flow_router.get("/{network}/get_address_transactions")
 async def get_address_transactions(
     network: str,
     address: str = Query(...),
@@ -101,13 +101,13 @@ async def get_address_transactions(
         data["results"] = []
 
     if data["response"]:
-        transformer = GraphTransformer(network=network)
+        transformer = get_graph_transformer(network)  # Use the factory here
         data["results"] = transformer.transform_result(data["response"])
 
     return format_response(data, response_type)
 
 
-@funds_flow_bitcoin_router.get("/{network}/funds-flow")
+@funds_flow_router.get("/{network}/funds-flow")
 async def get_funds_flow(
     network: str,
     address: str = Query(...),
@@ -135,7 +135,7 @@ async def get_funds_flow(
         data["results"] = []
 
     if data["response"]:
-        transformer = GraphTransformer(network=network)
+        transformer = get_graph_transformer(network)  # Use the factory here
         data["results"] = transformer.transform_result(data["response"])
 
     return format_response(data, response_type)
