@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from src.subnet.protocol import MODEL_KIND_FUNDS_FLOW, NETWORK_BITCOIN, NETWORK_COMMUNE
 from src.subnet.validator.validator import Validator
 from src.subnet.validator_api import get_validator, api_key_auth
-from src.subnet.validator_api.models.graph_result_transformer import BitcoinGraphTransformer
+from src.subnet.validator_api.models.graph_result_transformer import GraphTransformer
 from src.subnet.validator_api.services.bitcoin_query_api import BitcoinQueryApi
 from src.subnet.validator_api.services.commune_query_api import CommuneQueryApi  # Import the CommuneQueryApi
 from src.subnet.validator_api.helpers.reponse_formatter import format_response, ResponseType
@@ -45,7 +45,7 @@ async def get_blocks(
         data["results"] = []
 
     if data["response"]:
-        transformer = BitcoinGraphTransformer()
+        transformer = GraphTransformer(network=network)
         data["results"] = transformer.transform_result(data["response"])
 
     return format_response(data, response_type)
@@ -71,7 +71,7 @@ async def get_transaction_by_tx_id(
         data["results"] = []
 
     if data["response"]:
-        transformer = BitcoinGraphTransformer()
+        transformer = GraphTransformer(network=network)
         data["results"] = transformer.transform_result(data["response"])
 
     return format_response(data, response_type)
@@ -101,7 +101,7 @@ async def get_address_transactions(
         data["results"] = []
 
     if data["response"]:
-        transformer = BitcoinGraphTransformer()
+        transformer = GraphTransformer(network=network)
         data["results"] = transformer.transform_result(data["response"])
 
     return format_response(data, response_type)
@@ -135,7 +135,7 @@ async def get_funds_flow(
         data["results"] = []
 
     if data["response"]:
-        transformer = BitcoinGraphTransformer()
+        transformer = GraphTransformer(network=network)
         data["results"] = transformer.transform_result(data["response"])
 
     return format_response(data, response_type)

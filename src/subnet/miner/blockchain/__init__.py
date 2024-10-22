@@ -26,22 +26,26 @@ class GraphSearch:
             try:
                 result = session.run(query)
 
-                # Check if there are no results
+                # If no results are found, return an empty list
                 if not result:
-                    return None
+                    return []
 
                 results_data = []
 
-                # Iterate through the result to access keys and their corresponding values
+                # Iterate through the query result
                 for record in result:
                     processed_record = {}
 
-                    # Iterate through each key-value pair in the record
+                    # Iterate over the key-value pairs in each record
                     for key in record.keys():
                         value = record[key]
 
+                        if value is None:
+                            # Handle null values gracefully
+                            processed_record[key] = None
+
                         # Process nodes
-                        if hasattr(value, "id") and hasattr(value, "labels"):
+                        elif hasattr(value, "id") and hasattr(value, "labels"):
                             processed_record[key] = {
                                 "id": value.id,
                                 "labels": list(value.labels),
@@ -58,7 +62,7 @@ class GraphSearch:
                                 "properties": dict(value),
                             }
 
-                        # Handle primitive or unexpected values gracefully
+                        # Handle primitive or other values
                         else:
                             processed_record[key] = value
 
