@@ -4,7 +4,6 @@ from typing import List, Any, Dict, Set
 def satoshi_to_btc(satoshi: int) -> float:
     return satoshi / 1e8
 
-
 class BaseGraphTransformer(ABC):
     @abstractmethod
     def transform_result(self, result: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
