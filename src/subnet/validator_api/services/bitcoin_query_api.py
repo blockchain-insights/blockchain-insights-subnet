@@ -38,43 +38,40 @@ class BitcoinQueryApi(QueryApi):
         transformed_data = data  # TODO: Add any data transformation here if needed
 
         return transformed_data
+
     async def get_blocks_around_transaction(self, tx_id: str, radius: int) -> dict:
-        """Retrieve the target transaction, its vins/vouts, and related paths."""
+        """Retrieve the target transaction, its vins/vouts, and related paths within the radius."""
         if radius > 10:
             raise ValueError("Radius cannot be more than 10 blocks")
 
-        query = """
-            MATCH (t1:Transaction {tx_id: $tx_id})
-            WITH t1, t1.block_height AS target_block_height
-            UNWIND range(target_block_height - $radius, target_block_height + $radius) AS block_height
-            MATCH (t:Transaction {block_height: block_height})
-            WHERE t.tx_id = $tx_id OR EXISTS {
-                MATCH (a:Address)-[:SENT]->(t1)
-                RETURN 1
-            }
-            OPTIONAL MATCH (a1:Address)-[s1:SENT]->(t1)
-            OPTIONAL MATCH (t1)-[s2:SENT]->(a2:Address)
-            OPTIONAL MATCH path_in = (a1)-[s3:SENT*1..$radius]->(t2:Transaction)
-            OPTIONAL MATCH (a3:Address)-[s4:SENT]->(t2)
-            OPTIONAL MATCH path_out = (t2)-[s5:SENT*1..$radius]->(a4:Address)
-            OPTIONAL MATCH (t3:Transaction)-[s6:SENT]->(a4)
-            WITH t1, a1, s1, a2, s2,
-                 [node IN nodes(path_in) | CASE WHEN node:Transaction THEN node ELSE NULL END] AS txs_in,
-                 [node IN nodes(path_in) | CASE WHEN node:Address THEN node ELSE NULL END] AS addrs_in,
-                 [rel IN relationships(path_in) | rel] AS rels_in,
-                 [node_out IN nodes(path_out) | CASE WHEN node_out:Transaction THEN node_out ELSE NULL END] AS txs_out,
-                 [node_out IN nodes(path_out) | CASE WHEN node_out:Address THEN node_out ELSE NULL END] AS addrs_out,
-                 [rel_out IN relationships(path_out) | rel_out] AS rels_out
-            RETURN t1, a1, s1, a2, s2,
-                   txs_in AS t2, addrs_in AS a3, rels_in AS s3,
-                   txs_out AS t3, addrs_out AS a4, rels_out AS s4
-            ORDER BY t1.block_height
-        """
+        query = f"""
+            MATCH (t1:Transaction {{tx_id: '{tx_id}'}})
+    WITH t1, t1.block_height AS target_block_height
+    UNWIND range(target_block_height - {radius}, target_block_height + {radius}) AS block_height
 
+    OPTIONAL MATCH (a1:Address)-[s1:SENT]->(t1)
+    OPTIONAL MATCH (t1)-[s2:SENT]->(a2)
+
+    OPTIONAL MATCH (t_in:Transaction {{block_height: block_height}})-[s3:SENT]->(a1)
+    OPTIONAL MATCH (a2)-[s4:SENT]->(t_out:Transaction {{block_height: block_height}})
+
+    WITH 
+        t1, a1, s1, a2, s2, 
+        COLLECT(DISTINCT t_in) AS txs_in, 
+        COLLECT(DISTINCT t_out) AS txs_out, 
+        COLLECT(DISTINCT a1) AS addrs_in, 
+        COLLECT(DISTINCT a2) AS addrs_out,
+        COLLECT(DISTINCT s1) + COLLECT(DISTINCT s2) + 
+        COLLECT(DISTINCT s3) + COLLECT(DISTINCT s4) AS rels
+
+    RETURN 
+        t1, addrs_in AS a3, addrs_out AS a4, 
+        txs_in AS t2, txs_out AS t3, rels AS s3
+    ORDER BY t1.block_height
+        """
         data = await self._execute_query(query)
 
         return data
-
     async def get_address_transactions(self,
                                        address: str,
                                        start_block_height: Optional[int] = None,
