@@ -1,85 +1,154 @@
-name: Create/Update Tag, Auto-Release, and Build Docker Image
+name: Create Release
 
+# Allows the workflow to be triggered manually
 on:
   workflow_dispatch:
     inputs:
-      semver:
-        description: 'Semantic Version (e.g., 1.2.3)'
+      tag_version:
+        description: 'Tag version (e.g., 1.0.0)'
         required: true
-      additional_tag:
-        description: 'Additional tag (optional)'
-        required: false
-        default: ''
+        default: '1.0.0'  # Default version (optional)
 
+permissions:
+  contents: write
+  packages: write
+  
 jobs:
-  tag-release-and-docker:
+  create-tag:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 0  # Fetch all history for generating release notes
+      # Checkout the repository
+      - name: Checkout Repository
+        uses: actions/checkout@v3
 
-      - name: Create/Update and push tag
-        run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git tag -f v${{ github.event.inputs.semver }}
-          git push https://$TOKEN@github.com/${{ github.repository }}.git v${{ github.event.inputs.semver }} --force
+      # Fetch all tags (this ensures we have the latest tag list)
+      - name: Fetch all tags
+        run: git fetch --tags
+
+      # Create a new tag based on the input version
+      - name: Create and Push Tag
         env:
-          TOKEN: ${{ secrets.ACTIONS_TOKEN }}
-
-
-      - name: Generate Release Notes
-        id: generate_release_notes
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # GitHub automatically provides this
         run: |
-          if git rev-parse --verify v${{ github.event.inputs.semver }}^ >/dev/null 2>&1; then
-            previous_tag=$(git describe --tags --abbrev=0 v${{ github.event.inputs.semver }}^)
-            echo "RELEASE_NOTES<<EOF" >> $GITHUB_OUTPUT
-            echo "Changes since $previous_tag:" >> $GITHUB_OUTPUT
-            git log $previous_tag..v${{ github.event.inputs.semver }} --pretty=format:'- %s' >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Get the tag version from the input
+          tag_version="${{ github.event.inputs.tag_version }}"
+
+          # Create or update the tag locally
+          git tag -f $tag_version
+
+          # Force push the new tag to the repository, overwriting if it exists
+          git push origin $tag_version --force
+
+  create-release:
+    runs-on: ubuntu-latest
+    needs: create_tag
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      # Fetch all tags to ensure the latest tag is present
+      - name: Fetch tags
+        run: git fetch --tags
+
+      # Retrieve the latest tag
+      - name: Get Latest Tag
+        id: get_tag
+        run: |
+          # Fetch the most recent tag. If no tags exist, exit gracefully.
+          TAG=$(git tag --list --sort=-creatordate | head -n 1)
+          if [ -z "$TAG" ]; then
+            echo "Error: No tags found."
+            exit 1
+          fi
+          echo "TAG=$TAG" >> $GITHUB_ENV
+          echo "Latest tag is: $TAG"
+
+      # Check if the release already exists and delete it if needed
+      - name: Delete existing release if exists
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Get the release ID associated with the tag
+          release_id=$(curl -s \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            https://api.github.com/repos/${{ github.repository }}/releases/tags/${TAG} \
+            | jq -r .id)
+          
+          if [ "$release_id" != "null" ]; then
+            echo "Release with tag $TAG exists. Deleting it..."
+            curl -X DELETE \
+              -H "Authorization: token $GITHUB_TOKEN" \
+              https://api.github.com/repos/${{ github.repository }}/releases/$release_id
           else
-            echo "RELEASE_NOTES=Initial release" >> $GITHUB_OUTPUT
+            echo "No existing release found for tag $TAG."
+          fi
 
-      - name: Create/Update Release
-        id: create_release
+      - name: Extract Release Notes from CHANGELOG.md
+        id: extract_notes
+        shell: bash
+        run: |
+          TAG_VERSION="${TAG#v}"  # Remove 'v' prefix if present
+          
+          # Extract release notes for the current version
+          RELEASE_NOTES=$(awk '/^## \[?'"$TAG_VERSION"'\]?/{flag=1;next}/^## /{flag=0}flag' CHANGELOG.md)
+          
+          if [ -z "$RELEASE_NOTES" ]; then
+            echo "Error: Release notes for tag $TAG not found in CHANGELOG.md"
+            exit 1
+          fi
+
+          echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
+          echo "$RELEASE_NOTES" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Create Release
         uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.ACTIONS_TOKEN }}  # Ensure authentication
         with:
-          tag_name: v${{ github.event.inputs.semver }}
-          release_name: Release v${{ github.event.inputs.semver }}
-          body: ${{ steps.generate_release_notes.outputs.RELEASE_NOTES }}
-          draft: false
-          prerelease: false
+          tag_name: ${{ env.TAG }}
+          release_name: Release ${{ env.TAG }}
+          body: ${{ env.RELEASE_NOTES }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  publish-docker-image:
+    runs-on: ubuntu-latest
+    needs: create_release
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      # Set up Docker Buildx
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
 
+      # Login to GitHub Container Registry
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v1
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.ACTIONS_TOKEN }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Generate a date-based tag
       - name: Generate date tag
         id: date
         run: echo "date=$(date +'%Y-%m-%d-%H')" >> $GITHUB_OUTPUT
 
-      - name: Set tags
+      # Set the tags for the Docker image
+      - name: Set Docker Tags
         id: set_tags
         run: |
-          TAGS="ghcr.io/${{ github.repository }}:latest,ghcr.io/${{ github.repository }}:v${{ github.event.inputs.semver }}"
-          if [ -n "${{ github.event.inputs.additional_tag }}" ]; then
-            TAGS="$TAGS,ghcr.io/${{ github.repository }}:${{ github.event.inputs.additional_tag }}"
-          else
-            TAGS="$TAGS,ghcr.io/${{ github.repository }}:${{ steps.date.outputs.date }}"
-          fi
+          TAGS="ghcr.io/${{ github.repository }}:latest,ghcr.io/${{ github.repository }}:${{ github.event.inputs.tag_version }}"
+          # Add date-based tag for tracking builds by date
+          TAGS="$TAGS,ghcr.io/${{ github.repository }}:${{ steps.date.outputs.date }}"
           echo "tags=$TAGS" >> $GITHUB_OUTPUT
 
-      - name: Build and push
+      # Build and push the Docker image
+      - name: Build and push Docker image
         uses: docker/build-push-action@v2
         with:
           context: .
