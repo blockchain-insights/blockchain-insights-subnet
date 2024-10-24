@@ -55,16 +55,17 @@ async def get_blocks(
 async def get_transaction_by_tx_id(
     network: str,
     tx_id: str,
-    radius: int = Query(0),
+    left_hops: int = Query(0),
+    right_hops: int = Query(0),
     response_type: ResponseType = Query(ResponseType.json),
     validator: Validator = Depends(get_validator),
     api_key: str = Depends(api_key_auth),
 ):
-    if radius > 10:
-        raise HTTPException(status_code=400, detail="Radius cannot be greater than 10 blocks")
+    if left_hops > 4 or right_hops > 4:
+        raise HTTPException(status_code=400, detail="Hops cannot exceed 4 in either direction")
 
     query_api = select_query_api(network, validator)
-    data = await query_api.get_blocks_around_transaction(tx_id, radius)
+    data = await query_api.get_blocks_around_transaction(tx_id, left_hops, right_hops)
 
     if not data.get("response"):
         data["response"] = []

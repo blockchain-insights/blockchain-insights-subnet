@@ -39,31 +39,20 @@ class BitcoinQueryApi(QueryApi):
 
         return transformed_data
 
-    async def get_blocks_around_transaction(self, tx_id: str, radius: int) -> dict:
-        # Ensure the radius is within the allowed limit (R <= 10)
-        if radius > 10:
-            raise ValueError("Radius cannot be more than 10 blocks")
+    async def get_blocks_around_transaction(self, tx_id: str, left_hops: int, right_hops: int) -> dict:
+        """Retrieve the transaction, its vins/vouts, and related paths within the specified hops."""
 
-        # Query to retrieve both incoming and outgoing SENT edges with relevant transactions and addresses
+        if left_hops > 4 or right_hops > 4:
+            raise ValueError("Hops cannot exceed 4 in either direction")
+
         query = f"""
-            MATCH (t1:Transaction {{tx_id: '{tx_id}'}})
-            WITH t1.block_height AS target_block_height
-            UNWIND range(target_block_height - {radius}, target_block_height + {radius}) AS block_height
-            MATCH (t:Transaction {{block_height: block_height}})
-            OPTIONAL MATCH (a1:Address)-[s1:SENT]->(t)  // Incoming relationships
-            OPTIONAL MATCH (t)-[s2:SENT]->(a2:Address)  // Outgoing relationships
-            RETURN a1, s1, t AS t1, s2, a2
-            ORDER BY t.block_height
+            MATCH path1 = (a0:Address)-[s0:SENT*0..{left_hops}]->(t1:Transaction {{tx_id: '{tx_id}'}})
+            MATCH path2 = (t1)-[s1:SENT*0..{right_hops}]->(a1:Address)
+            RETURN path1, path2
         """
 
-        # Execute the query and retrieve data
         data = await self._execute_query(query)
-
-        # Transform data if necessary
-        transformed_data = data
-
-        return transformed_data
-
+        return data
     async def get_address_transactions(self,
                                        address: str,
                                        start_block_height: Optional[int] = None,
