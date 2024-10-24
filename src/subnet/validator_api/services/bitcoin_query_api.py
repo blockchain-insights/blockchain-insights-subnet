@@ -39,38 +39,19 @@ class BitcoinQueryApi(QueryApi):
 
         return transformed_data
 
-    async def get_blocks_around_transaction(self, tx_id: str, radius: int) -> dict:
-        """Retrieve the target transaction, its vins/vouts, and related paths within the radius."""
-        if radius > 10:
-            raise ValueError("Radius cannot be more than 10 blocks")
+    async def get_blocks_around_transaction(self, tx_id: str, left_hops: int, right_hops: int) -> dict:
+        """Retrieve the transaction, its vins/vouts, and related paths within the specified hops."""
+
+        if left_hops > 4 or right_hops > 4:
+            raise ValueError("Hops cannot exceed 4 in either direction")
 
         query = f"""
-            MATCH (t1:Transaction {{tx_id: '{tx_id}'}})
-    WITH t1, t1.block_height AS target_block_height
-    UNWIND range(target_block_height - {radius}, target_block_height + {radius}) AS block_height
-
-    OPTIONAL MATCH (a1:Address)-[s1:SENT]->(t1)
-    OPTIONAL MATCH (t1)-[s2:SENT]->(a2)
-
-    OPTIONAL MATCH (t_in:Transaction {{block_height: block_height}})-[s3:SENT]->(a1)
-    OPTIONAL MATCH (a2)-[s4:SENT]->(t_out:Transaction {{block_height: block_height}})
-
-    WITH 
-        t1, a1, s1, a2, s2, 
-        COLLECT(DISTINCT t_in) AS txs_in, 
-        COLLECT(DISTINCT t_out) AS txs_out, 
-        COLLECT(DISTINCT a1) AS addrs_in, 
-        COLLECT(DISTINCT a2) AS addrs_out,
-        COLLECT(DISTINCT s1) + COLLECT(DISTINCT s2) + 
-        COLLECT(DISTINCT s3) + COLLECT(DISTINCT s4) AS rels
-
-    RETURN 
-        t1, addrs_in AS a3, addrs_out AS a4, 
-        txs_in AS t2, txs_out AS t3, rels AS s3
-    ORDER BY t1.block_height
+            MATCH path1 = (a0:Address)-[s0:SENT*0..{left_hops}]->(t1:Transaction {{tx_id: '{tx_id}'}})
+            MATCH path2 = (t1)-[s1:SENT*0..{right_hops}]->(a1:Address)
+            RETURN path1, path2
         """
-        data = await self._execute_query(query)
 
+        data = await self._execute_query(query)
         return data
     async def get_address_transactions(self,
                                        address: str,
