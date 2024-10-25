@@ -39,31 +39,20 @@ class BitcoinQueryApi(QueryApi):
 
         return transformed_data
 
-    async def get_blocks_around_transaction(self, tx_id: str, radius: int) -> dict:
-        # Ensure the radius is within the allowed limit (R <= 10)
-        if radius > 10:
-            raise ValueError("Radius cannot be more than 10 blocks")
+    async def get_blocks_around_transaction(self, tx_id: str, left_hops: int, right_hops: int) -> dict:
+        """Retrieve the transaction, its vins/vouts, and related paths within the specified hops."""
 
-        # Query to retrieve both incoming and outgoing SENT edges with relevant transactions and addresses
+        if left_hops > 4 or right_hops > 4:
+            raise ValueError("Hops cannot exceed 4 in either direction")
+
         query = f"""
-            MATCH (t1:Transaction {{tx_id: '{tx_id}'}})
-            WITH t1.block_height AS target_block_height
-            UNWIND range(target_block_height - {radius}, target_block_height + {radius}) AS block_height
-            MATCH (t:Transaction {{block_height: block_height}})
-            OPTIONAL MATCH (a1:Address)-[s1:SENT]->(t)  // Incoming relationships
-            OPTIONAL MATCH (t)-[s2:SENT]->(a2:Address)  // Outgoing relationships
-            RETURN a1, s1, t AS t1, s2, a2
-            ORDER BY t.block_height
+            MATCH path1 = (a0:Address)-[s0:SENT*0..{left_hops}]->(t1:Transaction {{tx_id: '{tx_id}'}})
+            MATCH path2 = (t1)-[s1:SENT*0..{right_hops}]->(a1:Address)
+            RETURN path1, path2
         """
 
-        # Execute the query and retrieve data
         data = await self._execute_query(query)
-
-        # Transform data if necessary
-        transformed_data = data
-
-        return transformed_data
-
+        return data
     async def get_address_transactions(self,
                                        address: str,
                                        start_block_height: Optional[int] = None,
@@ -120,73 +109,52 @@ class BitcoinQueryApi(QueryApi):
     async def get_funds_flow(self,
                              address: str,
                              direction: str,
-                             intermediate_addresses: Optional[list[str]] = None,
+                             intermediate_addresses: Optional[List[str]] = None,
                              hops: Optional[int] = 5,
                              start_block_height: Optional[int] = None,
                              end_block_height: Optional[int] = None) -> dict:
 
-        query_elements = []
-
-        # Handle intermediate addresses
-        if intermediate_addresses:
-            query_elements.append(f"WITH {intermediate_addresses} AS intermediates")
-
-        # Base query depending on direction ('left' for incoming, 'right' for outgoing)
+        # Start with the base path matching with hops included
         if direction == 'right':
-            # Flowing out of the address
             base_query = f"""
-            MATCH (a1:Address {{address: '{address}'}})-[s1:SENT]->(t1:Transaction)-[s2:SENT]->(a2:Address)
+            MATCH path1 = (a1:Address {{address: '{address}'}})
+                          -[s1:SENT]->(t1:Transaction)
+                          -[s2:SENT*1..{hops}]->(a2:Address)
             """
         elif direction == 'left':
-            # Flowing into the address
             base_query = f"""
-            MATCH (a1:Address {{address: '{address}'}})<-[s1:SENT]-(t1:Transaction)<-[s2:SENT]-(a2:Address)
+            MATCH path1 = (a1:Address {{address: '{address}'}})
+                          <-[s1:SENT]-(t1:Transaction)
+                          <-[s2:SENT*1..{hops}]-(a2:Address)
             """
         else:
             raise ValueError("Direction must be either 'left' or 'right'")
 
-        query_elements.append(base_query)
+        query_elements = [base_query]
 
-        # Add block height filters using `range` for Memgraph compatibility
-        where_clauses = []
+        # Add block height filtering if specified
         if start_block_height is not None and end_block_height is not None:
-            where_clauses.append(f"t1.block_height IN range({start_block_height}, {end_block_height})")
+            query_elements.append(f"WHERE t1.block_height IN range({start_block_height}, {end_block_height})")
 
-        # Add intermediate addresses match if provided
+        # Handle intermediate address filtering if provided
         if intermediate_addresses:
-            query_elements.append(f"WHERE a2.address = intermediates[0]")
-            query_elements.append(f"""
-                WITH a1, t1, a2, s1, s2, intermediates
-                UNWIND RANGE(1, SIZE(intermediates)-1) AS idx
-                MATCH (a{{idx-1}}:Address {{address: intermediates[idx-1]}})-[:SENT]->(a{{idx}}:Address {{address: intermediates[idx]}})
-                WITH a1, t1, a2, s1, s2, intermediates, idx
-                MATCH (a{{idx}})-[s:SENT]->(an:Address)
-                RETURN a1, t1, a2, s1, s2, s, an, intermediates
-            """)
+            intermediates_condition = " AND ".join(
+                [f"'{addr}' IN [x IN nodes(path1) | x.address]" for addr in intermediate_addresses]
+            )
+            query_elements.append(f"AND {intermediates_condition}")
 
-        # Add where clause if applicable
-        if where_clauses:
-            query_elements.append(f"WHERE {' AND '.join(where_clauses)}")
+        # Return only path1, which contains all relevant information
+        query_elements.append("RETURN path1")
 
-        # Handle hops and create the path based on direction
-        if hops is not None:
-            if direction == 'right':
-                query_elements.append(f"MATCH path = (a2)-[s:SENT*1..{hops}]->(an:Address)")
-            elif direction == 'left':
-                query_elements.append(f"MATCH path = (a2)<-[s:SENT*1..{hops}]-(an:Address)")
-
-        if hops is not None:
-            query_elements.append("RETURN a1, t1, a2, s1, s2, path")
-        else:
-            query_elements.append("RETURN a1, t1, a2, s1, s2")
+        # Assemble the final query string
         final_query = "\n".join(query_elements)
 
-        # Execute the query
+        # Execute the query and transform the results
         data = await self._execute_query(final_query)
-
-        transformed_data = data  # Apply any transformations if necessary
+        transformed_data = data  # Apply necessary transformations
 
         return transformed_data
+
 
     async def get_balance_tracking(self,
                                    addresses: Optional[list[str]] = None,
