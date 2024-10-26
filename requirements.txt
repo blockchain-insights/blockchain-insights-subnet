@@ -21,3 +21,7 @@ pycryptodome
 jinja2
 strawberry-graphql
 substrate-interface
+pytest
+pytest-asyncio
+pytest-cov
+pytest-mock
