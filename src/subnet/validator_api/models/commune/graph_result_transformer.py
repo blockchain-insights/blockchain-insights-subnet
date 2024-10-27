@@ -109,7 +109,7 @@ class CommuneGraphTransformer(BaseGraphTransformer):
                 return value["properties"]["tx_id"], "transaction"
         return str(node_id), "unknown"
 
-    # ========== Path Handling Logic ==========
+    # ========== Path Handling Logic (Updated) ==========
 
     def process_path_entry(self, entry: Dict[str, Any]) -> None:
         """Process path-based entries."""
@@ -132,9 +132,13 @@ class CommuneGraphTransformer(BaseGraphTransformer):
 
     def _process_path_relationships(self, nodes: List[Dict[str, Any]], relationships: List[Dict[str, Any]]) -> None:
         """Extract relationships (edges) from paths."""
-        for relationship in relationships:
-            from_node, to_node = nodes[0], nodes[1]  # Assume two-node paths
-            self._add_path_edge(from_node, to_node, relationship["value_satoshi"])
+        # Loop through each relationship and the corresponding node pairs
+        for i, relationship in enumerate(relationships):
+            if i + 1 < len(nodes):
+                from_node = nodes[i]
+                to_node = nodes[i + 1]
+                value_satoshi = relationship.get("value_satoshi", 0)
+                self._add_path_edge(from_node, to_node, value_satoshi)
 
     def _add_address_node(self, node: Dict[str, Any]) -> None:
         """Add an address node."""
