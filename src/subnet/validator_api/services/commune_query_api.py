@@ -61,23 +61,34 @@ class CommuneQueryApi(QueryApi):
             end_block_height: Optional[int] = None,
             limit: Optional[int] = 100
     ) -> dict:
-        # Start building the query with the address and outgoing/incoming transactions
+        """
+        Retrieve outgoing and incoming transactions for a given address,
+        filtered by block height if specified.
+        """
+
+        # Start building the query with outgoing and incoming transactions
         query = f"""
             MATCH (a:Address {{address: '{address}'}})
             OPTIONAL MATCH (a)-[t1:TRANSACTION]->(a2:Address)  // Outgoing transactions
             OPTIONAL MATCH (a3:Address)-[t2:TRANSACTION]->(a)  // Incoming transactions
         """
 
-        # Add block height filtering if specified
+        # Add block height filtering with correct logic
         conditions = []
-        if start_block_height is not None:
+        if start_block_height is not None and end_block_height is not None:
+            conditions.append(
+                f"((t1.block_height >= {start_block_height} AND t1.block_height <= {end_block_height}) "
+                f"OR (t2.block_height >= {start_block_height} AND t2.block_height <= {end_block_height}))"
+            )
+        elif start_block_height is not None:
             conditions.append(f"(t1.block_height >= {start_block_height} OR t2.block_height >= {start_block_height})")
-        if end_block_height is not None:
+        elif end_block_height is not None:
             conditions.append(f"(t1.block_height <= {end_block_height} OR t2.block_height <= {end_block_height})")
+
         if conditions:
             query += f"WHERE {' AND '.join(conditions)}\n"
 
-        # Complete the query structure with result aggregation
+        # Complete the query with result aggregation and limit
         query += f"""
             WITH a, t1, a2, t2, a3
             WHERE t1 IS NOT NULL OR t2 IS NOT NULL
@@ -85,11 +96,11 @@ class CommuneQueryApi(QueryApi):
             LIMIT {limit}
         """
 
-        # Execute the query
+        # Execute the query and get the result
         data = await self._execute_query(query)
 
-        # Optional: Transform the data if needed
-        transformed_data = data  # Apply any necessary transformations
+        # Transform the result if needed
+        transformed_data = data
 
         return transformed_data
 
