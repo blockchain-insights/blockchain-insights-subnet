@@ -46,7 +46,7 @@ sudo npm install pm2 -g
 pm2 startup
 ```
 
-#### Clone Repository and switch version
+#### Clone Repository
 
 ```shell
 git clone https://github.com/blockchain-insights/blockchain-insights-subnet.git miner1
