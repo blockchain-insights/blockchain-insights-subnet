@@ -51,6 +51,10 @@ pm2 startup
 
 ```shell
 git clone https://github.com/blockchain-insights/blockchain-insights-subnet.git ~/validator1
+git fetch --all --tags
+git tag -l
+# use latest tag in next command
+git checkout tags/1.2.0
 ```
 
 #### Env configuration
