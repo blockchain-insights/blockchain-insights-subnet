@@ -42,3 +42,10 @@ async def get_ranks(network: Optional[str] = None,
                           api_key: str = Depends(api_key_auth)):
     results = await validator.miner_discovery_manager.get_miners_for_leader_board(network)
     return results
+
+@miner_router.get("/miner/networks")
+async def get_miners_per_network(
+                          validator: Validator = Depends(get_validator),
+                          api_key: str = Depends(api_key_auth)):
+    results = await validator.miner_discovery_manager.get_miners_per_network()
+    return results

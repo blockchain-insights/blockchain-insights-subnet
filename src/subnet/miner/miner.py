@@ -181,12 +181,4 @@ if __name__ == "__main__":
         allow_headers=["*"],
     )
 
-    def shutdown_handler(signal, frame):
-        uvicorn_server.should_exit = True
-        uvicorn_server.force_exit = True
-
-    signal.signal(signal.SIGINT, shutdown_handler)
-    signal.signal(signal.SIGTERM, shutdown_handler)
-
-    uvicorn_server = uvicorn.Server(config=uvicorn.Config(app, host="0.0.0.0", port=settings.PORT, workers=settings.WORKERS))
-    uvicorn_server.run()
+    uvicorn.run(app, host="0.0.0.0", port=settings.PORT, workers=settings.WORKERS)

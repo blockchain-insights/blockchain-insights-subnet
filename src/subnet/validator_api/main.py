@@ -8,7 +8,7 @@ from src.subnet.validator_api import patch_record, miner_discovery_manager, sett
 from src.subnet.validator_api.rate_limiter import RateLimiterMiddleware
 from src.subnet.validator_api.routes.v1.balance_tracking import balance_tracking_router
 from src.subnet.validator_api.routes.v1.funds_flow import funds_flow_router
-from src.subnet.validator_api.routes.v1.miner_receipts import miner_router
+from src.subnet.validator_api.routes.v1.miners import miner_router
 
 logger.remove()
 logger.add(
@@ -45,17 +45,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-def shutdown_handler(signal, frame):
-    logger.debug("Shutdown handler started")
-    settings_manager.stop_reloader()
-    uvicorn.should_exit = True
-    uvicorn.force_exit = True
-    logger.debug("Shutdown handler finished")
-
-
-signal.signal(signal.SIGINT, shutdown_handler)
-signal.signal(signal.SIGTERM, shutdown_handler)
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:

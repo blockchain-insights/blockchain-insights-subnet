@@ -72,6 +72,22 @@ class MinerDiscoveryManager:
                 return None
             return to_dict(miner)
 
+
+    async def get_miners_per_network(self):
+        async with self.session_manager.session() as session:
+            result = await session.execute(
+                select(
+                    MinerDiscovery.network,
+                    func.count(MinerDiscovery.id).label('count')
+                )
+                .group_by(MinerDiscovery.network)
+                .order_by(func.count(MinerDiscovery.id).desc())
+            )
+
+            rows = result.fetchall()
+
+            return [{'network': row.network, 'count': row.count} for row in rows]
+
     async def get_miners_by_network(self, network: Optional[str]):
         if not network:
             async with self.session_manager.session() as session:
