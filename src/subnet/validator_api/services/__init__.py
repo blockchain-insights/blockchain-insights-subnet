@@ -1,7 +1,7 @@
 from typing import Optional, List
 
 
-class QueryApi:
+class FundsFlowQueryApi:
 
     async def get_block(self, block_height: int) -> dict:
 
@@ -27,17 +27,3 @@ class QueryApi:
                              start_block_height: Optional[int],
                              end_block_height: Optional[int]) -> dict:
         pass
-
-    async def get_balance_tracking(self,
-                                   addresses: Optional[List[str]],
-                                   min_amount: Optional[int],
-                                   max_amount: Optional[int],
-                                   start_block_height: Optional[int],
-                                   end_block_height: Optional[int]) -> dict:
-        pass
-
-    async def get_balance_tracking_timestamp(self,
-                                             start_block_height: Optional[int],
-                                             end_block_height: Optional[int]) -> dict:
-        pass
-

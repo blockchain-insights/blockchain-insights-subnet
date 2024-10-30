@@ -86,7 +86,7 @@ class MinerReceiptManager:
             receipts = result.scalars().all()
 
             return {
-                "receipts": receipts,
+                "data": receipts,
                 "total_pages": total_pages,
                 "total_items": total_items
             }

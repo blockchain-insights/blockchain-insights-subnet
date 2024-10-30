@@ -1,13 +1,12 @@
 from typing import Optional, List
 from fastapi import Depends, APIRouter, Query, HTTPException
 from pydantic import BaseModel
-
-from src.subnet.protocol import NETWORK_BITCOIN, NETWORK_COMMUNE
+from src.subnet.protocol import NETWORK_BITCOIN, NETWORK_COMMUNE, MODEL_KIND_FUNDS_FLOW
 from src.subnet.validator.validator import Validator
 from src.subnet.validator_api import get_validator, api_key_auth
-from src.subnet.validator_api.models.factories import get_graph_transformer  # Import the factory
-from src.subnet.validator_api.services.bitcoin_query_api import BitcoinQueryApi
-from src.subnet.validator_api.services.commune_query_api import CommuneQueryApi
+from src.subnet.validator_api.models.factories import get_graph_transformer
+from src.subnet.validator_api.services.bitcoin_funds_flow_query_api import BitcoinFundsFlowQueryApi
+from src.subnet.validator_api.services.commune_funds_flow_query_api import CommuneFundsFlowQueryApi
 from src.subnet.validator_api.helpers.reponse_formatter import format_response, ResponseType
 
 funds_flow_router = APIRouter(prefix="/v1/funds-flow", tags=["funds-flow"])
@@ -20,9 +19,9 @@ class MinerMetadataRequest(BaseModel):
 def select_query_api(network: str, validator: Validator):
     """Helper function to select the appropriate query API."""
     if network == NETWORK_BITCOIN:
-        return BitcoinQueryApi(validator)
+        return BitcoinFundsFlowQueryApi(validator)
     elif network == NETWORK_COMMUNE:
-        return CommuneQueryApi(validator)
+        return CommuneFundsFlowQueryApi(validator)
     raise HTTPException(status_code=400, detail="Invalid network.")
 
 

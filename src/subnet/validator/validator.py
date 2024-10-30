@@ -388,9 +388,18 @@ class Validator(Module):
                     logger.info("Terminating validation loop")
                     break
 
+    @staticmethod
+    def format_query_string(query_string: str):
+        import re
+        cleaned = query_string.replace('\n', ' ').replace('\t', ' ')
+        cleaned = re.sub(r'\s+', ' ', cleaned)
+        cleaned = cleaned.strip()
+        return cleaned
+
     async def query_miner(self, network: str, model_kind: str, query, miner_key: Optional[str]) -> dict:
         request_id = str(uuid.uuid4())
         timestamp = datetime.utcnow()
+        query = self.format_query_string(query)
         query_hash = generate_hash(query)
 
         if miner_key:
@@ -459,16 +468,16 @@ class Validator(Module):
         module_port = int(miner['miner_ip_port'])
         module_client = ModuleClient(module_ip, module_port, self.key)
         try:
-            llm_query_result = await module_client.call(
+            query_result = await module_client.call(
                 "query",
                 miner_key,
                 {"model_kind": model_kind, "query": query, "validator_key": self.key.ss58_address},
                 timeout=self.query_timeout,
             )
-            if not llm_query_result:
+            if not query_result:
                 return None
 
-            return llm_query_result
+            return query_result
         except Exception as e:
             logger.warning(f"Failed to query miner", error=e, miner_key=miner_key)
             return None
