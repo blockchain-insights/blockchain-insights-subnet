@@ -402,6 +402,7 @@ class Validator(Module):
         query = self.format_query_string(query)
         query_hash = generate_hash(query)
 
+        # Single miner case
         if miner_key:
             miner = await self.miner_discovery_manager.get_miner_by_key(miner_key, network)
             if not miner:
@@ -410,56 +411,198 @@ class Validator(Module):
                     "timestamp": timestamp,
                     "miner_keys": None,
                     "query_hash": query_hash,
+                    "response_hash": None,
+                    "verified": False,
+                    "verifying_miners": [],
                     "model_kind": model_kind,
                     "query": query,
-                    "response": []}
+                    "response": []
+                }
 
             response = await self._query_miner(miner, model_kind, query)
-            await self.miner_receipt_manager.store_miner_receipt(request_id, miner_key, model_kind, network, query_hash, timestamp)
+            if response:  # Simplified validation as per your version
+                response_hash = generate_hash(str(response))
+                await self.miner_receipt_manager.store_miner_receipt(
+                    request_id,
+                    miner_key,
+                    model_kind,
+                    network,
+                    query_hash,
+                    timestamp,
+                    response_hash
+                )
+                return {
+                    "request_id": request_id,
+                    "timestamp": timestamp,
+                    "miner_keys": [miner_key],
+                    "query_hash": query_hash,
+                    "response_hash": response_hash,
+                    "verified": False,
+                    "verifying_miners": [miner_key],
+                    "model_kind": model_kind,
+                    "query": query,
+                    **response
 
+                }
             return {
                 "request_id": request_id,
                 "timestamp": timestamp,
                 "miner_keys": [miner_key],
                 "query_hash": query_hash,
+                "response_hash": None,
+                "verified": False,
+                "verifying_miners": [miner_key],
                 "model_kind": model_kind,
                 "query": query,
-                "response": response
+                "response": None
             }
+
+        # Multiple miners case
+        select_count = 3
+        sample_size = 16
+
+        miners = await self.miner_discovery_manager.get_miners_by_network(network)
+        if len(miners) < 3:
+            top_miners = miners
         else:
-            select_count = 3
-            sample_size = 16
-            miners = await self.miner_discovery_manager.get_miners_by_network(network)
+            top_miners = sample(miners[:sample_size], select_count)
 
-            if len(miners) < 3:
-                top_miners = miners
-            else:
-                top_miners = sample(miners[:sample_size], select_count)
+        query_tasks = {
+            asyncio.create_task(self._query_miner(miner, model_kind, query)): miner
+            for miner in top_miners
+        }
 
-            query_tasks = []
-            for miner in top_miners:
-                query_tasks.append(self._query_miner(miner,  model_kind, query))
+        # Track responses by their hash
+        responses = {}  # {response_hash: (response, [miners])}
 
-            responses = await asyncio.gather(*query_tasks)
+        try:
+            pending = set(query_tasks.keys())
+            start_time = time.time()
 
-            combined_responses = list(zip(top_miners, responses))
+            while pending:
+                if time.time() - start_time > self.query_timeout:
+                    break
 
-            for miner, response in combined_responses:
-                if response:
-                    await self.miner_receipt_manager.store_miner_receipt(request_id, miner['miner_key'], model_kind, network, query_hash, timestamp)
+                # Wait for the next task to complete with timeout
+                done, pending = await asyncio.wait(
+                    pending,
+                    timeout=max(0.0, self.query_timeout - (time.time() - start_time)),
+                    return_when=asyncio.FIRST_COMPLETED
+                )
 
-            miner, random_response = random.choice(combined_responses)
-            await self.miner_receipt_manager.accept_miner_receipt(request_id, miner['miner_key'])
+                if not done:  # Timeout reached
+                    break
 
+                # Process completed tasks
+                for completed_task in done:
+                    try:
+                        response = await completed_task
+                        current_miner = query_tasks[completed_task]
+
+                        if not response:
+                            continue
+
+                        # Hash the response for comparison
+                        response_hash = generate_hash(str(response))
+
+                        # Add to or update our response tracking
+                        if response_hash in responses:
+                            # We found a match!
+                            existing_response, existing_miners = responses[response_hash]
+                            existing_miners.append(current_miner)
+
+                            # Store receipts for both miners
+                            first_miner = existing_miners[0]
+                            for miner in [first_miner, current_miner]:
+                                await self.miner_receipt_manager.store_miner_receipt(
+                                    request_id,
+                                    miner['miner_key'],
+                                    model_kind,
+                                    network,
+                                    query_hash,
+                                    timestamp,
+                                    response_hash
+                                )
+
+                            # Accept receipt only for the first miner that provided this response
+                            await self.miner_receipt_manager.accept_miner_receipt(
+                                request_id,
+                                first_miner['miner_key']
+                            )
+
+                            # Cancel remaining tasks
+                            for task in pending:
+                                task.cancel()
+
+                            return {
+                                "request_id": request_id,
+                                "timestamp": timestamp,
+                                "miner_keys": [miner['miner_key'] for miner in top_miners],
+                                "query_hash": query_hash,
+                                "response_hash": response_hash,
+                                "verified": True,
+                                "verifying_miners": [m['miner_key'] for m in existing_miners],
+                                "model_kind": model_kind,
+                                "query": query,
+                                **existing_response
+                            }
+                        else:
+                            # First time seeing this response, store it
+                            responses[response_hash] = (response, [current_miner])
+
+                    except Exception as e:
+                        logger.error(f"Error querying miner", error=e)
+                        continue
+
+            # If we get here, either timeout occurred or no matching responses were found
+            # Find the response from the most reputable miner or the fastest one
+            if responses:
+                # For now, we'll just take the first response we got
+                first_response_hash = next(iter(responses))
+                response, miners = responses[first_response_hash]
+                first_miner = miners[0]
+
+                await self.miner_receipt_manager.store_miner_receipt(
+                    request_id,
+                    first_miner['miner_key'],
+                    model_kind,
+                    network,
+                    query_hash,
+                    timestamp,
+                    first_response_hash
+                )
+
+                return {
+                    "request_id": request_id,
+                    "timestamp": timestamp,
+                    "miner_keys": [miner['miner_key'] for miner in top_miners],
+                    "query_hash": query_hash,
+                    "response_hash": first_response_hash,
+                    "verified": False,
+                    "verifying_miners": [first_miner['miner_key']],
+                    "model_kind": model_kind,
+                    "query": query,
+                    **response[0]
+                }
+
+            # No valid responses at all
             return {
                 "request_id": request_id,
                 "timestamp": timestamp,
                 "miner_keys": [miner['miner_key'] for miner in top_miners],
                 "query_hash": query_hash,
+                "response_hash": None,
+                "verified": False,
+                "verifying_miners": [],
                 "model_kind": model_kind,
                 "query": query,
-                "response": random_response
+                "response": None,
             }
+
+        finally:
+            for task in query_tasks.keys():
+                if not task.done():
+                    task.cancel()
 
     async def _query_miner(self, miner, model_kind, query):
         miner_key = miner['miner_key']
@@ -477,7 +620,20 @@ class Validator(Module):
             if not query_result:
                 return None
 
-            return query_result
+            return self.unpack_response(query_result)
         except Exception as e:
             logger.warning(f"Failed to query miner", error=e, miner_key=miner_key)
             return None
+
+    @staticmethod
+    def unpack_response(response):
+        if isinstance(response, list):
+            if not response:
+                raise IndexError("Cannot unpack an empty list")
+            if not isinstance(response[0], dict):
+                raise ValueError("First element of list must be a dictionary")
+            return response[0]
+        elif isinstance(response, dict):
+            return response
+        else:
+            raise TypeError(f"Cannot unpack type {type(response)}. Must be list or dict")

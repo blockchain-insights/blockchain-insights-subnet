@@ -19,6 +19,7 @@ class MinerReceipt(OrmBase):
     model_kind = Column(String, nullable=False)
     network = Column(String, nullable=False)
     query_hash = Column(Text, nullable=False)
+    response_hash = Column(Text, nullable=False)
     accepted = Column(Boolean, nullable=False, default=False)
     timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
 
@@ -36,7 +37,7 @@ class MinerReceiptManager:
     def __init__(self, session_manager: DatabaseSessionManager):
         self.session_manager = session_manager
 
-    async def store_miner_receipt(self, request_id: str, miner_key: str, model_kind: str, network: str, query_hash: str, timestamp: datetime):
+    async def store_miner_receipt(self, request_id: str, miner_key: str, model_kind: str, network: str, query_hash: str, timestamp: datetime, response_hash: str):
         async with self.session_manager.session() as session:
             async with session.begin():
                 stmt = insert(MinerReceipt).values(
@@ -46,7 +47,8 @@ class MinerReceiptManager:
                     query_hash=query_hash,
                     network=network,
                     accepted=False,
-                    timestamp=timestamp
+                    timestamp=timestamp,
+                    response_hash=response_hash
                 )
                 await session.execute(stmt)
 

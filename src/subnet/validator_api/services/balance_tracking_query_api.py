@@ -28,47 +28,8 @@ class BalanceTrackingQueryAPI:
                                    page: int = 1,
                                    page_size: int = 100
                                    ) -> dict:
-        """
-        Get paginated balance tracking data filtered by addresses, amount range, block range, and timestamp range.
 
-        Parameters:
-        - network: Network identifier
-        - addresses: List of addresses to filter (optional)
-        - min_amount: Minimum balance amount to filter (optional)
-        - max_amount: Maximum balance amount to filter (optional)
-        - start_block_height: Start block height to filter (optional)
-        - end_block_height: End block height to filter (optional)
-        - start_timestamp: Start timestamp to filter (optional)
-        - end_timestamp: End timestamp to filter (optional)
-        - page: Page number (default: 1)
-        - page_size: Number of items per page (default: 100)
-
-        Returns:
-        - A dictionary containing:
-            - data: List of balance tracking records
-            - total_pages: Total number of pages
-            - total_items: Total number of items matching the filters
-        """
-
-        base_query = """
-            SELECT
-                bc.address,
-                bc.block as block_height,
-                bc.d_balance as balance_delta,
-                bc.block_timestamp as timestamp
-            FROM
-                balance_changes bc
-            WHERE
-                1=1
-        """
-
-
-        count_query = """
-            SELECT MAX(bc.block) - MIN(bc.block) + 1 as total
-            FROM balance_changes bc
-            WHERE 1=1
-        """
-
+        offset = (page - 1) * page_size
         conditions = []
 
         if addresses:
@@ -90,29 +51,44 @@ class BalanceTrackingQueryAPI:
         if end_timestamp is not None:
             conditions.append(f"bc.block_timestamp <= {end_timestamp}")
 
-        for condition in conditions:
-            base_query += f" AND {condition}"
-            count_query += f" AND {condition}"
+        where_clause = " AND ".join(conditions)
+        if where_clause:
+            where_clause = f"WHERE {where_clause}"
 
-        offset = (page - 1) * page_size
-
-        base_query += f"""
-            ORDER BY bc.block_timestamp
-            LIMIT {page_size}
-            OFFSET {offset};
+        query = f"""
+            WITH result_set AS (
+                SELECT 
+                    bc.address,
+                    bc.block as block_height,
+                    bc.d_balance as balance_delta,
+                    bc.block_timestamp as timestamp,
+                    COUNT(*) OVER() as total_count
+                FROM balance_changes bc
+                {where_clause}
+                ORDER BY bc.block_timestamp
+                LIMIT {page_size}
+                OFFSET {offset}
+            )
+            SELECT 
+                json_build_object(
+                    'response', (
+                        SELECT json_agg(row_to_json(r))
+                        FROM (
+                            SELECT 
+                                address,
+                                block_height,
+                                balance_delta,
+                                timestamp
+                            FROM result_set
+                        ) r
+                    ),
+                    'total_items', COALESCE((SELECT total_count FROM result_set LIMIT 1), 0),
+                    'total_pages', CEIL(COALESCE((SELECT total_count FROM result_set LIMIT 1), 0)::float / {page_size})
+                ) as result;
         """
 
-        data = await self._execute_query(network, base_query, model_kind=MODEL_KIND_BALANCE_TRACKING)
-        total_count = await self._execute_query(network, count_query, model_kind=MODEL_KIND_BALANCE_TRACKING)
-
-        total_items = total_count['response'][0]['total']
-        total_pages = (total_items + page_size - 1) // page_size
-
-        return {
-            **data,
-            'total_pages': total_pages,
-            'total_items': total_items
-        }
+        result = await self._execute_query(network, query, model_kind=MODEL_KIND_BALANCE_TRACKING)
+        return result[0]['result']
 
     async def get_balance_tracking_timestamp(self,
                                              network: str,
@@ -120,21 +96,8 @@ class BalanceTrackingQueryAPI:
                                              end_date: Optional[str] = None,
                                              page: int = 1,
                                              page_size: int = 100) -> dict:
-        base_query = """
-            SELECT
-                block_height,
-                timestamp
-            FROM
-                blocks
-        """
-
-        count_query = """
-            SELECT COUNT(*) as total
-            FROM blocks
-        """
 
         conditions = []
-
         if start_date:
             try:
                 start_datetime = datetime.strptime(start_date, "%Y-%m-%d")
@@ -152,24 +115,33 @@ class BalanceTrackingQueryAPI:
         where_clause = ""
         if conditions:
             where_clause = " WHERE " + " AND ".join(conditions)
-            base_query += where_clause
-            count_query += where_clause
 
         offset = (page - 1) * page_size
-        base_query += f"""
-            ORDER BY timestamp
-            LIMIT {page_size}
-            OFFSET {offset};
+        query = f"""
+            WITH result_set AS (
+                SELECT 
+                    block_height,
+                    timestamp,
+                    COUNT(*) OVER() as total_count
+                FROM blocks
+                {where_clause}
+                ORDER BY timestamp
+                LIMIT {page_size}
+                OFFSET {offset}
+            )
+            SELECT 
+                json_build_object(
+                    'data', (
+                        SELECT json_agg(row_to_json(r)) 
+                        FROM (
+                            SELECT block_height, timestamp 
+                            FROM result_set
+                        ) r
+                    ),
+                    'total_items', COALESCE((SELECT total_count FROM result_set LIMIT 1), 0),
+                    'total_pages', CEIL(COALESCE((SELECT total_count FROM result_set LIMIT 1), 0)::float / {page_size})
+                ) as response;
         """
 
-        data = await self._execute_query(network, base_query)
-        total_count = await self._execute_query(network, count_query)
-
-        total_items = total_count[0]['total']
-        total_pages = (total_items + page_size - 1) // page_size
-
-        return {
-            'data': data,
-            'total_pages': total_pages,
-            'total_items': total_items
-        }
+        result = await self._execute_query(network, query)
+        return result
