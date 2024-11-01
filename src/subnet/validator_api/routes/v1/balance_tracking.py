@@ -5,7 +5,6 @@ from fastapi import Depends, APIRouter, Query, HTTPException
 from pydantic import BaseModel
 from src.subnet.validator.validator import Validator
 from src.subnet.validator_api import get_validator, api_key_auth
-from src.subnet.validator_api.models.factories import get_tabular_transformer
 from src.subnet.validator_api.services.balance_tracking_query_api import BalanceTrackingQueryAPI
 from src.subnet.validator_api.helpers.reponse_formatter import format_response, ResponseType
 
@@ -127,14 +126,6 @@ async def get_balance_tracking(
         page_size=page_size,
     )
 
-    if not data.get("response"):
-        data["response"] = []
-        data["results"] = []
-
-    if data["response"]:
-        transformer = get_tabular_transformer(network)
-        data["results"] = transformer.transform_result(data["response"])
-
     return format_response(data, response_type)
 
 
@@ -189,13 +180,5 @@ async def get_timestamps(
         page=page,
         page_size=page_size,
     )
-
-    if not data.get("response"):
-        data["response"] = []
-        data["results"] = []
-
-    if data["response"]:
-        transformer = get_tabular_transformer(network)
-        data["results"] = transformer.transform_result(data["response"])
 
     return format_response(data, response_type)

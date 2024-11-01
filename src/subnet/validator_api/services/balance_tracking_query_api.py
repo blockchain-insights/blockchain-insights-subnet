@@ -16,6 +16,16 @@ class BalanceTrackingQueryAPI:
         except Exception as e:
             raise Exception(f"Error executing query: {str(e)}")
 
+
+    # implement timeseries queries from: https://claude.ai/chat/7dcdbd19-cd80-46bf-a37d-ff9338598df4
+
+    # balance tracking
+    # we need new new schema changes there, include balance too into indexers
+    # we implement basic balance tracking endpoint for getting balance in time for addresses
+    # we make funds flow endpoints to work with new schema and conensus checking, Hardy have to fix cyphers, transformers needs to be adjusted / fixed as they dont include relations
+    # then we can implement balance tracking timeseries endpoints
+
+
     async def get_balance_tracking(self,
                                    network: str,
                                    addresses: Optional[list[str]] = None,
