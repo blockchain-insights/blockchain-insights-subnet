@@ -19,22 +19,9 @@ class BalanceTrackingQueryAPI:
 
     # implement timeseries queries from: https://claude.ai/chat/7dcdbd19-cd80-46bf-a37d-ff9338598df4
 
-    # balance tracking
-    # we need new new schema changes there, include balance too into indexers
-    # we implement basic balance tracking endpoint for getting balance in time for addresses
-    # we make funds flow endpoints to work with new schema and conensus checking, Hardy have to fix cyphers, transformers needs to be adjusted / fixed as they dont include relations
-    # then we can implement balance tracking timeseries endpoints
-
-
-    async def get_balance_tracking(self,
+    async def get_balance_deltas(self,
                                    network: str,
                                    addresses: Optional[list[str]] = None,
-                                   min_amount: Optional[int] = None,
-                                   max_amount: Optional[int] = None,
-                                   start_block_height: Optional[int] = None,
-                                   end_block_height: Optional[int] = None,
-                                   start_timestamp: Optional[int] = None,
-                                   end_timestamp: Optional[int] = None,
                                    page: int = 1,
                                    page_size: int = 100
                                    ) -> dict:
@@ -45,21 +32,6 @@ class BalanceTrackingQueryAPI:
         if addresses:
             formatted_addresses = ', '.join(f"'{address}'" for address in addresses)
             conditions.append(f"bc.address IN ({formatted_addresses})")
-
-        if min_amount is not None:
-            conditions.append(f"bc.d_balance >= {min_amount}")
-        if max_amount is not None:
-            conditions.append(f"bc.d_balance <= {max_amount}")
-
-        if start_block_height is not None:
-            conditions.append(f"bc.block >= {start_block_height}")
-        if end_block_height is not None:
-            conditions.append(f"bc.block <= {end_block_height}")
-
-        if start_timestamp is not None:
-            conditions.append(f"bc.block_timestamp >= {start_timestamp}")
-        if end_timestamp is not None:
-            conditions.append(f"bc.block_timestamp <= {end_timestamp}")
 
         where_clause = " AND ".join(conditions)
         if where_clause:
@@ -81,7 +53,7 @@ class BalanceTrackingQueryAPI:
             )
             SELECT 
                 json_build_object(
-                    'response', (
+                    'data', (
                         SELECT json_agg(row_to_json(r))
                         FROM (
                             SELECT 
@@ -94,11 +66,11 @@ class BalanceTrackingQueryAPI:
                     ),
                     'total_items', COALESCE((SELECT total_count FROM result_set LIMIT 1), 0),
                     'total_pages', CEIL(COALESCE((SELECT total_count FROM result_set LIMIT 1), 0)::float / {page_size})
-                ) as result;
+                ) as response_json;
         """
 
         result = await self._execute_query(network, query, model_kind=MODEL_KIND_BALANCE_TRACKING)
-        return result[0]['result']
+        return result
 
     async def get_balance_tracking_timestamp(self,
                                              network: str,
