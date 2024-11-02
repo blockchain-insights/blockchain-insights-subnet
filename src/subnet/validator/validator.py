@@ -582,7 +582,7 @@ class Validator(Module):
                     "verifying_miners": [first_miner['miner_key']],
                     "model_kind": model_kind,
                     "query": query,
-                    **response[0]
+                    **response
                 }
 
             # No valid responses at all
@@ -632,8 +632,19 @@ class Validator(Module):
                 raise IndexError("Cannot unpack an empty list")
             if not isinstance(response[0], dict):
                 raise ValueError("First element of list must be a dictionary")
-            return response[0]
+            if len(response) > 0 and "response_json" in response[0]:
+                return {
+                    "response": response[0]["response_json"]
+                }
+            else:
+                return {
+                    "response": response
+                }
         elif isinstance(response, dict):
+            if not response.get("response_json"):
+                return {
+                    "response": response
+                }
             return response
         else:
             raise TypeError(f"Cannot unpack type {type(response)}. Must be list or dict")

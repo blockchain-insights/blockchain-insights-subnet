@@ -28,13 +28,8 @@ class CommuneFundsFlowQueryApi(FundsFlowQueryApi):
             RETURN a1, t, a2
         """
 
-        # Execute the query and fetch the data
         data = await self._execute_query(query)
-
-        # Transform data if necessary
-        transformed_data = data  # TODO: Add any data transformation here if needed
-
-        return transformed_data
+        return data
 
     async def get_blocks_around_transaction(self, tx_id: str, left_hops: int, right_hops: int) -> dict:
         # Ensure hops are within the allowed limits
@@ -49,7 +44,6 @@ class CommuneFundsFlowQueryApi(FundsFlowQueryApi):
             RETURN path1, path2
         """
 
-        # Execute the query and return the results
         data = await self._execute_query(query)
         return data
 
@@ -95,13 +89,8 @@ class CommuneFundsFlowQueryApi(FundsFlowQueryApi):
             LIMIT {limit}
         """
 
-        # Execute the query and get the result
         data = await self._execute_query(query)
-
-        # Transform the result if needed
-        transformed_data = data
-
-        return transformed_data
+        return data
 
     async def get_funds_flow(
             self,
@@ -156,6 +145,4 @@ class CommuneFundsFlowQueryApi(FundsFlowQueryApi):
 
         # Execute the query and transform the results
         data = await self._execute_query(final_query)
-        transformed_data = data  # Apply any necessary transformations
-
-        return transformed_data
+        return data

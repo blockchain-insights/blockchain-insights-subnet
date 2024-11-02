@@ -150,7 +150,7 @@ class BalanceTrackingQueryAPI:
                     ),
                     'total_items', COALESCE((SELECT total_count FROM result_set LIMIT 1), 0),
                     'total_pages', CEIL(COALESCE((SELECT total_count FROM result_set LIMIT 1), 0)::float / {page_size})
-                ) as response;
+                ) as response_json;
         """
 
         result = await self._execute_query(network, query)

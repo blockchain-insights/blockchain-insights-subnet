@@ -1,7 +1,7 @@
 from typing import Optional, List
 from fastapi import Depends, APIRouter, Query, HTTPException
 from pydantic import BaseModel
-from src.subnet.protocol import NETWORK_BITCOIN, NETWORK_COMMUNE, MODEL_KIND_FUNDS_FLOW
+from src.subnet.protocol import NETWORK_BITCOIN, NETWORK_COMMUNE
 from src.subnet.validator.validator import Validator
 from src.subnet.validator_api import get_validator, api_key_auth
 from src.subnet.validator_api.models.factories import get_graph_transformer

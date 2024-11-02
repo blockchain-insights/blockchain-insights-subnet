@@ -30,13 +30,8 @@ class BitcoinFundsFlowQueryApi(FundsFlowQueryApi):
             RETURN a1,s1,t1,s2,a2
         """
 
-        # Execute the query and fetch the data
         data = await self._execute_query(query)
-
-        # Transform data if necessary
-        transformed_data = data  # TODO: Add any data transformation here if needed
-
-        return transformed_data
+        return data
 
     async def get_blocks_around_transaction(self, tx_id: str, left_hops: int, right_hops: int) -> dict:
         """Retrieve the transaction, its vins/vouts, and related paths within the specified hops."""
@@ -52,6 +47,7 @@ class BitcoinFundsFlowQueryApi(FundsFlowQueryApi):
 
         data = await self._execute_query(query)
         return data
+
     async def get_address_transactions(self,
                                        address: str,
                                        start_block_height: Optional[int] = None,
@@ -99,11 +95,7 @@ class BitcoinFundsFlowQueryApi(FundsFlowQueryApi):
 
         # Execute the query
         data = await self._execute_query(query)
-
-        # Optional: Transform the data if needed
-        transformed_data = data
-
-        return transformed_data
+        return data
 
     async def get_funds_flow(self,
                              address: str,
@@ -150,6 +142,4 @@ class BitcoinFundsFlowQueryApi(FundsFlowQueryApi):
 
         # Execute the query and transform the results
         data = await self._execute_query(final_query)
-        transformed_data = data  # Apply necessary transformations
-
-        return transformed_data
+        return data
