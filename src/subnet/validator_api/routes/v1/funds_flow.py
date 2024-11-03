@@ -28,14 +28,11 @@ def select_query_api(network: str, validator: Validator):
 @funds_flow_router.get("/{network}/get_blocks")
 async def get_blocks(
     network: str,
-    block_heights: List[int] = Query(..., description="List of block heights (maximum 10)"),
+    block_heights: List[int] = Query(..., description="List of block heights (maximum 10)", min_length=1, max_length=10),
     response_type: ResponseType = Query(ResponseType.json),
     validator: Validator = Depends(get_validator),
     api_key: str = Depends(api_key_auth),
 ):
-    if len(block_heights) > 10:
-        raise HTTPException(status_code=400, detail="The maximum number of block heights allowed is 10.")
-
     query_api = select_query_api(network, validator)
     data = await query_api.get_blocks(block_heights)
 
@@ -53,15 +50,12 @@ async def get_blocks(
 async def get_transaction_by_tx_id(
     network: str,
     tx_id: str,
-    left_hops: int = Query(0),
-    right_hops: int = Query(0),
+    left_hops: int = Query(2, description="Number of hops to the left", ge=0, le=4),
+    right_hops: int = Query(2, description="Number of hops to the right", ge=0, le=4),
     response_type: ResponseType = Query(ResponseType.json),
     validator: Validator = Depends(get_validator),
     api_key: str = Depends(api_key_auth),
 ):
-    if left_hops > 4 or right_hops > 4:
-        raise HTTPException(status_code=400, detail="Hops cannot exceed 4 in either direction")
-
     query_api = select_query_api(network, validator)
     data = await query_api.get_blocks_around_transaction(tx_id, left_hops, right_hops)
 
@@ -79,8 +73,8 @@ async def get_transaction_by_tx_id(
 async def get_address_transactions(
     network: str,
     address: str = Query(...),
-    start_block_height: Optional[int] = Query(None),
-    end_block_height: Optional[int] = Query(None),
+    left_hops: int = Query(2, description="Number of hops to the left", ge=0, le=4),
+    right_hops: int = Query(2, description="Number of hops to the right", ge=0, le=4),
     limit: Optional[int] = Query(100),
     response_type: ResponseType = Query(ResponseType.json),
     validator: Validator = Depends(get_validator),
@@ -89,8 +83,8 @@ async def get_address_transactions(
     query_api = select_query_api(network, validator)
     data = await query_api.get_address_transactions(
         address=address,
-        start_block_height=start_block_height,
-        end_block_height=end_block_height,
+        left_hops=left_hops,
+        right_hops=right_hops,
         limit=limit,
     )
 

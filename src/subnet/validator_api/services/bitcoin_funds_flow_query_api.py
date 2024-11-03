@@ -17,17 +17,14 @@ class BitcoinFundsFlowQueryApi(FundsFlowQueryApi):
             raise Exception(f"Error executing query: {str(e)}")
 
     async def get_blocks(self, block_heights: List[int]) -> dict:
-        # Ensure that the array has no more than 10 block heights
         if len(block_heights) > 10:
             raise ValueError("Cannot query more than 10 blocks at once")
 
-        # Corrected Cypher query with value_satoshi and optional matching for coinbase transactions
         query = f"""
-            MATCH (t1:Transaction)
+            MATCH path1 = (a0:Address)-[s0:SENT*0..1]->(t1:Transaction)
             WHERE t1.block_height IN {block_heights}
-            OPTIONAL MATCH (a1:Address)-[s1:SENT]->(t1)
-            OPTIONAL MATCH (t1)-[s2:SENT]->(a2:Address)
-            RETURN a1,s1,t1,s2,a2
+            MATCH path2 = (t1)-[s1:SENT*0..1]->(a1:Address)
+            RETURN path1, path2
         """
 
         data = await self._execute_query(query)
@@ -50,50 +47,22 @@ class BitcoinFundsFlowQueryApi(FundsFlowQueryApi):
 
     async def get_address_transactions(self,
                                        address: str,
-                                       start_block_height: Optional[int] = None,
-                                       end_block_height: Optional[int] = None,
+                                       left_hops: int = 2,
+                                       right_hops: int =2,
                                        limit: Optional[int] = 100) -> dict:
-        # Start with the original query structure
+
         query = f"""
             MATCH (a:Address {{address: '{address}'}})
-            OPTIONAL MATCH (a)-[s1:SENT]->(t1:Transaction)
-        """
-
-        # Add block height condition for t1 if provided
-        if start_block_height is not None or end_block_height is not None:
-            t1_conditions = []
-            if start_block_height is not None:
-                t1_conditions.append(f"t1.block_height >= {start_block_height}")
-            if end_block_height is not None:
-                t1_conditions.append(f"t1.block_height <= {end_block_height}")
-            query += f"WHERE {' AND '.join(t1_conditions)}\n"
-
-        # Continue building the query with the rest of the structure
-        query += f"""
-            OPTIONAL MATCH (t1)-[s2:SENT]->(a2:Address)
-            OPTIONAL MATCH (t2:Transaction)-[s4:SENT]->(a)
-        """
-
-        # Add block height condition for t2 if provided
-        if start_block_height is not None or end_block_height is not None:
-            t2_conditions = []
-            if start_block_height is not None:
-                t2_conditions.append(f"t2.block_height >= {start_block_height}")
-            if end_block_height is not None:
-                t2_conditions.append(f"t2.block_height <= {end_block_height}")
-            query += f"WHERE {' AND '.join(t2_conditions)}\n"
-
-        # Add remaining structure
-        query += f"""
-            OPTIONAL MATCH (a3:Address)-[s3:SENT]->(t2)
-            OPTIONAL MATCH (t2)-[s5:SENT]->(a4:Address)
-            WITH a, s1, t1, s2, a2, a3, s3, t2, s4, s5, a4
-            WHERE t1 IS NOT NULL OR t2 IS NOT NULL
-            RETURN a, s1, t1, s2, a2, a3, s3, t2, s4, s5, a4
+            MATCH path1 = (a)-[s1:SENT*0..{right_hops}]->(t:Transaction)
+            MATCH path2 = (other:Address)-[s2:SENT*0..{left_hops}]->(t2:Transaction)-[s3:SENT]->(a)
+            OPTIONAL MATCH path3 = (t)-[s4:SENT*1..{right_hops}]->(downstream:Address)
+            WHERE downstream <> a
+            OPTIONAL MATCH path4 = (upstream:Address)-[s5:SENT*1..{left_hops}]->(t2)
+            WHERE upstream <> a
+            RETURN path1, path2, path3, path4
             LIMIT {limit}
         """
 
-        # Execute the query
         data = await self._execute_query(query)
         return data
 
