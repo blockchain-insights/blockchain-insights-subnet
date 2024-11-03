@@ -4,8 +4,8 @@ from typing import Optional, List
 from fastapi import Depends, APIRouter, Query, HTTPException
 from pydantic import BaseModel
 from src.subnet.validator.validator import Validator
-from src.subnet.validator_api import get_validator, api_key_auth
-from src.subnet.validator_api.services.balance_tracking_query_api import BalanceTrackingQueryAPI
+from src.subnet.gateway import get_validator, api_key_auth
+from src.subnet.gateway.services.balance_tracking_query_api import BalanceTrackingQueryAPI
 
 
 balance_tracking_router = APIRouter(prefix="/v1/balance-tracking", tags=["balance-tracking"])

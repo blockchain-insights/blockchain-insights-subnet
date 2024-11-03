@@ -3,11 +3,11 @@ from fastapi import Depends, APIRouter, Query, HTTPException
 from pydantic import BaseModel
 from src.subnet.protocol import NETWORK_BITCOIN, NETWORK_COMMUNE
 from src.subnet.validator.validator import Validator
-from src.subnet.validator_api import get_validator, api_key_auth
-from src.subnet.validator_api.models.factories import get_graph_transformer
-from src.subnet.validator_api.services.bitcoin_funds_flow_query_api import BitcoinFundsFlowQueryApi
-from src.subnet.validator_api.services.commune_funds_flow_query_api import CommuneFundsFlowQueryApi
-from src.subnet.validator_api.helpers.reponse_formatter import format_response, ResponseType
+from src.subnet.gateway import get_validator, api_key_auth
+from src.subnet.gateway.models.factories import get_graph_transformer
+from src.subnet.gateway.services.bitcoin_funds_flow_query_api import BitcoinFundsFlowQueryApi
+from src.subnet.gateway.services.commune_funds_flow_query_api import CommuneFundsFlowQueryApi
+from src.subnet.gateway.helpers.reponse_formatter import format_response, ResponseType
 
 funds_flow_router = APIRouter(prefix="/v1/funds-flow", tags=["funds-flow"])
 

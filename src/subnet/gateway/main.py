@@ -1,18 +1,17 @@
-import signal
 import uvicorn
 from fastapi import FastAPI
 from loguru import logger
 from starlette.middleware.cors import CORSMiddleware
 import sys
-from src.subnet.validator_api import patch_record, miner_discovery_manager, settings_manager, settings
-from src.subnet.validator_api.rate_limiter import RateLimiterMiddleware
-from src.subnet.validator_api.routes.v1.balance_tracking import balance_tracking_router
-from src.subnet.validator_api.routes.v1.funds_flow import funds_flow_router
-from src.subnet.validator_api.routes.v1.miners import miner_router
+from src.subnet.gateway import patch_record, settings
+from src.subnet.gateway.rate_limiter import RateLimiterMiddleware
+from src.subnet.gateway.routes.v1.balance_tracking import balance_tracking_router
+from src.subnet.gateway.routes.v1.funds_flow import funds_flow_router
+from src.subnet.gateway.routes.v1.miners import miner_router
 
 logger.remove()
 logger.add(
-    "../../logs/validator_api.log",
+    "../../logs/gateway.log",
     rotation="500 MB",
     format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}",
     filter=patch_record
@@ -26,7 +25,7 @@ logger.add(
 )
 
 app = FastAPI(
-    title="Chain Insights API",
+    title="The Chain Insights Gateway",
     description="",
     version="0.1.0"
 )
@@ -48,7 +47,7 @@ app.add_middleware(
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("Usage: python -m subnet.validator.validator_api <environment> ; where <environment> is 'testnet' or 'mainnet'")
+        print("Usage: python -m subnet.validator.gateway <environment> ; where <environment> is 'testnet' or 'mainnet'")
         sys.exit(1)
 
     uvicorn.run("main:app", host="0.0.0.0", port=settings.PORT, workers=settings.WORKERS)

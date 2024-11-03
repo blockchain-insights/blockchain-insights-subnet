@@ -16,7 +16,7 @@ from src.subnet.validator.database.models.miner_discovery import MinerDiscoveryM
 from src.subnet.validator.database.models.miner_receipt import MinerReceiptManager
 from src.subnet.validator._config import load_environment, SettingsManager
 from src.subnet.validator.database.session_manager import DatabaseSessionManager
-from src.subnet.validator_api.rate_limiter import RateLimiterMiddleware
+from src.subnet.gateway.rate_limiter import RateLimiterMiddleware
 from src.subnet.validator.validator import Validator
 from src.subnet.validator.weights_storage import WeightsStorage
 
@@ -41,7 +41,7 @@ else:
 
 def patch_record(record):
     record["extra"]["validator_key"] = keypair.ss58_address
-    record["extra"]["service"] = 'validator-api'
+    record["extra"]["service"] = 'gateway'
     record["extra"]["timestamp"] = datetime.utcnow().isoformat()
     record["extra"]["level"] = record['level'].name
 
@@ -84,7 +84,7 @@ api_key_header = APIKeyHeader(name='x-api-key', auto_error = False)
 async def api_key_auth(api_key: str = Security(api_key_header)):
     global api_key_manager
     if api_key_manager is None:
-        raise HTTPException(status_code=500, detail="API Key Manager not initialized")
+        raise HTTPException(status_code=500, detail="Gateway API Key Manager not initialized")
     has_access = await api_key_manager.validate_api_key(api_key)
     if not has_access:
-        raise HTTPException(status_code=401, detail="Missing or Invalid API key")
+        raise HTTPException(status_code=401, detail="Missing or Invalid Gateway API key")

@@ -8,7 +8,7 @@
     - [Env configuration](#env-configuration)
     - [Validator wallet creation](#validator-wallet-creation)
     - [Running the validator and monitoring](#running-the-validator-and-monitoring)
-    - [Running the validator api](#running-the-validator-api)
+    - [Running the validator api](#running-the-gateway)
     - [Running the miner leaderboard](#running-the-miner-leaderboard)
 
 ## Setup
@@ -110,10 +110,10 @@ pm2 start ./scripts/run_validator.sh --name validator
 pm2 save
 ```
 
-### Running the validator api
+### Running the gateway
 
 ```shell
 cd ~/validator1
-pm2 start ./scripts/run_validator_api.sh --name validator-api
+pm2 start ./scripts/run_gateway.sh --name gateway
 pm2 save
 ```

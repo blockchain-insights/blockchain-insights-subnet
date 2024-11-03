@@ -1,7 +1,7 @@
 from typing import Optional, List
 from src.subnet.protocol import NETWORK_BITCOIN, MODEL_KIND_FUNDS_FLOW
 from src.subnet.validator.validator import Validator
-from src.subnet.validator_api.services import FundsFlowQueryApi
+from src.subnet.gateway.services import FundsFlowQueryApi
 
 
 class BitcoinFundsFlowQueryApi(FundsFlowQueryApi):
