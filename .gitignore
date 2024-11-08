@@ -164,9 +164,19 @@ env/.env.miner.testnet
 env/.env.validator.testnet
 /src/*.pkl
 
+# Node
+.commune
+chart
+
+# Dev Env
 venv_miner/
 venv_validator/
 venv_validator_api/
 /ops/validator/backup/
 .env.validator.mainnet
 .env.miner.mainnet
+Dockerfile.*
+devcontainer
+
+# MacOS
+.DS_Store
