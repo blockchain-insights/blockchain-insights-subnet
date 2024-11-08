@@ -14,6 +14,7 @@ from src.subnet.validator.database.models.challenge_funds_flow import ChallengeF
 from src.subnet.validator.database.models.miner_discovery import MinerDiscoveryManager
 from src.subnet.validator.database.models.miner_receipt import MinerReceiptManager
 from src.subnet.validator.database.session_manager import DatabaseSessionManager, run_migrations
+from src.subnet.validator.receipt_sync import ReceiptSyncWorker
 from src.subnet.validator.weights_storage import WeightsStorage
 from src.subnet.validator._config import load_environment, SettingsManager
 from src.subnet.validator.validator import Validator
@@ -76,6 +77,9 @@ if __name__ == "__main__":
     miner_receipt_manager = MinerReceiptManager(session_manager)
     challenge_funds_flow_manager = ChallengeFundsFlowManager(session_manager)
     challenge_balance_tracking_manager = ChallengeBalanceTrackingManager(session_manager)
+
+    receipt_sync_worker = ReceiptSyncWorker(keypair, settings.NET_UID, c_client, miner_receipt_manager)
+    asyncio.run(receipt_sync_worker.sync_receipts())
 
     validator = Validator(
         keypair,

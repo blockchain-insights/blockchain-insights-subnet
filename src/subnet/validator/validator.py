@@ -423,6 +423,7 @@ class Validator(Module):
             if response:  # Simplified validation as per your version
                 response_hash = generate_hash(str(response))
                 await self.miner_receipt_manager.store_miner_receipt(
+                    self.key.ss58_address,
                     request_id,
                     miner_key,
                     model_kind,
@@ -515,6 +516,7 @@ class Validator(Module):
                             first_miner = existing_miners[0]
                             for miner in [first_miner, current_miner]:
                                 await self.miner_receipt_manager.store_miner_receipt(
+                                    self.key.ss58_address,
                                     request_id,
                                     miner['miner_key'],
                                     model_kind,
@@ -563,6 +565,7 @@ class Validator(Module):
                 first_miner = miners[0]
 
                 await self.miner_receipt_manager.store_miner_receipt(
+                    self.key.ss58_address,
                     request_id,
                     first_miner['miner_key'],
                     model_kind,

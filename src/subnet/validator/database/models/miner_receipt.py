@@ -14,13 +14,18 @@ Base = declarative_base()
 class MinerReceipt(OrmBase):
     __tablename__ = 'miner_receipts'
     id = Column(BigInteger, primary_key=True, autoincrement=True)
+
+    validator_key = Column(String, nullable=False)
+    is_local_receipt = Column(Boolean, nullable=False, default=True)
+
+
     request_id = Column(String, nullable=False)
     miner_key = Column(String, nullable=False)
     model_kind = Column(String, nullable=False)
     network = Column(String, nullable=False)
     query_hash = Column(Text, nullable=False)
     response_hash = Column(Text, nullable=False)
-    accepted = Column(Boolean, nullable=False, default=False)
+    response_accepted = Column(Boolean, nullable=False, default=False)
     timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     __table_args__ = (
@@ -37,7 +42,7 @@ class MinerReceiptManager:
     def __init__(self, session_manager: DatabaseSessionManager):
         self.session_manager = session_manager
 
-    async def store_miner_receipt(self, request_id: str, miner_key: str, model_kind: str, network: str, query_hash: str, timestamp: datetime, response_hash: str):
+    async def store_miner_receipt(self, validator_key: str, request_id: str, miner_key: str, model_kind: str, network: str, query_hash: str, timestamp: datetime, response_hash: str):
         async with self.session_manager.session() as session:
             async with session.begin():
                 stmt = insert(MinerReceipt).values(
@@ -46,10 +51,37 @@ class MinerReceiptManager:
                     model_kind=model_kind,
                     query_hash=query_hash,
                     network=network,
-                    accepted=False,
+                    response_accepted=False,
                     timestamp=timestamp,
-                    response_hash=response_hash
+                    response_hash=response_hash,
+                    is_local_receipt=True,
+                    validator_key=validator_key
                 )
+                await session.execute(stmt)
+
+    async def sync_miner_receipts(self, receipts: List[Dict[str, Union[str, datetime, bool]]]):
+        async with self.session_manager.session() as session:
+            async with session.begin():
+                stmt = insert(MinerReceipt).values(receipts).on_conflict_do_nothing(
+                    index_elements=['miner_key', 'request_id'])
+                await session.execute(stmt)
+
+    async def sync_miner_receipt(self, validator_key: str, request_id: str, miner_key: str, model_kind: str, network: str, query_hash: str,
+                                  timestamp: datetime, response_hash: str, response_accepted: bool):
+        async with self.session_manager.session() as session:
+            async with session.begin():
+                stmt = insert(MinerReceipt).values(
+                    request_id=request_id,
+                    miner_key=miner_key,
+                    model_kind=model_kind,
+                    query_hash=query_hash,
+                    network=network,
+                    response_accepted=response_accepted,
+                    timestamp=timestamp,
+                    response_hash=response_hash,
+                    is_local_receipt=False,
+                    validator_key=validator_key
+                ).on_conflict_do_nothing(index_elements=['miner_key', 'request_id'])
                 await session.execute(stmt)
 
     async def accept_miner_receipt(self, request_id: str, miner_key: str):
@@ -91,6 +123,45 @@ class MinerReceiptManager:
                 "data": receipts,
                 "total_pages": total_pages,
                 "total_items": total_items
+            }
+
+    async def get_receipts_by_to_sync(self, timestamp: str, page: int = 1, page_size: int = 10):
+        async with self.session_manager.session() as session:
+            # Calculate offset
+            offset = (page - 1) * page_size
+
+            total_items_result = await session.execute(
+                select(func.count(MinerReceipt.id))
+                .where(MinerReceipt.timestamp >= timestamp)
+            )
+            total_items = total_items_result.scalar()
+            total_pages = (total_items + page_size - 1) // page_size
+
+            result = await session.execute(
+                select(MinerReceipt)
+                .where(MinerReceipt.timestamp >= timestamp)
+                .order_by(MinerReceipt.timestamp.asc())
+                .limit(page_size)
+                .offset(offset)
+            )
+            receipts = result.scalars().all()
+
+            return {
+                "data": receipts,
+                "total_pages": total_pages,
+                "total_items": total_items
+            }
+
+    async def get_last_receipt_timestamp_for_validator_key(self, validator_key: str) -> dict | None:
+        async with self.session_manager.session() as session:
+            query = select(MinerReceipt).where(MinerReceipt.validator_key == validator_key).order_by(MinerReceipt.timestamp.desc()).limit(1)
+            result = await session.execute(query)
+
+            if result is None:
+                return None
+
+            return {
+                "timestamp": result.timestamp
             }
 
     async def get_receipt_miner_rank(self, network: str) -> List[ReceiptMinerRank]:
