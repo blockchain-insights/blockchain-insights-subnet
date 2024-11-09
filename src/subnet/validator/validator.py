@@ -420,7 +420,7 @@ class Validator(Module):
                 }
 
             response = await self._query_miner(miner, model_kind, query)
-            if response:  # Simplified validation as per your version
+            if response:
                 response_hash = generate_hash(str(response))
                 await self.miner_receipt_manager.store_miner_receipt(
                     self.key.ss58_address,
@@ -514,22 +514,16 @@ class Validator(Module):
 
                             # Store receipts for both miners
                             first_miner = existing_miners[0]
-                            for miner in [first_miner, current_miner]:
-                                await self.miner_receipt_manager.store_miner_receipt(
-                                    self.key.ss58_address,
-                                    request_id,
-                                    miner['miner_key'],
-                                    model_kind,
-                                    network,
-                                    query_hash,
-                                    timestamp,
-                                    response_hash
-                                )
 
-                            # Accept receipt only for the first miner that provided this response
-                            await self.miner_receipt_manager.accept_miner_receipt(
+                            await self.miner_receipt_manager.store_miner_receipt(
+                                self.key.ss58_address,
                                 request_id,
-                                first_miner['miner_key']
+                                first_miner['miner_key'],
+                                model_kind,
+                                network,
+                                query_hash,
+                                timestamp,
+                                response_hash
                             )
 
                             # Cancel remaining tasks

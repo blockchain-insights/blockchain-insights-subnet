@@ -1,7 +1,7 @@
 from typing import List, Optional, Dict, Union
 from pydantic import BaseModel
 from sqlalchemy import Column, String, DateTime, update, insert, BigInteger, Boolean, UniqueConstraint, Text, select, \
-    func, text
+    func, text, Index
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.dialects.postgresql import insert
 from datetime import datetime
@@ -14,22 +14,29 @@ Base = declarative_base()
 class MinerReceipt(OrmBase):
     __tablename__ = 'miner_receipts'
     id = Column(BigInteger, primary_key=True, autoincrement=True)
-
     validator_key = Column(String, nullable=False)
-    is_local_receipt = Column(Boolean, nullable=False, default=True)
-
-
     request_id = Column(String, nullable=False)
     miner_key = Column(String, nullable=False)
     model_kind = Column(String, nullable=False)
     network = Column(String, nullable=False)
     query_hash = Column(Text, nullable=False)
     response_hash = Column(Text, nullable=False)
-    response_accepted = Column(Boolean, nullable=False, default=False)
     timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     __table_args__ = (
         UniqueConstraint('miner_key', 'request_id', name='uq_miner_key_request_id'),
+
+        Index('idx_miner_receipts_miner_key_timestamp',
+              'miner_key', 'timestamp', postgresql_using='btree'),
+
+        Index('idx_miner_receipts_timestamp',
+              'timestamp', postgresql_using='btree'),
+
+        Index('idx_miner_receipts_validator_key_timestamp',
+              'validator_key', 'timestamp', postgresql_using='btree'),
+
+        Index('idx_miner_receipts_network_timestamp',
+              'network', 'timestamp', postgresql_using='btree'),
     )
 
 
@@ -51,7 +58,6 @@ class MinerReceiptManager:
                     model_kind=model_kind,
                     query_hash=query_hash,
                     network=network,
-                    response_accepted=False,
                     timestamp=timestamp,
                     response_hash=response_hash,
                     is_local_receipt=True,
@@ -67,7 +73,7 @@ class MinerReceiptManager:
                 await session.execute(stmt)
 
     async def sync_miner_receipt(self, validator_key: str, request_id: str, miner_key: str, model_kind: str, network: str, query_hash: str,
-                                  timestamp: datetime, response_hash: str, response_accepted: bool):
+                                  timestamp: datetime, response_hash: str):
         async with self.session_manager.session() as session:
             async with session.begin():
                 stmt = insert(MinerReceipt).values(
@@ -76,22 +82,11 @@ class MinerReceiptManager:
                     model_kind=model_kind,
                     query_hash=query_hash,
                     network=network,
-                    response_accepted=response_accepted,
                     timestamp=timestamp,
                     response_hash=response_hash,
                     is_local_receipt=False,
                     validator_key=validator_key
                 ).on_conflict_do_nothing(index_elements=['miner_key', 'request_id'])
-                await session.execute(stmt)
-
-    async def accept_miner_receipt(self, request_id: str, miner_key: str):
-        async with self.session_manager.session() as session:
-            async with session.begin():
-                stmt = update(MinerReceipt).where(
-                    MinerReceipt.request_id == request_id
-                ).where(
-                    MinerReceipt.miner_key == miner_key
-                ).values(accepted=True)
                 await session.execute(stmt)
 
     async def get_receipts_by_miner_key(self, miner_key: str, page: int = 1, page_size: int = 10):
