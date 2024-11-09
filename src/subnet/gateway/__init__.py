@@ -17,6 +17,7 @@ from src.subnet.validator.database.models.miner_receipt import MinerReceiptManag
 from src.subnet.validator._config import load_environment, SettingsManager
 from src.subnet.validator.database.session_manager import DatabaseSessionManager
 from src.subnet.gateway.rate_limiter import RateLimiterMiddleware
+from src.subnet.validator.receipt_sync import ReceiptSyncWorker
 from src.subnet.validator.validator import Validator
 from src.subnet.validator.weights_storage import WeightsStorage
 
@@ -56,6 +57,7 @@ miner_discovery_manager = MinerDiscoveryManager(session_manager)
 miner_receipt_manager = MinerReceiptManager(session_manager)
 challenge_funds_flow_manager = ChallengeFundsFlowManager(session_manager)
 challenge_balance_tracking_manager = ChallengeBalanceTrackingManager(session_manager)
+receipt_sync_worker = ReceiptSyncWorker(keypair, settings.NET_UID, c_client, miner_receipt_manager)
 
 
 global api_key_manager
@@ -70,6 +72,7 @@ validator = Validator(
     challenge_funds_flow_manager,
     challenge_balance_tracking_manager,
     miner_receipt_manager,
+    receipt_sync_worker,
     query_timeout=settings.QUERY_TIMEOUT,
     challenge_timeout=settings.CHALLENGE_TIMEOUT,
 )
@@ -77,6 +80,9 @@ validator = Validator(
 
 def get_validator():
     return validator
+
+def get_receipt_sync_worker():
+    return validator.receipt_sync_worker
 
 api_key_header = APIKeyHeader(name='x-api-key', auto_error = False)
 

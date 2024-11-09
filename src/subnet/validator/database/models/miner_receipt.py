@@ -19,8 +19,10 @@ class MinerReceipt(OrmBase):
     miner_key = Column(String, nullable=False)
     model_kind = Column(String, nullable=False)
     network = Column(String, nullable=False)
+
     query_hash = Column(Text, nullable=False)
     response_hash = Column(Text, nullable=False)
+
     timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     __table_args__ = (
@@ -149,8 +151,13 @@ class MinerReceiptManager:
 
     async def get_last_receipt_timestamp_for_validator_key(self, validator_key: str) -> dict | None:
         async with self.session_manager.session() as session:
-            query = select(MinerReceipt).where(MinerReceipt.validator_key == validator_key).order_by(MinerReceipt.timestamp.desc()).limit(1)
-            result = await session.execute(query)
+            query = select(MinerReceipt).where(
+                MinerReceipt.validator_key == validator_key
+            ).order_by(
+                MinerReceipt.timestamp.desc()
+            ).limit(1)
+
+            result = await session.scalar(query)
 
             if result is None:
                 return None
@@ -158,39 +165,6 @@ class MinerReceiptManager:
             return {
                 "timestamp": result.timestamp
             }
-
-    async def get_receipt_miner_rank(self, network: str) -> List[ReceiptMinerRank]:
-        async with self.session_manager.session() as session:
-            query = text("""
-                            WITH miner_ratios AS (
-                                SELECT 
-                                    miner_key,
-                                    COUNT(CASE WHEN accepted = True THEN 1 END) AS accepted_true_count,
-                                    COUNT(CASE WHEN accepted = False THEN 1 END) AS accepted_false_count,
-                                    CASE 
-                                        WHEN COUNT(CASE WHEN accepted = False THEN 1 END) = 0 
-                                        THEN NULL 
-                                        ELSE COUNT(CASE WHEN accepted = True THEN 1 END)::float / COUNT(CASE WHEN accepted = False THEN 1 END)
-                                    END AS ratio
-                                FROM 
-                                    miner_receipts
-                                WHERE 
-                                    timestamp >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month' AND network = :network
-                                GROUP BY 
-                                    miner_key
-                            )
-                            SELECT 
-                                miner_key,
-                                ratio,
-                                RANK() OVER (ORDER BY ratio DESC NULLS LAST) AS rank
-                            FROM 
-                                miner_ratios
-                        """)
-
-            result = await session.execute(query, {"network": network}).fetchone()
-            result = [ReceiptMinerRank(miner_ratio=row['ratio'], miner_rank=row['rank']) for row in result]
-
-            return result
 
     async def get_receipts_count_by_networks(self) -> dict:
         async with self.session_manager.session() as session:
@@ -217,36 +191,29 @@ class MinerReceiptManager:
 
             query = text(f"""
                 WITH total_receipts AS (
-                    SELECT network, COUNT(*) AS total_count
+                    SELECT network, miner_key, COUNT(*) AS total_count
                     FROM miner_receipts
                     WHERE timestamp >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month'
-                    GROUP BY network
+                    {miner_key_filter}
+                    {network_filter}
+                    GROUP BY network, miner_key
                 ),
-                miner_accepted_counts AS (
-                    SELECT 
-                        miner_key,
-                        network,
-                        COUNT(CASE WHEN accepted = True THEN 1 END) AS accepted_true_count
-                    FROM 
-                        miner_receipts
-                    WHERE 
-                        timestamp >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month'
-                        {miner_key_filter}
-                        {network_filter}
-                    GROUP BY 
-                        miner_key, network
+                max_receipts_per_network AS (
+                    SELECT network, MAX(total_count) as max_count
+                    FROM total_receipts
+                    GROUP BY network
                 )
                 SELECT 
-                    mac.miner_key,
-                    mac.network,
+                    tr.miner_key,
+                    tr.network,
                     CASE 
-                        WHEN tr.total_count = 0 THEN 0
-                        ELSE POWER(mac.accepted_true_count::float / tr.total_count, 2)
+                        WHEN mrn.max_count = 0 THEN 0
+                        ELSE (tr.total_count::float / mrn.max_count)
                     END AS multiplier
                 FROM 
-                    miner_accepted_counts mac
+                    total_receipts tr
                 JOIN
-                    total_receipts tr ON mac.network = tr.network
+                    max_receipts_per_network mrn ON tr.network = mrn.network
                 ORDER BY multiplier DESC;
             """)
 
@@ -259,4 +226,4 @@ class MinerReceiptManager:
             result = await session.execute(query, params)
             result = result.fetchall()
 
-            return [{ 'miner_key': row[0], 'network': row[1], 'multiplier': row[2]} for row in result]
+            return [{'miner_key': row[0], 'network': row[1], 'multiplier': row[2]} for row in result]

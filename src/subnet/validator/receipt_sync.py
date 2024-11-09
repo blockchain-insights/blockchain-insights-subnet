@@ -2,7 +2,6 @@ import json
 from typing import Any
 import requests
 from communex.client import CommuneClient
-from loguru import logger
 from substrateinterface import Keypair
 from src.subnet.validator.database.models.miner_receipt import MinerReceiptManager
 
@@ -19,6 +18,7 @@ class ReceiptSyncWorker:
         self.netuid = netuid
         self.client = client
         self.miner_receipt_manager = miner_receipt_manager
+        self.key_to_gateway_urls = {}
 
     @staticmethod
     def _get_uid_gateway_url_pairs(ss58_to_metadata, uid_to_key, uid_to_incentive, uid_to_dividend):
@@ -67,35 +67,33 @@ class ReceiptSyncWorker:
 
     async def sync_receipts(self):
 
-        key_to_gateway_urls = await self.fetch_validators()
+        self.key_to_gateway_urls = await self.fetch_validators()
 
-        for key, gateway_url in key_to_gateway_urls.items():
+        for key, gateway_url in self.key_to_gateway_urls.items():
             timestamp = await self.miner_receipt_manager.get_last_receipt_timestamp_for_validator_key(key)
             if not timestamp:
                 timestamp = "2024-11-01T00:00:00Z"
 
-            try:
-                validator_signature = self.keypair.sign(timestamp.encode('utf-8'))
+            validator_signature = self.keypair.sign(timestamp.encode('utf-8')).hex()
+            sync_result_json = requests.get(f"{gateway_url}/receipts/sync", params={
+                "validator_key": key,
+                "validator_signature":  validator_signature,
+                "timestamp": timestamp
+            })
+
+            total_pages = sync_result_json["total_pages"]
+            receipts = json.loads(sync_result_json.json())
+
+            #TODO: we have to verify each miner signature here, if any signature is invalid, we should blacklist given valdiator
+
+            await self.miner_receipt_manager.sync_miner_receipts(receipts)
+
+            for page in range(2, total_pages + 1):
                 sync_result_json = requests.get(f"{gateway_url}/receipts/sync", params={
                     "validator_key": key,
                     "validator_signature":  validator_signature,
-                    "timestamp": timestamp
+                    "timestamp": timestamp,
+                    "page": page
                 })
-
-                total_pages = sync_result_json["total_pages"]
                 receipts = json.loads(sync_result_json.json())
                 await self.miner_receipt_manager.sync_miner_receipts(receipts)
-
-                for page in range(2, total_pages + 1):
-                    sync_result_json = requests.get(f"{gateway_url}/receipts/sync", params={
-                        "validator_key": key,
-                        "validator_signature":  validator_signature,
-                        "timestamp": timestamp,
-                        "page": page
-                    })
-                    receipts = json.loads(sync_result_json.json())
-                    await self.miner_receipt_manager.sync_miner_receipts(receipts)
-
-            except Exception as e:
-                logger.error(f"Error while syncing receipts for validator {key}", error=e, validator_key=self.keypair.ss58_address, sync_validator_key=key)
-                continue

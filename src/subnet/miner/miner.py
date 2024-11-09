@@ -7,7 +7,10 @@ from communex.module._rate_limiters.limiters import IpLimiterParams
 from keylimiter import TokenBucketLimiter
 from loguru import logger
 from starlette.middleware.cors import CORSMiddleware
+from substrateinterface import Keypair
+
 from src.subnet import VERSION
+from src.subnet.encryption import generate_hash
 from src.subnet.miner._config import MinerSettings, load_environment
 from src.subnet.miner.blockchain.search import GraphSearchFactory, BalanceSearchFactory
 from src.subnet.protocol import Challenge, MODEL_KIND_FUNDS_FLOW, MODEL_KIND_BALANCE_TRACKING
@@ -16,8 +19,9 @@ from src.subnet.validator.database import db_manager
 
 class Miner(Module):
 
-    def __init__(self, settings: MinerSettings):
+    def __init__(self, keypair: Keypair, settings: MinerSettings):
         super().__init__()
+        self.keypair = keypair
         self.settings = settings
         self.graph_search_factory = GraphSearchFactory()
         self.balance_search_factory = BalanceSearchFactory()
@@ -50,19 +54,32 @@ class Miner(Module):
     @endpoint
     async def query(self, model_kind: str, query: str, validator_key: str) -> dict:
 
-        logger.debug(f"Received challenge request from {validator_key}", validator_key=validator_key)
+        logger.debug(f"Received query request from {validator_key}", validator_key=validator_key)
 
         try:
-
             if model_kind == MODEL_KIND_FUNDS_FLOW:
                 search = GraphSearchFactory().create_graph_search(self.settings)
                 result = search.execute_query(query)
-                return result
+                response_hash = generate_hash(str(result))
+                result_hash_signature = self.keypair.sign(response_hash)
+
+                return {
+                    "result": result,
+                    "result_hash_signature": result_hash_signature,
+                    "result_hash": response_hash
+                }
 
             elif model_kind == MODEL_KIND_BALANCE_TRACKING:
                 search = BalanceSearchFactory().create_balance_search(self.settings.NETWORK)
                 result = await search.execute_query(query)
-                return result
+                response_hash = generate_hash(str(result))
+                result_hash_signature = self.keypair.sign(response_hash)
+
+                return {
+                    "result": result,
+                    "result_hash_signature": result_hash_signature,
+                    "result_hash": response_hash
+                }
             else:
                 raise ValueError(f"Invalid model type: {model_kind}")
         except Exception as e:
@@ -156,7 +173,7 @@ if __name__ == "__main__":
     )
 
     c_client = CommuneClient(get_node_url(use_testnet=use_testnet))
-    miner = Miner(settings=settings)
+    miner = Miner(keypair=keypair, settings=settings)
     refill_rate: float = 1 / 1000
     bucket = TokenBucketLimiter(
         refill_rate=refill_rate,

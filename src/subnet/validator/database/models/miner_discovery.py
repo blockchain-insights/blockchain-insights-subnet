@@ -146,8 +146,7 @@ class MinerDiscoveryManager:
                     md.miner_key,
                     CAST(md.timestamp AS VARCHAR) AS timestamp,
                     md.rank,
-                    COALESCE(COUNT(mr.id), 0) AS total_receipts,
-                    COALESCE(SUM(CASE WHEN mr.accepted THEN 1 ELSE 0 END), 0) AS accepted_receipts
+                    COALESCE(COUNT(mr.id), 0) AS total_receipts
                 FROM 
                     miner_discoveries AS md
                 LEFT JOIN 
@@ -169,8 +168,7 @@ class MinerDiscoveryManager:
                     md.network,
                     CAST(md.timestamp AS VARCHAR) AS timestamp,
                     md.rank,
-                    COALESCE(COUNT(mr.id), 0) AS total_receipts,
-                    COALESCE(SUM(CASE WHEN mr.accepted THEN 1 ELSE 0 END), 0) AS accepted_receipts
+                    COALESCE(COUNT(mr.id), 0) AS total_receipts
                 FROM 
                     miner_discoveries AS md
                 LEFT JOIN 

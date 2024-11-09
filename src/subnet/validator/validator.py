@@ -1,6 +1,4 @@
 import asyncio
-import json
-import random
 import threading
 import time
 import traceback
@@ -21,13 +19,13 @@ from ._config import ValidatorSettings, load_base_weights
 
 from .database.models.challenge_balance_tracking import ChallengeBalanceTrackingManager
 from .database.models.challenge_funds_flow import ChallengeFundsFlowManager
-from .encryption import generate_hash
+from src.subnet.encryption import generate_hash
 from .helpers import raise_exception_if_not_registered, get_ip_port, cut_to_max_allowed_weights
+from .receipt_sync import ReceiptSyncWorker
 from .weights_storage import WeightsStorage
 from src.subnet.validator.database.models.miner_discovery import MinerDiscoveryManager
 from src.subnet.validator.database.models.miner_receipt import MinerReceiptManager
-from src.subnet.protocol import Challenge, ChallengesResponse, ChallengeMinerResponse, Discovery, NETWORK_BITCOIN, \
-    NETWORK_COMMUNE
+from src.subnet.protocol import Challenge, ChallengesResponse, ChallengeMinerResponse, Discovery
 from .. import VERSION
 
 
@@ -43,6 +41,7 @@ class Validator(Module):
             challenge_funds_flow_manager: ChallengeFundsFlowManager,
             challenge_balance_tracking_manager: ChallengeBalanceTrackingManager,
             miner_receipt_manager: MinerReceiptManager,
+            receipt_sync_worker: ReceiptSyncWorker,
             query_timeout: int = 60,
             challenge_timeout: int = 60,
 
@@ -57,6 +56,7 @@ class Validator(Module):
         self.query_timeout = query_timeout
         self.weights_storage = weights_storage
         self.miner_discovery_manager = miner_discovery_manager
+        self.receipt_sync_worker = receipt_sync_worker
         self.terminate_event = threading.Event()
         self.challenge_funds_flow_manager = challenge_funds_flow_manager
         self.challenge_balance_tracking_manager = challenge_balance_tracking_manager
@@ -502,6 +502,10 @@ class Validator(Module):
 
                         if not response:
                             continue
+
+                        # TODO: varify miner signature, if signature is invalid we should skip this response
+
+                        Keypair.verify()
 
                         # Hash the response for comparison
                         response_hash = generate_hash(str(response))

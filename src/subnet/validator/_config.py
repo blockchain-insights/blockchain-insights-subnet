@@ -57,6 +57,8 @@ class ValidatorSettings(BaseSettings):
     CHALLENGE_FREQUENCY: int
     CHALLENGE_THRESHOLD: int
 
+    RECEIPT_SYNC_FREQUENCY: int = 3600
+
     BITCOIN_NODE_RPC_URL: str
     COMMUNE_NODE_RPC: str
 
