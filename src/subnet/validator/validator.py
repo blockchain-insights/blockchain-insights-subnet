@@ -422,16 +422,6 @@ class Validator(Module):
             response = await self._query_miner(miner, model_kind, query)
             if response:
                 response_hash = generate_hash(str(response))
-                await self.miner_receipt_manager.store_miner_receipt(
-                    self.key.ss58_address,
-                    request_id,
-                    miner_key,
-                    model_kind,
-                    network,
-                    query_hash,
-                    timestamp,
-                    response_hash
-                )
                 return {
                     "request_id": request_id,
                     "timestamp": timestamp,
@@ -503,9 +493,11 @@ class Validator(Module):
                         if not response:
                             continue
 
-                        # TODO: varify miner signature, if signature is invalid we should skip this response
-
-                        Keypair.verify()
+                        result_hash = response["result_hash"][0]
+                        result_hash_signature = response["result_hash_signature"][0]
+                        if not Keypair.create_from_seed(miner_key).verify(data=result_hash, signature=result_hash_signature):
+                            logger.warning(f"Invalid result hash signature", miner_key=miner_key, validator_key=self.key.ss58_address)
+                            continue
 
                         # Hash the response for comparison
                         response_hash = generate_hash(str(response))
@@ -527,7 +519,9 @@ class Validator(Module):
                                 network,
                                 query_hash,
                                 timestamp,
-                                response_hash
+                                response_hash,
+                                result_hash,
+                                result_hash_signature
                             )
 
                             # Cancel remaining tasks
@@ -554,39 +548,7 @@ class Validator(Module):
                         logger.error(f"Error querying miner", error=e)
                         continue
 
-            # If we get here, either timeout occurred or no matching responses were found
-            # Find the response from the most reputable miner or the fastest one
-            if responses:
-                # For now, we'll just take the first response we got
-                first_response_hash = next(iter(responses))
-                response, miners = responses[first_response_hash]
-                first_miner = miners[0]
-
-                await self.miner_receipt_manager.store_miner_receipt(
-                    self.key.ss58_address,
-                    request_id,
-                    first_miner['miner_key'],
-                    model_kind,
-                    network,
-                    query_hash,
-                    timestamp,
-                    first_response_hash
-                )
-
-                return {
-                    "request_id": request_id,
-                    "timestamp": timestamp,
-                    "miner_keys": [miner['miner_key'] for miner in top_miners],
-                    "query_hash": query_hash,
-                    "response_hash": first_response_hash,
-                    "verified": False,
-                    "verifying_miners": [first_miner['miner_key']],
-                    "model_kind": model_kind,
-                    "query": query,
-                    **response
-                }
-
-            # No valid responses at all
+            # No valid responses at all, returning empty response
             return {
                 "request_id": request_id,
                 "timestamp": timestamp,
