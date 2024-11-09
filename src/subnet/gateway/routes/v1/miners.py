@@ -34,9 +34,12 @@ async def sync_receipts(validator_key: str, validator_signature: str, timestamp:
                        validator: Validator = Depends(get_validator)):
 
     keypair = Keypair(ss58_address=validator_key)
-    message = timestamp.encode('utf-8')
-    if not keypair.verify(message, validator_signature):
+    signature_bytes = bytes.fromhex(validator_signature)
+    if not keypair.verify(timestamp, signature_bytes):
         raise HTTPException(status_code=400, detail="Invalid validator signature")
+
+    if not validator.receipt_sync_worker.key_to_gateway_urls.get():
+        raise HTTPException(status_code=400, detail="No gateways available")
 
     results = await validator.miner_receipt_manager.get_receipts_by_to_sync(validator_key, timestamp, page, page_size)
     return results
