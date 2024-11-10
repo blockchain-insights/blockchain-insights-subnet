@@ -217,6 +217,8 @@ class Validator(Module):
         multiplier = min(1.0, receipt_miner_multiplier)
         score = score + (0.7 * multiplier)
 
+        # TODO: fraud detection: if given miner loves too much certain valdiator, it's a fraud
+
         return score
 
     @staticmethod

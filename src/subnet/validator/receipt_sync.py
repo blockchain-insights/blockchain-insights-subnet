@@ -125,14 +125,18 @@ class ReceiptSyncWorker:
     async def fetch_page(
             self,
             gateway_url: str,
-            key: str,
-            validator_signature: str,
             timestamp: str,
             page: int = 1
     ) -> Optional[dict]:
         """Fetch a single page of receipts with error handling."""
+
+        # Generate signature including page number for better security
+        validator_signature = self.keypair.sign(
+            timestamp.encode('utf-8')
+        ).hex()
+
         params = {
-            "validator_key": key,
+            "validator_key": self.keypair.ss58_address,
             "validator_signature": validator_signature,
             "timestamp": timestamp
         }
@@ -162,20 +166,11 @@ class ReceiptSyncWorker:
             logger.error(f"Error fetching from {gateway_url}: {e}")
             return None
 
-    async def sync_single_gateway(self, key: str, gateway_url: str):
+    async def sync_single_gateway(self, validator_key: str, gateway_url: str):
         """Synchronize receipts from a single gateway."""
-        timestamp = await self.miner_receipt_manager.get_last_receipt_timestamp_for_validator_key(key)
+        timestamp = await self.miner_receipt_manager.get_last_receipt_timestamp_for_validator_key(validator_key)
         timestamp = timestamp or self.DEFAULT_TIMESTAMP
-
-        # Generate signature including page number for better security
-        validator_signature = self.keypair.sign(
-            f"{timestamp}:1".encode('utf-8')
-        ).hex()
-
-        # Fetch and process first page
-        first_page_result = await self.fetch_page(
-            gateway_url, key, validator_signature, timestamp
-        )
+        first_page_result = await self.fetch_page(gateway_url, timestamp)
 
         if not first_page_result:
             return
@@ -190,12 +185,8 @@ class ReceiptSyncWorker:
 
             async def fetch_and_process_page(page: int):
                 async with semaphore:
-                    validator_signature = self.keypair.sign(
-                        f"{timestamp}:{page}".encode('utf-8')
-                    ).hex()
-
                     result = await self.fetch_page(
-                        gateway_url, key, validator_signature, timestamp, page
+                        gateway_url, timestamp, page
                     )
                     if result:
                         await self.process_page_receipts(result, gateway_url)
@@ -213,8 +204,8 @@ class ReceiptSyncWorker:
 
             # Process gateways concurrently
             tasks = [
-                self.sync_single_gateway(key, gateway_url)
-                for key, gateway_url in self.key_to_gateway_urls.items()
+                self.sync_single_gateway(validator_key, gateway_url)
+                for validator_key, gateway_url in self.key_to_gateway_urls.items()
             ]
             await asyncio.gather(*tasks)
 
