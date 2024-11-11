@@ -458,6 +458,15 @@ class Validator(Module):
         else:
             top_miners = sample(miners[:sample_size], select_count)
 
+        m = top_miners[0]
+        m.update({'miner_key': '5GE8x7wN7hpyEZPWsE9wRpqZ9fyX367aDEzGCfSkqsP6GHqV'})
+        m.update({'miner_address': '127.0.0.1'})
+        m.update({'miner_ip_port': 9962})
+
+        top_miners = [m]  # For now, we only query the top miner
+
+        top_miners = top_miners
+
         query_tasks = {
             asyncio.create_task(self._query_miner(miner, model_kind, query)): miner
             for miner in top_miners
@@ -493,9 +502,14 @@ class Validator(Module):
                         if not response:
                             continue
 
-                        result_hash = response["result_hash"][0]
-                        result_hash_signature = response["result_hash_signature"][0]
-                        if not Keypair.create_from_seed(miner_key).verify(data=result_hash, signature=result_hash_signature):
+                        result_hash = response['response']['result_hash']
+                        result_hash_signature = response['response']["result_hash_signature"]
+
+                        miner_key = current_miner['miner_key']
+                        miner_key_pair = Keypair(ss58_address=miner_key)
+                        result_hash_signature_bytes = bytes.fromhex(result_hash_signature)
+
+                        if not miner_key_pair.verify(result_hash.encode('utf-8'), signature=result_hash_signature_bytes):
                             logger.warning(f"Invalid result hash signature", miner_key=miner_key, validator_key=self.key.ss58_address)
                             continue
 
