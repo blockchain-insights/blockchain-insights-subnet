@@ -113,7 +113,10 @@ class ReceiptSyncWorker:
     async def process_page_receipts(self, response_data: dict, gateway_url: str) -> bool:
         """Process a page of receipts including validation and storage."""
         try:
-            receipts = json.loads(response_data["receipts"])
+            receipts = response_data['data']
+            if receipts is None or receipts == []:
+                logger.info(f"No receipts found in response from {gateway_url}")
+                return False
             if not self.validate_receipt_signatures(receipts):
                 return False
             await self.miner_receipt_manager.sync_miner_receipts(receipts)
@@ -196,6 +199,12 @@ class ReceiptSyncWorker:
                 for page in range(2, total_pages + 1)
             ]
             await asyncio.gather(*tasks)
+
+    async def sync_key_to_gateway_urls(self):
+        try:
+            self.key_to_gateway_urls = await self.fetch_validators()
+        except Exception as e:
+            logger.error(f"Error fetching validators", error=e, validator_key=self.keypair.ss58_address)
 
     async def sync_receipts(self):
         """Main entry point for syncing receipts from all gateways."""

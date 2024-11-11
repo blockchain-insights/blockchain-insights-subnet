@@ -74,7 +74,6 @@ validator = Validator(
     challenge_funds_flow_manager,
     challenge_balance_tracking_manager,
     miner_receipt_manager,
-    receipt_sync_worker,
     query_timeout=settings.QUERY_TIMEOUT,
     challenge_timeout=settings.CHALLENGE_TIMEOUT,
 )
@@ -82,7 +81,7 @@ validator = Validator(
 receipt_sync_fetch_thread = ReceiptSyncFetchThread(
     keypair=keypair,
     settings=settings,
-    client=c_client,
+    receipt_sync_worker=receipt_sync_worker,
     frequency=settings.RECEIPT_SYNC_FREQUENCY,
     terminate_event=validator.terminate_event
 )
@@ -91,6 +90,8 @@ receipt_sync_fetch_thread = ReceiptSyncFetchThread(
 def get_validator():
     return validator
 
+def get_receipt_sync_worker():
+    return receipt_sync_worker
 
 api_key_header = APIKeyHeader(name='x-api-key', auto_error=False)
 

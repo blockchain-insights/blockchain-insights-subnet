@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from substrateinterface import Keypair
 
 from src.subnet.validator.validator import Validator
-from src.subnet.gateway import get_validator, api_key_auth
+from src.subnet.gateway import get_validator, api_key_auth, get_receipt_sync_worker
 
 miner_router = APIRouter(prefix="/v1/miner", tags=["miner"])
 
@@ -31,7 +31,8 @@ async def get_receipts(miner_key: str, page: int = 1, page_size: int = 10,
 
 @miner_router.get("/receipts/sync")
 async def sync_receipts(validator_key: str, validator_signature: str, timestamp: str, page: int = 1, page_size: int = 1000,
-                       validator: Validator = Depends(get_validator)):
+                       validator: Validator = Depends(get_validator),
+                       receipt_sync_worker = Depends(get_receipt_sync_worker)):
 
     keypair = Keypair(ss58_address=validator_key)
     signature_bytes = bytes.fromhex(validator_signature)
@@ -39,10 +40,10 @@ async def sync_receipts(validator_key: str, validator_signature: str, timestamp:
     if not keypair.verify(timestamp.encode('utf-8'), signature_bytes):
         raise HTTPException(status_code=400, detail="Invalid validator signature")
 
-    if not validator.receipt_sync_worker.key_to_gateway_urls.get(validator_key):
+    if not receipt_sync_worker.key_to_gateway_urls.get(validator_key):
         raise HTTPException(status_code=400, detail="No gateways available")
 
-    results = await validator.miner_receipt_manager.get_receipts_by_to_sync(validator_key, timestamp, page, page_size)
+    results = await validator.miner_receipt_manager.get_receipts_by_to_sync(validator.key.ss58_address, timestamp, page, page_size)
     return results
 
 

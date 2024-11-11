@@ -29,6 +29,7 @@ logger.add(
     filter=patch_record
 )
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup

@@ -1,9 +1,11 @@
 from typing import List, Optional, Dict, Union
+
+from dateutil import parser
 from pydantic import BaseModel
 from sqlalchemy import Column, String, DateTime, update, insert, BigInteger, Boolean, UniqueConstraint, Text, select, \
     func, text, Index
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.dialects.postgresql import insert, TIMESTAMP
 from datetime import datetime
 from src.subnet.validator.database import OrmBase
 from src.subnet.validator.database.session_manager import DatabaseSessionManager
@@ -23,7 +25,7 @@ class MinerReceipt(OrmBase):
     response_hash = Column(Text, nullable=False)
     result_hash = Column(Text, nullable=False)
     result_hash_signature = Column(Text, nullable=False)
-    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
+    timestamp = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
 
     __table_args__ = (
         UniqueConstraint('miner_key', 'request_id', name='uq_miner_key_request_id'),
@@ -124,21 +126,23 @@ class MinerReceiptManager:
                 "total_items": total_items
             }
 
-    async def get_receipts_by_to_sync(self, timestamp: str, page: int = 1, page_size: int = 10):
+    async def get_receipts_by_to_sync(self, validator_key: str, timestamp: str, page: int = 1, page_size: int = 10):
+
+        timestamp_obj = parser.isoparse(timestamp)
         async with self.session_manager.session() as session:
             # Calculate offset
             offset = (page - 1) * page_size
 
             total_items_result = await session.execute(
                 select(func.count(MinerReceipt.id))
-                .where(MinerReceipt.timestamp >= timestamp)
+                .where(MinerReceipt.timestamp >= timestamp_obj, MinerReceipt.validator_key == validator_key)
             )
             total_items = total_items_result.scalar()
             total_pages = (total_items + page_size - 1) // page_size
 
             result = await session.execute(
                 select(MinerReceipt)
-                .where(MinerReceipt.timestamp >= timestamp)
+                .where(MinerReceipt.timestamp >= timestamp_obj, MinerReceipt.validator_key == validator_key)
                 .order_by(MinerReceipt.timestamp.asc())
                 .limit(page_size)
                 .offset(offset)

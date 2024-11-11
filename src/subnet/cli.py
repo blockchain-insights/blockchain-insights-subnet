@@ -90,7 +90,6 @@ if __name__ == "__main__":
         challenge_funds_flow_manager,
         challenge_balance_tracking_manager,
         miner_receipt_manager,
-        receipt_sync_worker,
         query_timeout=settings.QUERY_TIMEOUT,
         challenge_timeout=settings.CHALLENGE_TIMEOUT
     )

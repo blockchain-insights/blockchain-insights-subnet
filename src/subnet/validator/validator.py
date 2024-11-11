@@ -41,7 +41,6 @@ class Validator(Module):
             challenge_funds_flow_manager: ChallengeFundsFlowManager,
             challenge_balance_tracking_manager: ChallengeBalanceTrackingManager,
             miner_receipt_manager: MinerReceiptManager,
-            receipt_sync_worker: ReceiptSyncWorker,
             query_timeout: int = 60,
             challenge_timeout: int = 60,
 
@@ -56,7 +55,6 @@ class Validator(Module):
         self.query_timeout = query_timeout
         self.weights_storage = weights_storage
         self.miner_discovery_manager = miner_discovery_manager
-        self.receipt_sync_worker = receipt_sync_worker
         self.terminate_event = threading.Event()
         self.challenge_funds_flow_manager = challenge_funds_flow_manager
         self.challenge_balance_tracking_manager = challenge_balance_tracking_manager
