@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.1] - 2024-10-30
+
+###- fixed unicorn shutdown issue
+- added endpoint for returning count per network
 
 ## [1.3.0] - 2024-11-12
 - Added decentralized validator receipt sync mechanism.
@@ -11,7 +15,6 @@ All notable changes to this project will be documented in this file.
 ### Added
 - Added commune ai-related Validator API endpoints.
 - Add endpoint for returning available miners per network.
-
 
 ## [1.0.0] - 2024-10-23
 
