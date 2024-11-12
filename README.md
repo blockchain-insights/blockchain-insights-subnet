@@ -33,6 +33,7 @@ It focuses on tracking and analyzing the movement of cryptocurrency funds and ch
 ### Roadmap
 
 - [x] **Migration from Bittensor**: Transition the subnet from the Bittensor ecosystem to a commune ai ecosystem.
+- [x] **Validator Receipt System**: Develop a decentralized validator receipt sync mechanism.
 - [ ] **Funds flow api**: Develop a funds flow API that provides detailed insights into cryptocurrency fund flows.
 - [ ] **Balance API**: Create a balance API that tracks changes in cryptocurrency balances.
 - [ ] **Data Visualization**: Implement data visualization tools to present insights in a user-friendly format.
