@@ -562,6 +562,34 @@ class Validator(Module):
                         logger.error(f"Error querying miner", error=e)
                         continue
 
+            # get the first response
+            for response_hash, (response, miners) in responses.items():
+                await self.miner_receipt_manager.store_miner_receipt(
+                    self.key.ss58_address,
+                    request_id,
+                    miners[0]['miner_key'],
+                    model_kind,
+                    network,
+                    query_hash,
+                    timestamp,
+                    response_hash,
+                    response['response']['result_hash'],
+                    response['response']['result_hash_signature']
+                )
+
+                return {
+                    "request_id": request_id,
+                    "timestamp": timestamp,
+                    "miner_keys": [miners[0]['miner_key']],
+                    "query_hash": query_hash,
+                    "response_hash": response_hash,
+                    "verified": False,
+                    "verifying_miners": [],
+                    "model_kind": model_kind,
+                    "query": query,
+                    **response
+                }
+
             # No valid responses at all, returning empty response
             return {
                 "request_id": request_id,

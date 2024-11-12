@@ -66,33 +66,19 @@ class MinerReceiptManager:
                     response_hash=response_hash,
                     result_hash=result_hash,
                     result_hash_signature=result_hash_signature,
-                    is_local_receipt=True,
                     validator_key=validator_key
                 )
                 await session.execute(stmt)
 
     async def sync_miner_receipts(self, receipts: List[Dict[str, Union[str, datetime, bool]]]):
+        for receipt in receipts:
+            if isinstance(receipt['timestamp'], str):
+                receipt['timestamp'] = datetime.fromisoformat(receipt['timestamp'])
+
         async with self.session_manager.session() as session:
             async with session.begin():
                 stmt = insert(MinerReceipt).values(receipts).on_conflict_do_nothing(
                     index_elements=['miner_key', 'request_id'])
-                await session.execute(stmt)
-
-    async def sync_miner_receipt(self, validator_key: str, request_id: str, miner_key: str, model_kind: str, network: str, query_hash: str,
-                                  timestamp: datetime, response_hash: str):
-        async with self.session_manager.session() as session:
-            async with session.begin():
-                stmt = insert(MinerReceipt).values(
-                    request_id=request_id,
-                    miner_key=miner_key,
-                    model_kind=model_kind,
-                    query_hash=query_hash,
-                    network=network,
-                    timestamp=timestamp,
-                    response_hash=response_hash,
-                    is_local_receipt=False,
-                    validator_key=validator_key
-                ).on_conflict_do_nothing(index_elements=['miner_key', 'request_id'])
                 await session.execute(stmt)
 
     async def get_receipts_by_miner_key(self, miner_key: str, page: int = 1, page_size: int = 10):
@@ -169,7 +155,7 @@ class MinerReceiptManager:
                 return None
 
             return {
-                "timestamp": result.timestamp
+                "timestamp": result.timestamp.isoformat()
             }
 
     async def get_receipts_count_by_networks(self) -> dict:

@@ -101,7 +101,7 @@ class ReceiptSyncWorker:
                 keypair = Keypair(ss58_address=receipt["miner_key"])
                 if not keypair.verify(
                         receipt["result_hash"].encode('utf-8'),
-                        receipt["result_hash_signature"]
+                        bytes.fromhex(receipt["result_hash_signature"])
                 ):
                     logger.warning(f"Invalid signature in receipt: {receipt}")
                     return False
@@ -171,8 +171,8 @@ class ReceiptSyncWorker:
 
     async def sync_single_gateway(self, validator_key: str, gateway_url: str):
         """Synchronize receipts from a single gateway."""
-        timestamp = await self.miner_receipt_manager.get_last_receipt_timestamp_for_validator_key(validator_key)
-        timestamp = timestamp or self.DEFAULT_TIMESTAMP
+        timestamp_result = await self.miner_receipt_manager.get_last_receipt_timestamp_for_validator_key(validator_key)
+        timestamp = timestamp_result['timestamp'] or self.DEFAULT_TIMESTAMP
         first_page_result = await self.fetch_page(gateway_url, timestamp)
 
         if not first_page_result:
