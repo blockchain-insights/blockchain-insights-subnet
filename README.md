@@ -4,18 +4,33 @@
 </div>
 
 ## Table of Contents
- 
-- [Introduction](#introduction)
-- [Subnet Vision](#subnet-vision)
-- [Roadmap](#roadmap)
-- [Overview](#overview)
-- [Subnet Architecture Components](#subnet-architecture-components)
-- [Scoring](#scoring)
-- [Miner Setup](MINER_SETUP.md)
-- [Validator Setup](VALIDATOR_SETUP.md)
-- Appendix
-  - [History of the Chain Insights Subnet](#History-of-the-Chain-Insights-Subnet)
-  - [Guru Posdast with aphex5](#Guru-Posdast-with-aphex5)
+
+- [Table of Contents](#table-of-contents)
+  - [Subnet Vision](#subnet-vision)
+  - [Roadmap](#roadmap)
+  - [Overview](#overview)
+  - [Subnet Architecture Components](#subnet-architecture-components)
+  - [Scoring](#scoring)
+    - [Scoring Model](#scoring-model)
+    - [\_score\_miner Method](#_score_miner-method)
+- [Challenges](#challenges)
+  - [Funds Flow Challenge](#funds-flow-challenge)
+  - [Balance Tracking Challenge](#balance-tracking-challenge)
+- [Organic Usage](#organic-usage)
+- [Installation Documentations](#installation-documentations)
+  - [Changelog](#changelog)
+  - [Miner Setup Instructions](#miner-setup-instructions)
+  - [Validator Setup Instructions](#validator-setup-instructions)
+- [Appendix](#appendix)
+  - [History of the Chain Insights Subnet](#history-of-the-chain-insights-subnet)
+    - [Formation and Launch](#formation-and-launch)
+    - [Early Growth and Team Expansion](#early-growth-and-team-expansion)
+    - [Adapting to New Opportunities](#adapting-to-new-opportunities)
+    - [Overcoming Challenges and Looking Ahead](#overcoming-challenges-and-looking-ahead)
+    - [Transition to Commune AI](#transition-to-commune-ai)
+    - [Current Vision](#current-vision)
+  - [Keith Singery Guru Podcast with aphex5](#keith-singery-guru-podcast-with-aphex5)
+  - [Chain Chat MVP demo](#chain-chat-mvp-demo)
   
 ### Subnet Vision
 
@@ -32,18 +47,28 @@ It focuses on tracking and analyzing the movement of cryptocurrency funds and ch
  
 ### Roadmap
 
-- [x] **Migration from Bittensor**: Transition the subnet from the Bittensor ecosystem to a commune ai ecosystem.
+- [X] **Migration from Bittensor**: Transition the subnet from the Bittensor ecosystem to a Commune AI ecosystem.
 - [x] **Validator Receipt System**: Develop a decentralized validator receipt sync mechanism.
-- [ ] **Funds flow api**: Develop a funds flow API that provides detailed insights into cryptocurrency fund flows.
-- [ ] **Balance API**: Create a balance API that tracks changes in cryptocurrency balances.
-- [ ] **Data Visualization**: Implement data visualization tools to present insights in a user-friendly format.
-- [ ] **App Development programme**: Launch an app development program to encourage the creation of applications that leverage the chain insights.
-- [ ] **Blockchain network monitoring**: Use miners with AI models to analyze blockchain data in real time to detect malicious funds flow patterns.
-- [ ] **Network Integrations**: Ongoing Miner's developments of blockchain indexers for various blockchain networks.
-  - [ ] **Commune AI Integrations**
-  - [ ] **Bittensor In Integration**
-  - [ ] **Ethereum Integration**
-  
+- [ ] **Gateway API**
+- - [ ] **Funds Flow API**: Develop a funds flow API that provides detailed insights into cryptocurrency fund flows.
+  - [ ] **Balance Tracking API**: Create a balance API that tracks changes in cryptocurrency balances.
+  - [ ] **Advance Cyper Algos API** Create Analysis Advance Algorithm APIs
+- [ ] **Data Visualization SDK**: Implement data visualization tools to present insights in a user-friendly format.
+- [ ] **Chains Integrations**: Ongoing miner developments of blockchain indexers for various blockchain networks.
+  - [x] **Bitcoin**
+    - [x] Funds Flow v1.1.0 Improvment
+    - [ ] Balance Tracking v1.1.0 Improvment
+  - [ ] **Commune AI ($COMAI)**
+    - [x] Funds Flow
+    - [ ] Balance Tracking
+  - [ ] **Bittensor $TAO**
+  - [ ] **Ethereum $ETH**
+  - [ ] **Polkadot $DOT**
+  - [ ] **Arbitrum $ARB**
+  - [ ] **Polygon $POL**
+- [ ] **App Development Program**: Launch an app development program to encourage the creation of applications that leverage chain insights.
+  - [ ] **Blockchain monitoring**: Use miners with AI/ML models to analyze blockchain data in real time to detect anomalies funds flow patterns.
+- [ ] **Chat Chain GPT Application**: Modify Chat Chain GPT application to work with Commune Subnet 20.
 
 ### Overview
 
@@ -84,7 +109,7 @@ This method calculates layered miner scores based on:
    - **Score:** Between `0.3` and `1.00`, depending on the number of accepted organic prompt responses among all miner responses within the last 30 days.
 
 **Layer 4 - WHEN Ready**
-  - Provides additional scoring for malicious pattern detection and blockchain monitoring alerts.
+  - Provides additional scoring for anomalies pattern detection and alerts events.
 
 ## Challenges
 
@@ -107,40 +132,48 @@ The Validator module continuously assesses miners, recalculating scores based on
 - **Scoring Influence:** Higher scores lead to more rewards and influence within the network.
 - **Dynamic Updates:** Scores adjust dynamically based on performance, ensuring only reliable miners maintain their influence in the network.
 
+## Installation Documentations
 
-# Appendix
+### [Changelog](CHANGELOG.md)
 
-## History of the Chain Insights Subnet
-### Formation and Launch
+### [Miner Setup Instructions](MINER_SETUP.md)
+
+### [Validator Setup Instructions](VALIDATOR_SETUP.md)
+
+## Appendix
+
+### History of the Chain Insights Subnet
+
+#### Formation and Launch
 
 Chain Insights Subnet officially launched on the Bittensor network on October 25, 2023, becoming fully operational in early December 2023. Founded by aphex5, a respected figure in the community, Chain Insights was created to deliver powerful, in-depth analytics for tracking and analyzing cryptocurrency fund flows and balance changes. The goal has always been to provide valuable insights into the cryptocurrency ecosystem, enhance anomaly detection, and contribute to the fight against financial crimes.
 
-### Early Growth and Team Expansion
+#### Early Growth and Team Expansion
 
 The project quickly gained momentum, attracting strong support from validators and benefiting from increasing emissions. By Q1 2024, the team had grown with the addition of six talented developers, further fueling the project's growth. In Q2 2024, the team welcomed four more developers, bringing new skills and ideas to help accelerate innovation and development.
 
-### Adapting to New Opportunities
+#### Adapting to New Opportunities
 
 During Q2, the evolving needs of the Open Tensor Foundation (OTF) presented exciting new opportunities for Chain Insights. The OTF’s focus on more diversified miner metrics and AI-driven advancements pushed the team to explore new frontiers, integrating advanced technologies and enhancing the miner-side functionality. This phase allowed the team to broaden its expertise and experiment with new concepts, further strengthening Chain Insights' capabilities.
 
-### Overcoming Challenges and Looking Ahead
+#### Overcoming Challenges and Looking Ahead
 
 As the project navigated these changes, Chain Insights delivered several key features, including Chain Chat, Cypher/SQL query conversions using large language models (LLMs), and tools for miner/validator monitoring and performance benchmarking. These developments reflected the team’s dedication to innovation and their commitment to creating a robust analytical tool for the cryptocurrency ecosystem.
 
 While the constantly evolving requirements from the OTF posed challenges, they also helped sharpen the team's focus and clarify the subnet’s unique value proposition. The team's resilience and vision have ensured that Chain Insights remains true to its original mission.
 
-### Transition to Commune AI
+#### Transition to Commune AI
 
 In August 2024, Chain Insights made a strategic decision to transition to Commune AI, an independent platform that allows the team to pursue their vision without external constraints. This move enables the team to continue refining the Chain Insights Subnet and deliver on its promise of providing advanced, cutting-edge analytics for cryptocurrency fund flows and balance changes.
 
-Current Vision
+#### Current Vision
 
 Today, Chain Insights remains focused on its core mission: offering comprehensive insights into cryptocurrency ecosystems, enhancing anomaly detection, and strengthening efforts to combat financial crimes. Operating within the Commune AI ecosystem allows the team to maintain autonomy and push forward with innovation, ensuring that Chain Insights remains a leader in blockchain analytics while staying true to its foundational goals.
 
-## Guru Podcast with aphex5
+### [Keith Singery](https://x.com/KeithSingery) Guru Podcast with aphex5
 
 - [Listen on spotify](https://open.spotify.com/episode/62k9rmnWWCWHf8bvawpO6R?si=WJcJPM0BSmmSSDWsm5T4EQ&nd=1&dlsi=368afd1dbeb149dd)
-- [Wath on X platform](https://x.com/KeithSingery/status/1768303479741898862?s=20)
+- [Watch on X platform](https://x.com/KeithSingery/status/1768303479741898862?s=20)
 
-## Chain Chat early days demo
-- [Watch on loom](https://www.loom.com/share/4ef89f1952a542a88968cd24578e1f43?sid=49f08f16-52a9-44e4-90d5-74bdd533a30d)
+### Chain Chat MVP demo
+- [Watch Chain Chat Demo](https://www.loom.com/share/4ef89f1952a542a88968cd24578e1f43?sid=49f08f16-52a9-44e4-90d5-74bdd533a30d)
