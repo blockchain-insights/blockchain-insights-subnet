@@ -1,6 +1,22 @@
 version: '3.8'
 
 services:
+
+  postgres-miner:
+    container_name: postgres-sn20-miner
+    image: postgres:16.3-alpine3.20
+    ports:
+      - "5430:5432"
+    volumes:
+      - "postgres-data-miner:/var/lib/postgresql/data"
+      - "./init.sql:/docker-entrypoint-initdb.d/init.sql"
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-miner}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeit456$}
+    restart: unless-stopped
+
+
   postgres:
     container_name: postgres-sn20
     image: postgres:16.3-alpine3.20
@@ -37,3 +53,4 @@ services:
 
 volumes:
   postgres-data-validator:
+  postgres-data-miner:

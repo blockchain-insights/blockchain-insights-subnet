@@ -16,19 +16,110 @@ class BitcoinFundsFlowQueryApi(FundsFlowQueryApi):
         except Exception as e:
             raise Exception(f"Error executing query: {str(e)}")
 
-    async def get_blocks(self, block_heights: List[int]) -> dict:
-        if len(block_heights) > 10:
-            raise ValueError("Cannot query more than 10 blocks at once")
+    async def get_blocks(self, block_height: int) -> dict:
+        if block_height <= 0:
+            raise ValueError("Block height must be a positive integer")
 
-        query = f"""
-            MATCH path1 = (a0:Address)-[s0:SENT*0..1]->(t1:Transaction)
-            WHERE t1.block_height IN {block_heights}
-            MATCH path2 = (t1)-[s1:SENT*0..1]->(a1:Address)
-            RETURN path1, path2
-        """
+        query = """
+            MATCH (t1:Transaction {block_height:%d})
+            OPTIONAL MATCH (t0)-[s0:SENT]->(a0:Address)-[s1:SENT]->(t1)-[s2:SENT]->(a2:Address)-[s3:SENT]->(t2)
+            WITH COLLECT(DISTINCT CASE WHEN t0 IS NOT NULL 
+                THEN { 
+                    id: t0.tx_id, 
+                    type: 'node', 
+                    label: 'transaction', 
+                    balance: t0.out_total_amount/100000000.0, 
+                    timestamp: t0.timestamp, 
+                    block_height: t0.block_height 
+                } END) 
+                + COLLECT(DISTINCT CASE WHEN t1 IS NOT NULL 
+                THEN { 
+                    id: t1.tx_id, 
+                    type: 'node', 
+                    label: 'transaction', 
+                    balance: t1.out_total_amount/100000000.0, 
+                    timestamp: t1.timestamp, 
+                    block_height: t1.block_height 
+                } END) 
+                + COLLECT(DISTINCT CASE WHEN t2 IS NOT NULL 
+                THEN { 
+                    id: t2.tx_id, 
+                    type: 'node', 
+                    label: 'transaction', 
+                    balance: t2.out_total_amount/100000000.0, 
+                    timestamp: t2.timestamp, 
+                    block_height: t2.block_height 
+                } END)
+                + COLLECT(DISTINCT CASE WHEN a0 IS NOT NULL 
+                THEN { 
+                    id: a0.address, 
+                    type: 'node', 
+                    label: 'address', 
+                    address: a0.address 
+                } END)
+                + COLLECT(DISTINCT CASE WHEN a2 IS NOT NULL 
+                THEN { 
+                    id: a2.address, 
+                    type: 'node', 
+                    label: 'address', 
+                    address: a2.address 
+                } END)
+                + COLLECT(DISTINCT CASE WHEN s0 IS NOT NULL 
+                THEN { 
+                    id: t0.tx_id + '-' + a0.address, 
+                    type: 'edge', 
+                    label: toString(s0.value_satoshi/100000000.0) + ' BTC', 
+                    from_id: t0.tx_id, 
+                    to_id: a0.address, 
+                    satoshi_value: s0.value_satoshi, 
+                    btc_value: s0.value_satoshi/100000000.0 
+                } END)
+                + COLLECT(DISTINCT CASE WHEN s1 IS NOT NULL 
+                THEN { 
+                    id: a0.address + '-' + t1.tx_id, 
+                    type: 'edge', 
+                    label: toString(s1.value_satoshi/100000000.0) + ' BTC', 
+                    from_id: a0.address, 
+                    to_id: t1.tx_id, 
+                    satoshi_value: s1.value_satoshi, 
+                    btc_value: s1.value_satoshi/100000000.0 
+                } END)
+                + COLLECT(DISTINCT CASE WHEN s2 IS NOT NULL 
+                THEN { 
+                    id: t1.tx_id + '-' + a2.address, 
+                    type: 'edge', 
+                    label: toString(s2.value_satoshi/100000000.0) + ' BTC', 
+                    from_id: t1.tx_id, 
+                    to_id: a2.address, 
+                    satoshi_value: s2.value_satoshi, 
+                    btc_value: s2.value_satoshi/100000000.0 
+                } END)
+                + COLLECT(DISTINCT CASE WHEN s3 IS NOT NULL 
+                THEN { 
+                    id: a2.address + '-' + t2.tx_id, 
+                    type: 'edge', 
+                    label: toString(s3.value_satoshi/100000000.0) + ' BTC', 
+                    from_id: a2.address, 
+                    to_id: t2.tx_id, 
+                    satoshi_value: s3.value_satoshi, 
+                    btc_value: s3.value_satoshi/100000000.0 
+                } END) AS elements
+            UNWIND elements AS element
+            RETURN element.id AS id,
+                   element.type AS type,
+                   element.label AS label,
+                   element.balance AS balance,
+                   element.timestamp AS timestamp,
+                   element.block_height AS block_height,
+                   element.address AS address,
+                   element.from_id AS from_id,
+                   element.to_id AS to_id,
+                   element.satoshi_value AS satoshi_value,
+                   element.btc_value AS btc_value
+            """ % block_height
 
         data = await self._execute_query(query)
-        return data
+        return data if data else []
 
     async def get_blocks_around_transaction(self, tx_id: str, left_hops: int, right_hops: int) -> dict:
         """Retrieve the transaction, its vins/vouts, and related paths within the specified hops."""

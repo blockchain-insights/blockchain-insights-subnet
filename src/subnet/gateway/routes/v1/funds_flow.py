@@ -28,20 +28,20 @@ def select_query_api(network: str, validator: Validator):
 @funds_flow_router.get("/{network}/get_blocks")
 async def get_blocks(
     network: str,
-    block_heights: List[int] = Query(..., description="List of block heights (maximum 10)", min_length=1, max_length=10),
+    block_height: int = Query(..., description="Block height"),
     response_type: ResponseType = Query(ResponseType.json),
     validator: Validator = Depends(get_validator),
     api_key: str = Depends(api_key_auth),
 ):
     query_api = select_query_api(network, validator)
-    data = await query_api.get_blocks(block_heights)
+    data = await query_api.get_blocks(block_height)
 
     if not data.get("response"):
         data["response"] = []
 
-    if data["response"]:
-        transformer = get_graph_transformer(network)  # Use the factory here
-        data["response"] = transformer.transform_result(data["response"])
+    #if data["response"]:
+        #transformer = get_graph_transformer(network)  # Use the factory here
+        #data["response"] = transformer.transform_result(data["response"])
 
     return format_response(data, response_type)
 

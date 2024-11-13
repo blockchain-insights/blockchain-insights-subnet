@@ -21,3 +21,18 @@ WITH keys(r) AS properties
 UNWIND properties AS property
 RETURN DISTINCT property;
 
+╒═════════════╕
+│label        │
+╞═════════════╡
+│"Cache"      │
+├─────────────┤
+│"Transaction"│
+├─────────────┤
+│"Address"    │
+└─────────────┘
+
+╒════════════════╕
+│relationshipType│
+╞════════════════╡
+│"SENT"          │
+└────────────────┘

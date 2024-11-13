@@ -4,7 +4,7 @@ from src.subnet.miner._config import MinerSettings
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from loguru import logger
-from neo4j import READ_ACCESS, GraphDatabase
+from neo4j import READ_ACCESS, GraphDatabase, WRITE_ACCESS
 from neo4j.exceptions import Neo4jError
 
 
@@ -22,7 +22,7 @@ class GraphSearch:
         )
 
     def execute_query(self, query: str):
-        with self.driver.session(default_access_mode=READ_ACCESS) as session:
+        with self.driver.session(default_access_mode=WRITE_ACCESS) as session:
             try:
                 result = session.run(query)
 
