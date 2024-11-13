@@ -21,8 +21,9 @@ class BitcoinFundsFlowQueryApi(FundsFlowQueryApi):
             raise ValueError("Block height must be a positive integer")
 
         query = """
-            MATCH (t1:Transaction {block_height:%d})
-            OPTIONAL MATCH (t0)-[s0:SENT]->(a0:Address)-[s1:SENT]->(t1)-[s2:SENT]->(a2:Address)-[s3:SENT]->(t2)
+            MATCH (t1:Transaction {block_height:%d})-[SENT]->(a:Address)
+            OPTIONAL MATCH (t0)-[s0:SENT]->(a0:Address)-[s1:SENT]->(t1)
+            OPTIONAL MATCH (t1)-[s2:SENT]->(a2:Address)-[s3:SENT]->(t2)
             WITH COLLECT(DISTINCT CASE WHEN t0 IS NOT NULL 
                 THEN { 
                     id: t0.tx_id, 
@@ -105,7 +106,7 @@ class BitcoinFundsFlowQueryApi(FundsFlowQueryApi):
                     btc_value: s3.value_satoshi/100000000.0 
                 } END) AS elements
             UNWIND elements AS element
-            RETURN element.id AS id,
+            RETURN DISTINCT element.id AS id,
                    element.type AS type,
                    element.label AS label,
                    element.balance AS balance,
