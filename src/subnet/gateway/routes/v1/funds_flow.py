@@ -62,10 +62,6 @@ async def get_transaction_by_tx_id(
     if not data.get("response"):
         data["response"] = []
 
-    if data["response"]:
-        transformer = get_graph_transformer(network)  # Use the factory here
-        data["response"] = transformer.transform_result(data["response"])
-
     return format_response(data, response_type)
 
 
