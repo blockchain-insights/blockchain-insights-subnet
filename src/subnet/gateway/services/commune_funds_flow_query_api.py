@@ -21,23 +21,24 @@ class CommuneFundsFlowQueryApi(FundsFlowQueryApi):
 
         query = """
             MATCH (a0:Address)-[t:TRANSACTION {block_height: %d}]->(a1:Address)
+            WITH DISTINCT a0, a1, t
             WITH 
-                COLLECT( {
+                COLLECT({
                     id: a0.address,
                     type: 'node',
                     label: 'address',
                     address: a0.address
                 }) AS source_addresses,
                 
-                COLLECT( {
+                COLLECT({
                     id: a1.address,
                     type: 'node',
                     label: 'address',
                     address: a1.address
                 }) AS target_addresses,
                  
-                COLLECT( {
-                    tx_id: t.id,
+                COLLECT({
+                    id: t.id,
                     type: 'edge',
                     block_height: t.block_height,
                     transaction_type: t.type,
@@ -50,7 +51,7 @@ class CommuneFundsFlowQueryApi(FundsFlowQueryApi):
             
             WITH source_addresses + target_addresses + edges AS elements
             UNWIND elements AS element
-            RETURN DISTINCT 
+            RETURN 
                 element.id AS id,
                 element.type AS type,
                 element.label AS label,
@@ -61,6 +62,7 @@ class CommuneFundsFlowQueryApi(FundsFlowQueryApi):
                 element.address AS address,
                 element.from_id AS from_id,
                 element.to_id AS to_id
+
         """ % block_height
 
         data = await self._execute_query(query)
