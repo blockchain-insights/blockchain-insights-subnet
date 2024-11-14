@@ -160,128 +160,78 @@ class BitcoinFundsFlowQueryApi(FundsFlowQueryApi):
         data = await self._execute_query(query)
         return data
 
-    async def get_address_transactions(self,
-                                       address: str,
-                                       in_hops: int = 2,
-                                       out_hops: int =2,
-                                       limit: Optional[int] = 100) -> dict:
-
-        if in_hops > 4 or out_hops > 4:
-            raise ValueError("Hops cannot exceed 4 in either direction")
+    async def get_address_transactions(self, address: str, limit: Optional[int] = 100) -> dict:
 
         if not isinstance(address, str) or not address.strip():
             raise ValueError("Address must be a non-empty string")
 
-        query = f"""
-            MATCH (center:Address {{address: '{address}'}})
+        query = """
+            MATCH (a0:Address {address: '%s'})
 
-            OPTIONAL MATCH (center)-[:SENT]-(t:Transaction)
-
-            OPTIONAL MATCH path_in = (src_tx:Transaction)-[:SENT]->(addr:Address)-[:SENT*0..{in_hops - 1}]->(in_addr:Address)-[:SENT]->(in_tx:Transaction)-[:SENT]->(center)
-
-            OPTIONAL MATCH path_out = (center)-[:SENT]->(out_tx:Transaction)-[:SENT]->(out_addr:Address)-[:SENT*0..{out_hops - 1}]->(dst_addr:Address)-[:SENT]->(dst_tx:Transaction)
-
+            OPTIONAL MATCH (a0)-[s1:SENT]->(t1:Transaction)-[s2:SENT]->(a1:Address)
+            OPTIONAL MATCH (a0)<-[s0:SENT]-(t0:Transaction)<-[s3:SENT]-(a3:Address)
+            
             WITH 
-                COLLECT(DISTINCT CASE WHEN src_tx IS NOT NULL THEN {{
-                    id: src_tx.tx_id, 
-                    type: 'node', 
-                    label: 'transaction',
-                    balance: src_tx.out_total_amount/100000000.0,
-                    timestamp: src_tx.timestamp,
-                    block_height: src_tx.block_height 
-                }} END) +
-                COLLECT(DISTINCT CASE WHEN in_tx IS NOT NULL THEN {{
-                    id: in_tx.tx_id,
-                    type: 'node',
-                    label: 'transaction',
-                    balance: in_tx.out_total_amount/100000000.0,
-                    timestamp: in_tx.timestamp,
-                    block_height: in_tx.block_height
-                }} END) +
-                COLLECT(DISTINCT CASE WHEN out_tx IS NOT NULL THEN {{
-                    id: out_tx.tx_id,
-                    type: 'node',
-                    label: 'transaction',
-                    balance: out_tx.out_total_amount/100000000.0,
-                    timestamp: out_tx.timestamp,
-                    block_height: out_tx.block_height
-                }} END) +
-                COLLECT(DISTINCT CASE WHEN dst_tx IS NOT NULL THEN {{
-                    id: dst_tx.tx_id,
-                    type: 'node',
-                    label: 'transaction',
-                    balance: dst_tx.out_total_amount/100000000.0,
-                    timestamp: dst_tx.timestamp,
-                    block_height: dst_tx.block_height
-                }} END) +
-                COLLECT(DISTINCT CASE WHEN addr IS NOT NULL THEN {{
-                    id: addr.address,
-                    type: 'node',
-                    label: 'address',
-                    address: addr.address
-                }} END) +
-                COLLECT(DISTINCT CASE WHEN in_addr IS NOT NULL THEN {{
-                    id: in_addr.address,
-                    type: 'node',
-                    label: 'address',
-                    address: in_addr.address
-                }} END) +
-                COLLECT(DISTINCT {{
-                    id: center.address,
-                    type: 'node',
-                    label: 'address',
-                    address: center.address,
+                COLLECT(DISTINCT CASE WHEN t1 IS NOT NULL THEN {
+                    id: t1.tx_id, 
+                    type: 'transaction',
+                    balance: t1.out_total_amount / 100000000.0,
+                    timestamp: t1.timestamp,
+                    block_height: t1.block_height 
+                } END) +
+                COLLECT(DISTINCT CASE WHEN t0 IS NOT NULL THEN {
+                    id: t0.tx_id,
+                    type: 'transaction',
+                    balance: t0.out_total_amount / 100000000.0,
+                    timestamp: t0.timestamp,
+                    block_height: t0.block_height
+                } END) +
+                COLLECT(DISTINCT CASE WHEN a1 IS NOT NULL THEN {
+                    id: a1.address,
+                    type: 'address'
+                } END) +
+                COLLECT(DISTINCT CASE WHEN a3 IS NOT NULL THEN {
+                    id: a3.address,
+                    type: 'address'
+                } END) +
+                COLLECT(DISTINCT {
+                    id: a0.address,
+                    type: 'address',
                     is_center: true
-                }}) +
-                COLLECT(DISTINCT CASE WHEN out_addr IS NOT NULL THEN {{
-                    id: out_addr.address,
-                    type: 'node',
-                    label: 'address',
-                    address: out_addr.address
-                }} END) +
-                COLLECT(DISTINCT CASE WHEN dst_addr IS NOT NULL THEN {{
-                    id: dst_addr.address,
-                    type: 'node',
-                    label: 'address',
-                    address: dst_addr.address
-                }} END) +
-                COLLECT(DISTINCT CASE WHEN (src_tx)-[s:SENT]->(addr) THEN {{
-                    id: src_tx.tx_id + '-' + addr.address,
+                }) +
+                COLLECT(DISTINCT CASE WHEN (t1)-[s2:SENT]->(a1) THEN {
+                    id: t1.tx_id + '-' + a1.address,
                     type: 'edge',
-                    label: toString(s.value_satoshi/100000000.0) + ' BTC',
-                    from_id: src_tx.tx_id,
-                    to_id: addr.address,
-                    value: s.value_satoshi/100000000.0,
-                    timestamp: src_tx.timestamp
-                }} END) +
-                COLLECT(DISTINCT CASE WHEN (in_tx)-[s:SENT]->(center) THEN {{
-                    id: in_tx.tx_id + '-' + center.address,
+                    from_id: t1.tx_id,
+                    to_id: a1.address,
+                    value: s2.value_satoshi / 100000000.0,
+                    timestamp: t1.timestamp
+                } END) +
+                COLLECT(DISTINCT CASE WHEN (a0)-[s1:SENT]->(t1) THEN {
+                    id: a0.address + '-' + t1.tx_id,
                     type: 'edge',
-                    label: toString(s.value_satoshi/100000000.0) + ' BTC',
-                    from_id: in_tx.tx_id,
-                    to_id: center.address,
-                    value: s.value_satoshi/100000000.0,
-                    timestamp: in_tx.timestamp
-                }} END) +
-                COLLECT(DISTINCT CASE WHEN (center)-[s:SENT]->(out_tx) THEN {{
-                    id: center.address + '-' + out_tx.tx_id,
+                    from_id: a0.address,
+                    to_id: t1.tx_id,
+                    value: s1.value_satoshi / 100000000.0,
+                    timestamp: t1.timestamp
+                } END) +
+                COLLECT(DISTINCT CASE WHEN (t0)-[s0:SENT]->(a0) THEN {
+                    id: t0.tx_id + '-' + a0.address,
                     type: 'edge',
-                    label: toString(s.value_satoshi/100000000.0) + ' BTC',
-                    from_id: center.address,
-                    to_id: out_tx.tx_id,
-                    value: s.value_satoshi/100000000.0,
-                    timestamp: out_tx.timestamp
-                }} END) +
-                COLLECT(DISTINCT CASE WHEN (out_tx)-[s:SENT]->(out_addr) THEN {{
-                    id: out_tx.tx_id + '-' + out_addr.address,
+                    from_id: t0.tx_id,
+                    to_id: a0.address,
+                    value: s0.value_satoshi / 100000000.0,
+                    timestamp: t0.timestamp
+                } END) +
+                COLLECT(DISTINCT CASE WHEN (a3)-[s3:SENT]->(t0) THEN {
+                    id: a3.address + '-' + t0.tx_id,
                     type: 'edge',
-                    label: toString(s.value_satoshi/100000000.0) + ' BTC',
-                    from_id: out_tx.tx_id,
-                    to_id: out_addr.address,
-                    value: s.value_satoshi/100000000.0,
-                    timestamp: out_tx.timestamp
-                }} END) AS elements
-
+                    from_id: a3.address,
+                    to_id: t0.tx_id,
+                    value: s3.value_satoshi / 100000000.0,
+                    timestamp: t0.timestamp
+                } END) AS elements
+            
             UNWIND elements AS element
             WITH element
             WHERE element IS NOT NULL
@@ -295,18 +245,10 @@ class BitcoinFundsFlowQueryApi(FundsFlowQueryApi):
                 element.address AS address,
                 element.from_id AS from_id,
                 element.to_id AS to_id,
-                element.value AS btc_value,
-                CASE 
-                    WHEN element.to_id = '{address}' THEN 'incoming'
-                    WHEN element.from_id = '{address}' THEN 'outgoing'
-                    ELSE NULL 
-                END AS flow_direction,
-                CASE 
-                    WHEN element.is_center = true THEN true 
-                    ELSE false 
-                END AS is_center_node
+                element.satoshi_value AS satoshi_value,
+                element.btc_value AS btc_value
             ORDER BY element.timestamp DESC
-        """
+        """ % address
 
         data = await self._execute_query(query)
         return data if data else []

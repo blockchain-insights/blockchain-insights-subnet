@@ -69,9 +69,6 @@ async def get_transaction_by_tx_id(
 async def get_address_transactions(
     network: str,
     address: str = Query(...),
-    in_hops: int = Query(2, description="Number of hops to the left", ge=0, le=4),
-    out_hops: int = Query(2, description="Number of hops to the right", ge=0, le=4),
-    limit: Optional[int] = Query(100),
     response_type: ResponseType = Query(ResponseType.json),
     validator: Validator = Depends(get_validator),
     api_key: str = Depends(api_key_auth),
@@ -79,9 +76,6 @@ async def get_address_transactions(
     query_api = select_query_api(network, validator)
     data = await query_api.get_address_transactions(
         address=address,
-        in_hops=in_hops,
-        out_hops=out_hops,
-        limit=limit,
     )
 
     if not data.get("response"):
