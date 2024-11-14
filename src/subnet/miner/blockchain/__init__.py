@@ -71,7 +71,8 @@ class GraphSearch:
                 return results_data
 
             except Neo4jError as e:
-                raise ValueError("Query attempted to modify data, which is not allowed.") from e
+                logger.error("Failed to execute query", error=e, query=query)
+                raise ValueError("Failed to execute query") from e
 
     def solve_challenge(self, in_total_amount: int, out_total_amount: int, tx_id_last_6_chars: str) -> str:
         """Solve a challenge and return the result."""

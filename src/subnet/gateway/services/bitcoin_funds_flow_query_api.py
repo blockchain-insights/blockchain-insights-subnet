@@ -28,15 +28,15 @@ class BitcoinFundsFlowQueryApi(FundsFlowQueryApi):
                 WITH 
                     COLLECT(DISTINCT CASE WHEN t0 IS NOT NULL THEN {
                         id: t0.tx_id, type: 'node', label: 'transaction', 
-                        balance: t0.out_total_amount/100000000.0, timestamp: t0.timestamp, 
+                        amount: t0.out_total_amount/100000000.0, timestamp: t0.timestamp, 
                         block_height: t0.block_height } END) AS transactions_t0,
                     COLLECT(DISTINCT CASE WHEN t1 IS NOT NULL THEN {
                         id: t1.tx_id, type: 'node', label: 'transaction', 
-                        balance: t1.out_total_amount/100000000.0, timestamp: t1.timestamp, 
+                        amount: t1.out_total_amount/100000000.0, timestamp: t1.timestamp, 
                         block_height: t1.block_height } END) AS transactions_t1,
                     COLLECT(DISTINCT CASE WHEN t2 IS NOT NULL THEN {
                         id: t2.tx_id, type: 'node', label: 'transaction', 
-                        balance: t2.out_total_amount/100000000.0, timestamp: t2.timestamp, 
+                        amount: t2.out_total_amount/100000000.0, timestamp: t2.timestamp, 
                         block_height: t2.block_height } END) AS transactions_t2,
 
                     COLLECT(DISTINCT CASE WHEN a0 IS NOT NULL THEN {
@@ -74,7 +74,7 @@ class BitcoinFundsFlowQueryApi(FundsFlowQueryApi):
                 RETURN DISTINCT element.id AS id,
                        element.type AS type,
                        element.label AS label,
-                       element.balance AS balance,
+                       element.amount AS amount,
                        element.timestamp AS timestamp,
                        element.block_height AS block_height,
                        element.address AS address,
@@ -98,7 +98,7 @@ class BitcoinFundsFlowQueryApi(FundsFlowQueryApi):
             WITH 
                 COLLECT(DISTINCT CASE WHEN t1 IS NOT NULL THEN {
                     id: t1.tx_id, type: 'node', label: 'transaction', 
-                    balance: t1.out_total_amount / 100000000.0, 
+                    amount: t1.out_total_amount / 100000000.0, 
                     timestamp: t1.timestamp, block_height: t1.block_height 
                 } END) AS transactions_t1,
 
@@ -141,7 +141,7 @@ class BitcoinFundsFlowQueryApi(FundsFlowQueryApi):
             RETURN DISTINCT element.id AS id,
                    element.type AS type,
                    element.label AS label,
-                   element.balance AS balance,
+                   element.amount AS amount,
                    element.timestamp AS timestamp,
                    element.block_height AS block_height,
                    element.address AS address,
@@ -173,7 +173,7 @@ class BitcoinFundsFlowQueryApi(FundsFlowQueryApi):
                     id: t1.tx_id,
                     type: 'node',
                     label: 'transaction',
-                    balance: t1.out_total_amount/100000000.0,
+                    amount: t1.out_total_amount/100000000.0,
                     timestamp: t1.timestamp,
                     block_height: t1.block_height
                 }) AS out_txs,
@@ -181,7 +181,7 @@ class BitcoinFundsFlowQueryApi(FundsFlowQueryApi):
                     id: t0.tx_id,
                     type: 'node',
                     label: 'transaction',
-                    balance: t0.out_total_amount/100000000.0,
+                    amount: t0.out_total_amount/100000000.0,
                     timestamp: t0.timestamp,
                     block_height: t0.block_height
                 }) AS in_txs,
@@ -255,7 +255,7 @@ class BitcoinFundsFlowQueryApi(FundsFlowQueryApi):
                 element.id AS id,
                 element.type AS type,
                 element.label AS label,
-                element.balance AS balance,
+                element.amount AS amount,
                 element.timestamp AS timestamp,
                 element.block_height AS block_height,
                 element.address AS address,

@@ -1,4 +1,3 @@
-from typing import Optional
 from src.subnet.protocol import NETWORK_COMMUNE, MODEL_KIND_FUNDS_FLOW
 from src.subnet.validator.validator import Validator
 from src.subnet.gateway.services import FundsFlowQueryApi
@@ -41,7 +40,7 @@ class CommuneFundsFlowQueryApi(FundsFlowQueryApi):
                     id: t.tx_id,
                     type: 'node',
                     label: 'transaction',
-                    balance: t.amount,
+                    amount: t.amount,
                     timestamp: t.timestamp,
                     block_height: t.block_height
                 }) AS transactions,
@@ -52,7 +51,7 @@ class CommuneFundsFlowQueryApi(FundsFlowQueryApi):
                     label: toString(t.amount) + ' COMAI',
                     from_id: a0.address,
                     to_id: a1.address,
-                    amount: t.amount,
+                    amount: t.amount
                 }) AS edges
             
             WITH source_addresses + target_addresses + transactions + edges AS elements
@@ -61,13 +60,12 @@ class CommuneFundsFlowQueryApi(FundsFlowQueryApi):
                 element.id AS id,
                 element.type AS type,
                 element.label AS label,
-                element.balance AS balance,
+                element.amount AS amount,
                 element.timestamp AS timestamp,
                 element.block_height AS block_height,
                 element.address AS address,
                 element.from_id AS from_id,
-                element.to_id AS to_id,
-                element.balance AS balance
+                element.to_id AS to_id
         """ % block_height
 
         data = await self._execute_query(query)
@@ -96,7 +94,7 @@ class CommuneFundsFlowQueryApi(FundsFlowQueryApi):
                     id: t.tx_id,
                     type: 'node',
                     label: 'transaction',
-                    balance: t.amount,
+                    amount: t.amount,
                     timestamp: t.timestamp,
                     block_height: t.block_height
                 }) AS transactions,
@@ -107,7 +105,7 @@ class CommuneFundsFlowQueryApi(FundsFlowQueryApi):
                     label: toString(t.amount) + ' COMAI',
                     from_id: a0.address,
                     to_id: a1.address,
-                    amount: t.amount,
+                    amount: t.amount
                 }) AS edges
             
             WITH source_addresses + target_addresses + transactions + edges AS elements
@@ -116,13 +114,12 @@ class CommuneFundsFlowQueryApi(FundsFlowQueryApi):
                 element.id AS id,
                 element.type AS type,
                 element.label AS label,
-                element.balance AS balance,
+                element.amount AS amount,
                 element.timestamp AS timestamp,
                 element.block_height AS block_height,
                 element.address AS address,
                 element.from_id AS from_id,
-                element.to_id AS to_id,
-                element.balance AS balance
+                element.to_id AS to_id
         """ % tx_id
 
         data = await self._execute_query(query)
