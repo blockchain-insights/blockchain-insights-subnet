@@ -97,39 +97,61 @@ class BitcoinFundsFlowQueryApi(FundsFlowQueryApi):
 
             WITH 
                 COLLECT(DISTINCT CASE WHEN t1 IS NOT NULL THEN {
-                    id: t1.tx_id, type: 'node', label: 'transaction', 
+                    id: t1.tx_id, 
+                    type: 'node', 
+                    label: 'transaction', 
                     amount: t1.out_total_amount / 100000000.0, 
-                    timestamp: t1.timestamp, block_height: t1.block_height 
+                    timestamp: t1.timestamp,
+                    block_height: t1.block_height 
                 } END) AS transactions_t1,
 
                 COLLECT(DISTINCT CASE WHEN a0 IS NOT NULL THEN {
-                    id: a0.address, type: 'node', label: 'address', address: a0.address 
+                    id: a0.address, 
+                    type: 'node',
+                    label: 'address',
+                    address: a0.address 
                 } END) AS addresses_a0,
+                
                 COLLECT(DISTINCT CASE WHEN a1 IS NOT NULL THEN {
-                    id: a1.address, type: 'node', label: 'address', address: a1.address 
+                    id: a1.address, 
+                    type: 'node',
+                    label: 'address',
+                    address: a1.address 
                 } END) AS addresses_a1,
+                
                 COLLECT(DISTINCT CASE WHEN a2 IS NOT NULL THEN {
-                    id: a2.address, type: 'node', label: 'address', address: a2.address 
+                    id: a2.address,
+                    type: 'node',
+                    label: 'address',
+                    address: a2.address 
                 } END) AS addresses_a2,
 
                 COLLECT(DISTINCT CASE WHEN s1 IS NOT NULL THEN {
-                    id: t1.tx_id + '-' + a1.address, type: 'edge', 
+                    id: t1.tx_id + '-' + a1.address,
+                    type: 'edge', 
                     label: toString(s1.value_satoshi / 100000000.0) + ' BTC', 
-                    from_id: t1.tx_id, to_id: a1.address, 
+                    from_id: t1.tx_id, 
+                    to_id: a1.address, 
                     satoshi_value: s1.value_satoshi, 
                     btc_value: s1.value_satoshi / 100000000.0 
                 } END) AS edges_s1,
+                
                 COLLECT(DISTINCT CASE WHEN s2 IS NOT NULL THEN {
-                    id: a0.address + '-' + t1.tx_id, type: 'edge', 
+                    id: a0.address + '-' + t1.tx_id,
+                    type: 'edge', 
                     label: toString(s2.value_satoshi / 100000000.0) + ' BTC', 
-                    from_id: a0.address, to_id: t1.tx_id, 
+                    from_id: a0.address,
+                    to_id: t1.tx_id, 
                     satoshi_value: s2.value_satoshi, 
                     btc_value: s2.value_satoshi / 100000000.0 
                 } END) AS edges_s2,
+                
                 COLLECT(DISTINCT CASE WHEN s3 IS NOT NULL THEN {
-                    id: t1.tx_id + '-' + a2.address, type: 'edge', 
+                    id: t1.tx_id + '-' + a2.address,
+                    type: 'edge', 
                     label: toString(s3.value_satoshi / 100000000.0) + ' BTC', 
-                    from_id: t1.tx_id, to_id: a2.address, 
+                    from_id: t1.tx_id,
+                    to_id: a2.address, 
                     satoshi_value: s3.value_satoshi, 
                     btc_value: s3.value_satoshi / 100000000.0 
                 } END) AS edges_s3

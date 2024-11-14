@@ -22,22 +22,22 @@ class CommuneFundsFlowQueryApi(FundsFlowQueryApi):
         query = """
             MATCH (a0:Address)-[t:TRANSACTION {block_height: %d}]->(a1:Address)
             WITH 
-                COLLECT(DISTINCT {
+                COLLECT( {
                     id: a0.address,
                     type: 'node',
                     label: 'address',
                     address: a0.address
                 }) AS source_addresses,
                 
-                COLLECT(DISTINCT {
+                COLLECT( {
                     id: a1.address,
                     type: 'node',
                     label: 'address',
                     address: a1.address
                 }) AS target_addresses,
                  
-                COLLECT(DISTINCT {
-                    id: t.id,
+                COLLECT( {
+                    tx_id: t.id,
                     type: 'edge',
                     block_height: t.block_height,
                     transaction_type: t.type,
@@ -45,7 +45,7 @@ class CommuneFundsFlowQueryApi(FundsFlowQueryApi):
                     label: toString(t.amount/1000000000) + ' COMAI',
                     from_id: a0.address,
                     to_id: a1.address,
-                    amount: t.amount/1000000000
+                    amount: toFloat(t.amount/1000000000)
                 }) AS edges
             
             WITH source_addresses + target_addresses + edges AS elements
