@@ -16,7 +16,7 @@ class BitcoinFundsFlowQueryApi(FundsFlowQueryApi):
         except Exception as e:
             raise Exception(f"Error executing query: {str(e)}")
 
-    async def get_blocks(self, block_height: int) -> dict:
+    async def get_block(self, block_height: int) -> dict:
         if block_height <= 0:
             raise ValueError("Block height must be a positive integer")
 
@@ -87,11 +87,8 @@ class BitcoinFundsFlowQueryApi(FundsFlowQueryApi):
         data = await self._execute_query(query)
         return data if data else []
 
-    async def get_blocks_around_transaction(self, tx_id: str, left_hops: int, right_hops: int) -> dict:
+    async def get_blocks_around_transaction(self, tx_id: str) -> dict:
         """Retrieve the transaction, its vins/vouts, and related paths within the specified hops."""
-
-        if left_hops > 4 or right_hops > 4:
-            raise ValueError("Hops cannot exceed 4 in either direction")
 
         query = """
                 MATCH (t1:Transaction {tx_id:'%s'})-[s1:SENT]->(a1:Address)
@@ -252,50 +249,3 @@ class BitcoinFundsFlowQueryApi(FundsFlowQueryApi):
 
         data = await self._execute_query(query)
         return data if data else []
-
-    async def get_funds_flow(self,
-                             address: str,
-                             direction: str,
-                             intermediate_addresses: Optional[List[str]] = None,
-                             hops: Optional[int] = 5,
-                             start_block_height: Optional[int] = None,
-                             end_block_height: Optional[int] = None) -> dict:
-
-        # Start with the base path matching with hops included
-        if direction == 'right':
-            base_query = f"""
-            MATCH path1 = (a1:Address {{address: '{address}'}})
-                          -[s1:SENT]->(t1:Transaction)
-                          -[s2:SENT*1..{hops}]->(a2:Address)
-            """
-        elif direction == 'left':
-            base_query = f"""
-            MATCH path1 = (a1:Address {{address: '{address}'}})
-                          <-[s1:SENT]-(t1:Transaction)
-                          <-[s2:SENT*1..{hops}]-(a2:Address)
-            """
-        else:
-            raise ValueError("Direction must be either 'left' or 'right'")
-
-        query_elements = [base_query]
-
-        # Add block height filtering if specified
-        if start_block_height is not None and end_block_height is not None:
-            query_elements.append(f"WHERE t1.block_height IN range({start_block_height}, {end_block_height})")
-
-        # Handle intermediate address filtering if provided
-        if intermediate_addresses:
-            intermediates_condition = " AND ".join(
-                [f"'{addr}' IN [x IN nodes(path1) | x.address]" for addr in intermediate_addresses]
-            )
-            query_elements.append(f"AND {intermediates_condition}")
-
-        # Return only path1, which contains all relevant information
-        query_elements.append("RETURN path1")
-
-        # Assemble the final query string
-        final_query = "\n".join(query_elements)
-
-        # Execute the query and transform the results
-        data = await self._execute_query(final_query)
-        return data
