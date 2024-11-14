@@ -453,10 +453,23 @@ class Validator(Module):
         sample_size = 16
 
         miners = await self.miner_discovery_manager.get_miners_by_network(network)
-        if len(miners) < 3:
+        if 3 > len(miners) > 0:
             top_miners = miners
+        if len(miners) == 0:
+            return {
+                "request_id": request_id,
+                "timestamp": timestamp,
+                "miner_keys": [],
+                "query_hash": query_hash,
+                "response_hash": None,
+                "verified": False,
+                "verifying_miners": [],
+                "model_kind": model_kind,
+                "query": query,
+                "response": None
+            }
         else:
-            top_miners = sample(miners[:sample_size], select_count)
+            top_miners = miners if len(miners) <= select_count else sample(miners, select_count)
 
         #WE KEEP IT HERE FOR DEBUGGING PURPOSES
         m = top_miners[0]
