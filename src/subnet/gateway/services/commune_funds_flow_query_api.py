@@ -41,7 +41,7 @@ class CommuneFundsFlowQueryApi(FundsFlowQueryApi):
                     id: t.tx_id,
                     type: 'node',
                     label: 'transaction',
-                    balance: t.value_satoshi/100000000.0,
+                    balance: t.amount,
                     timestamp: t.timestamp,
                     block_height: t.block_height
                 }) AS transactions,
@@ -49,11 +49,10 @@ class CommuneFundsFlowQueryApi(FundsFlowQueryApi):
                 COLLECT(DISTINCT {
                     id: t.tx_id + '-' + a1.address,
                     type: 'edge',
-                    label: toString(t.value_satoshi/100000000.0) + ' BTC',
+                    label: toString(t.amount) + ' COMAI',
                     from_id: a0.address,
                     to_id: a1.address,
-                    satoshi_value: t.value_satoshi,
-                    btc_value: t.value_satoshi/100000000.0
+                    amount: t.amount,
                 }) AS edges
             
             WITH source_addresses + target_addresses + transactions + edges AS elements
@@ -68,8 +67,7 @@ class CommuneFundsFlowQueryApi(FundsFlowQueryApi):
                 element.address AS address,
                 element.from_id AS from_id,
                 element.to_id AS to_id,
-                element.satoshi_value AS satoshi_value,
-                element.btc_value AS btc_value
+                element.balance AS balance
         """ % block_height
 
         data = await self._execute_query(query)
@@ -79,40 +77,39 @@ class CommuneFundsFlowQueryApi(FundsFlowQueryApi):
 
         query = """
             MATCH (a0:Address)-[t:TRANSACTION {id: '%s'}]->(a1:Address)
-            WITH 
+                        WITH 
                 COLLECT(DISTINCT {
                     id: a0.address,
                     type: 'node',
                     label: 'address',
                     address: a0.address
                 }) AS source_addresses,
-
+                
                 COLLECT(DISTINCT {
                     id: a1.address,
                     type: 'node',
                     label: 'address',
                     address: a1.address
                 }) AS target_addresses,
-
+                
                 COLLECT(DISTINCT {
                     id: t.tx_id,
                     type: 'node',
                     label: 'transaction',
-                    balance: t.value_satoshi/100000000.0,
+                    balance: t.amount,
                     timestamp: t.timestamp,
                     block_height: t.block_height
                 }) AS transactions,
-
+                
                 COLLECT(DISTINCT {
                     id: t.tx_id + '-' + a1.address,
                     type: 'edge',
-                    label: toString(t.value_satoshi/100000000.0) + ' BTC',
+                    label: toString(t.amount) + ' COMAI',
                     from_id: a0.address,
                     to_id: a1.address,
-                    satoshi_value: t.value_satoshi,
-                    btc_value: t.value_satoshi/100000000.0
+                    amount: t.amount,
                 }) AS edges
-
+            
             WITH source_addresses + target_addresses + transactions + edges AS elements
             UNWIND elements AS element
             RETURN DISTINCT 
@@ -125,8 +122,7 @@ class CommuneFundsFlowQueryApi(FundsFlowQueryApi):
                 element.address AS address,
                 element.from_id AS from_id,
                 element.to_id AS to_id,
-                element.satoshi_value AS satoshi_value,
-                element.btc_value AS btc_value
+                element.balance AS balance
         """ % tx_id
 
         data = await self._execute_query(query)
