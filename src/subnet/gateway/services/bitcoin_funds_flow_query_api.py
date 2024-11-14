@@ -16,99 +16,255 @@ class BitcoinFundsFlowQueryApi(FundsFlowQueryApi):
         except Exception as e:
             raise Exception(f"Error executing query: {str(e)}")
 
-    async def get_blocks(self, block_heights: List[int]) -> dict:
-        if len(block_heights) > 10:
-            raise ValueError("Cannot query more than 10 blocks at once")
+    async def get_block(self, block_height: int) -> dict:
+        if block_height <= 0:
+            raise ValueError("Block height must be a positive integer")
 
-        query = f"""
-            MATCH path1 = (a0:Address)-[s0:SENT*0..1]->(t1:Transaction)
-            WHERE t1.block_height IN {block_heights}
-            MATCH path2 = (t1)-[s1:SENT*0..1]->(a1:Address)
-            RETURN path1, path2
-        """
+        query = """
+                MATCH (t1:Transaction {block_height:%d})-[s1:SENT]->(a1:Address)
+                OPTIONAL MATCH (t0)-[s0:SENT]->(a0:Address)-[s2:SENT]->(t1)
+                OPTIONAL MATCH (t1)-[s3:SENT]->(a2:Address)-[s4:SENT]->(t2)
+
+                WITH 
+                    CASE WHEN t0 IS NOT NULL THEN {
+                        id: t0.tx_id, type: 'node', label: 'transaction', 
+                        amount: t0.out_total_amount/100000000.0, timestamp: t0.timestamp, 
+                        block_height: t0.block_height } ELSE NULL END AS transaction_t0,
+                    CASE WHEN t1 IS NOT NULL THEN {
+                        id: t1.tx_id, type: 'node', label: 'transaction', 
+                        amount: t1.out_total_amount/100000000.0, timestamp: t1.timestamp, 
+                        block_height: t1.block_height } ELSE NULL END AS transaction_t1,
+                    CASE WHEN t2 IS NOT NULL THEN {
+                        id: t2.tx_id, type: 'node', label: 'transaction', 
+                        amount: t2.out_total_amount/100000000.0, timestamp: t2.timestamp, 
+                        block_height: t2.block_height } ELSE NULL END AS transaction_t2,
+
+                    CASE WHEN a0 IS NOT NULL THEN {
+                        id: a0.address, type: 'node', label: 'address', address: a0.address } ELSE NULL END AS address_a0,
+                    CASE WHEN a1 IS NOT NULL THEN {
+                        id: a1.address, type: 'node', label: 'address', address: a1.address } ELSE NULL END AS address_a1,
+                    CASE WHEN a2 IS NOT NULL THEN {
+                        id: a2.address, type: 'node', label: 'address', address: a2.address } ELSE NULL END AS address_a2,
+
+                    CASE WHEN s0 IS NOT NULL THEN {
+                        id: t0.tx_id + '-' + a0.address, type: 'edge', label: toString(s0.value_satoshi/100000000.0) + ' BTC', 
+                        from_id: t0.tx_id, to_id: a0.address, satoshi_value: s0.value_satoshi, 
+                        btc_value: s0.value_satoshi/100000000.0 } ELSE NULL END AS edge_s0,
+                    CASE WHEN s1 IS NOT NULL THEN {
+                        id: t1.tx_id + '-' + a1.address, type: 'edge', label: toString(s1.value_satoshi/100000000.0) + ' BTC', 
+                        from_id: t1.tx_id, to_id: a1.address, satoshi_value: s1.value_satoshi, 
+                        btc_value: s1.value_satoshi/100000000.0 } ELSE NULL END AS edge_s1,
+                    CASE WHEN s2 IS NOT NULL THEN {
+                        id: a0.address + '-' + t1.tx_id, type: 'edge', label: toString(s2.value_satoshi/100000000.0) + ' BTC', 
+                        from_id: a0.address, to_id: t1.tx_id, satoshi_value: s2.value_satoshi, 
+                        btc_value: s2.value_satoshi/100000000.0 } ELSE NULL END AS edge_s2,
+                    CASE WHEN s3 IS NOT NULL THEN {
+                        id: t1.tx_id + '-' + a2.address, type: 'edge', label: toString(s3.value_satoshi/100000000.0) + ' BTC', 
+                        from_id: t1.tx_id, to_id: a2.address, satoshi_value: s3.value_satoshi, 
+                        btc_value: s3.value_satoshi/100000000.0 } ELSE NULL END AS edge_s3,
+                    CASE WHEN s4 IS NOT NULL THEN {
+                        id: a2.address + '-' + t2.tx_id, type: 'edge', label: toString(s4.value_satoshi/100000000.0) + ' BTC', 
+                        from_id: a2.address, to_id: t2.tx_id, satoshi_value: s4.value_satoshi, 
+                        btc_value: s4.value_satoshi/100000000.0 } ELSE NULL END AS edge_s4
+
+                WITH [transaction_t0, transaction_t1, transaction_t2, address_a0, address_a1, address_a2, edge_s0, edge_s1, edge_s2, edge_s3, edge_s4] AS elements
+                UNWIND elements AS element
+                WITH element WHERE element IS NOT NULL
+                RETURN DISTINCT 
+                    element.id AS id,
+                    element.type AS type,
+                    element.label AS label,
+                    element.amount AS amount,
+                    element.timestamp AS timestamp,
+                    element.block_height AS block_height,
+                    element.address AS address,
+                    element.from_id AS from_id,
+                    element.to_id AS to_id,
+                    element.satoshi_value AS satoshi_value,
+                    element.btc_value AS btc_value
+                """ % block_height
 
         data = await self._execute_query(query)
-        return data
+        return data if data else []
 
-    async def get_blocks_around_transaction(self, tx_id: str, left_hops: int, right_hops: int) -> dict:
+    async def get_blocks_around_transaction(self, tx_id: str) -> dict:
         """Retrieve the transaction, its vins/vouts, and related paths within the specified hops."""
 
-        if left_hops > 4 or right_hops > 4:
-            raise ValueError("Hops cannot exceed 4 in either direction")
+        query = """
+            MATCH (t1:Transaction {tx_id: '%s'})-[s1:SENT]->(a1:Address)
+            OPTIONAL MATCH (a0:Address)-[s2:SENT]->(t1)
+            OPTIONAL MATCH (t1)-[s3:SENT]->(a2:Address)
 
-        query = f"""
-            MATCH path1 = (a0:Address)-[s0:SENT*0..{left_hops}]->(t1:Transaction {{tx_id: '{tx_id}'}})
-            MATCH path2 = (t1)-[s1:SENT*0..{right_hops}]->(a1:Address)
-            RETURN path1, path2
-        """
+            WITH 
+                COLLECT(DISTINCT CASE WHEN t1 IS NOT NULL THEN {
+                    id: t1.tx_id, type: 'node', label: 'transaction', 
+                    amount: t1.out_total_amount / 100000000.0, 
+                    timestamp: t1.timestamp, block_height: t1.block_height 
+                } END) AS transactions_t1,
+
+                COLLECT(DISTINCT CASE WHEN a0 IS NOT NULL THEN {
+                    id: a0.address, type: 'node', label: 'address', address: a0.address 
+                } END) AS addresses_a0,
+                COLLECT(DISTINCT CASE WHEN a1 IS NOT NULL THEN {
+                    id: a1.address, type: 'node', label: 'address', address: a1.address 
+                } END) AS addresses_a1,
+                COLLECT(DISTINCT CASE WHEN a2 IS NOT NULL THEN {
+                    id: a2.address, type: 'node', label: 'address', address: a2.address 
+                } END) AS addresses_a2,
+
+                COLLECT(DISTINCT CASE WHEN s1 IS NOT NULL THEN {
+                    id: t1.tx_id + '-' + a1.address, type: 'edge', 
+                    label: toString(s1.value_satoshi / 100000000.0) + ' BTC', 
+                    from_id: t1.tx_id, to_id: a1.address, 
+                    satoshi_value: s1.value_satoshi, 
+                    btc_value: s1.value_satoshi / 100000000.0 
+                } END) AS edges_s1,
+                COLLECT(DISTINCT CASE WHEN s2 IS NOT NULL THEN {
+                    id: a0.address + '-' + t1.tx_id, type: 'edge', 
+                    label: toString(s2.value_satoshi / 100000000.0) + ' BTC', 
+                    from_id: a0.address, to_id: t1.tx_id, 
+                    satoshi_value: s2.value_satoshi, 
+                    btc_value: s2.value_satoshi / 100000000.0 
+                } END) AS edges_s2,
+                COLLECT(DISTINCT CASE WHEN s3 IS NOT NULL THEN {
+                    id: t1.tx_id + '-' + a2.address, type: 'edge', 
+                    label: toString(s3.value_satoshi / 100000000.0) + ' BTC', 
+                    from_id: t1.tx_id, to_id: a2.address, 
+                    satoshi_value: s3.value_satoshi, 
+                    btc_value: s3.value_satoshi / 100000000.0 
+                } END) AS edges_s3
+
+            WITH transactions_t1 
+                + addresses_a0 + addresses_a1 + addresses_a2 
+                + edges_s1 + edges_s2 + edges_s3 AS elements
+            UNWIND elements AS element
+            RETURN DISTINCT element.id AS id,
+                   element.type AS type,
+                   element.label AS label,
+                   element.amount AS amount,
+                   element.timestamp AS timestamp,
+                   element.block_height AS block_height,
+                   element.address AS address,
+                   element.from_id AS from_id,
+                   element.to_id AS to_id,
+                   element.satoshi_value AS satoshi_value,
+                   element.btc_value AS btc_value
+            """ % tx_id
 
         data = await self._execute_query(query)
         return data
 
-    async def get_address_transactions(self,
-                                       address: str,
-                                       left_hops: int = 2,
-                                       right_hops: int =2,
-                                       limit: Optional[int] = 100) -> dict:
+    async def get_address_transactions(self, address: str, limit: Optional[int] = 100) -> dict:
 
-        query = f"""
-            MATCH (a:Address {{address: '{address}'}})
-            MATCH path1 = (a)-[s1:SENT*0..{right_hops}]->(t:Transaction)
-            MATCH path2 = (other:Address)-[s2:SENT*0..{left_hops}]->(t2:Transaction)-[s3:SENT]->(a)
-            OPTIONAL MATCH path3 = (t)-[s4:SENT*1..{right_hops}]->(downstream:Address)
-            WHERE downstream <> a
-            OPTIONAL MATCH path4 = (upstream:Address)-[s5:SENT*1..{left_hops}]->(t2)
-            WHERE upstream <> a
-            RETURN path1, path2, path3, path4
-            LIMIT {limit}
-        """
+        if not isinstance(address, str) or not address.strip():
+            raise ValueError("Address must be a non-empty string")
+
+        query = """
+            MATCH (a0:Address {address: '%s'})
+
+            OPTIONAL MATCH (a0)-[s1:SENT]->(t1:Transaction)-[s2:SENT]->(a1:Address)
+            OPTIONAL MATCH (a0)<-[s0:SENT]-(t0:Transaction)<-[s3:SENT]-(a3:Address)
+
+            WITH DISTINCT
+                t0, t1, a0, a1, a3, s0, s1, s2, s3
+
+            WITH 
+                COLLECT(DISTINCT {
+                    id: t1.tx_id,
+                    type: 'node',
+                    label: 'transaction',
+                    amount: t1.out_total_amount/100000000.0,
+                    timestamp: t1.timestamp,
+                    block_height: t1.block_height
+                }) AS out_txs,
+                COLLECT(DISTINCT {
+                    id: t0.tx_id,
+                    type: 'node',
+                    label: 'transaction',
+                    amount: t0.out_total_amount/100000000.0,
+                    timestamp: t0.timestamp,
+                    block_height: t0.block_height
+                }) AS in_txs,
+                COLLECT(DISTINCT {
+                    id: a1.address,
+                    type: 'node',
+                    label: 'address',
+                    address: a1.address
+                }) AS out_addresses,
+                COLLECT(DISTINCT {
+                    id: a3.address,
+                    type: 'node',
+                    label: 'address',
+                    address: a3.address
+                }) AS in_addresses,
+                COLLECT(DISTINCT {
+                    id: a0.address,
+                    type: 'node',
+                    label: 'address',
+                    address: a0.address
+                })[0] AS center_address,
+                COLLECT(DISTINCT {
+                    id: t1.tx_id + '-' + a1.address,
+                    type: 'edge',
+                    label: toString(s2.value_satoshi/100000000.0) + ' BTC',
+                    from_id: t1.tx_id,
+                    to_id: a1.address,
+                    satoshi_value: s2.value_satoshi,
+                    btc_value: s2.value_satoshi/100000000.0,
+                    timestamp: t1.timestamp
+                }) AS out_edges1,
+                COLLECT(DISTINCT {
+                    id: a0.address + '-' + t1.tx_id,
+                    type: 'edge',
+                    label: toString(s1.value_satoshi/100000000.0) + ' BTC',
+                    from_id: a0.address,
+                    to_id: t1.tx_id,
+                    satoshi_value: s1.value_satoshi,
+                    btc_value: s1.value_satoshi/100000000.0,
+                    timestamp: t1.timestamp
+                }) AS out_edges2,
+                COLLECT(DISTINCT {
+                    id: t0.tx_id + '-' + a0.address,
+                    type: 'edge',
+                    label: toString(s0.value_satoshi/100000000.0) + ' BTC',
+                    from_id: t0.tx_id,
+                    to_id: a0.address,
+                    satoshi_value: s0.value_satoshi,
+                    btc_value: s0.value_satoshi/100000000.0,
+                    timestamp: t0.timestamp
+                }) AS in_edges1,
+                COLLECT(DISTINCT {
+                    id: a3.address + '-' + t0.tx_id,
+                    type: 'edge',
+                    label: toString(s3.value_satoshi/100000000.0) + ' BTC',
+                    from_id: a3.address,
+                    to_id: t0.tx_id,
+                    satoshi_value: s3.value_satoshi,
+                    btc_value: s3.value_satoshi/100000000.0,
+                    timestamp: t0.timestamp
+                }) AS in_edges2
+
+            WITH out_txs + in_txs + [center_address] + out_addresses + in_addresses + 
+                 out_edges1 + out_edges2 + in_edges1 + in_edges2 AS elements
+
+            UNWIND elements AS element
+            WITH element
+            WHERE element.id IS NOT NULL
+
+            RETURN DISTINCT 
+                element.id AS id,
+                element.type AS type,
+                element.label AS label,
+                element.amount AS amount,
+                element.timestamp AS timestamp,
+                element.block_height AS block_height,
+                element.address AS address,
+                element.from_id AS from_id,
+                element.to_id AS to_id,
+                element.satoshi_value AS satoshi_value,
+                element.btc_value AS btc_value
+            ORDER BY element.timestamp DESC
+        """ % address
 
         data = await self._execute_query(query)
-        return data
-
-    async def get_funds_flow(self,
-                             address: str,
-                             direction: str,
-                             intermediate_addresses: Optional[List[str]] = None,
-                             hops: Optional[int] = 5,
-                             start_block_height: Optional[int] = None,
-                             end_block_height: Optional[int] = None) -> dict:
-
-        # Start with the base path matching with hops included
-        if direction == 'right':
-            base_query = f"""
-            MATCH path1 = (a1:Address {{address: '{address}'}})
-                          -[s1:SENT]->(t1:Transaction)
-                          -[s2:SENT*1..{hops}]->(a2:Address)
-            """
-        elif direction == 'left':
-            base_query = f"""
-            MATCH path1 = (a1:Address {{address: '{address}'}})
-                          <-[s1:SENT]-(t1:Transaction)
-                          <-[s2:SENT*1..{hops}]-(a2:Address)
-            """
-        else:
-            raise ValueError("Direction must be either 'left' or 'right'")
-
-        query_elements = [base_query]
-
-        # Add block height filtering if specified
-        if start_block_height is not None and end_block_height is not None:
-            query_elements.append(f"WHERE t1.block_height IN range({start_block_height}, {end_block_height})")
-
-        # Handle intermediate address filtering if provided
-        if intermediate_addresses:
-            intermediates_condition = " AND ".join(
-                [f"'{addr}' IN [x IN nodes(path1) | x.address]" for addr in intermediate_addresses]
-            )
-            query_elements.append(f"AND {intermediates_condition}")
-
-        # Return only path1, which contains all relevant information
-        query_elements.append("RETURN path1")
-
-        # Assemble the final query string
-        final_query = "\n".join(query_elements)
-
-        # Execute the query and transform the results
-        data = await self._execute_query(final_query)
-        return data
+        return data if data else []
