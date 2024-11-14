@@ -35,26 +35,20 @@ class CommuneFundsFlowQueryApi(FundsFlowQueryApi):
                     label: 'address',
                     address: a1.address
                 }) AS target_addresses,
-                
+                 
                 COLLECT(DISTINCT {
-                    id: t.tx_id,
-                    type: 'node',
-                    label: 'transaction',
-                    amount: t.amount,
-                    timestamp: t.timestamp,
-                    block_height: t.block_height
-                }) AS transactions,
-                
-                COLLECT(DISTINCT {
-                    id: t.tx_id + '-' + a1.address,
+                    id: t.id,
                     type: 'edge',
-                    label: toString(t.amount) + ' COMAI',
+                    block_height: t.block_height,
+                    transaction_type: t.type,
+                    timestamp: toString(t.timestamp),
+                    label: toString(t.amount/1000000000) + ' COMAI',
                     from_id: a0.address,
                     to_id: a1.address,
-                    amount: t.amount
+                    amount: t.amount/1000000000
                 }) AS edges
             
-            WITH source_addresses + target_addresses + transactions + edges AS elements
+            WITH source_addresses + target_addresses + edges AS elements
             UNWIND elements AS element
             RETURN DISTINCT 
                 element.id AS id,
@@ -63,6 +57,7 @@ class CommuneFundsFlowQueryApi(FundsFlowQueryApi):
                 element.amount AS amount,
                 element.timestamp AS timestamp,
                 element.block_height AS block_height,
+                element.transaction_type as transaction_type,
                 element.address AS address,
                 element.from_id AS from_id,
                 element.to_id AS to_id
@@ -91,7 +86,7 @@ class CommuneFundsFlowQueryApi(FundsFlowQueryApi):
                 }) AS target_addresses,
                 
                 COLLECT(DISTINCT {
-                    id: t.tx_id,
+                    id: t.id,
                     type: 'node',
                     label: 'transaction',
                     amount: t.amount,
@@ -100,7 +95,7 @@ class CommuneFundsFlowQueryApi(FundsFlowQueryApi):
                 }) AS transactions,
                 
                 COLLECT(DISTINCT {
-                    id: t.tx_id + '-' + a1.address,
+                    id: t.id + '-' + a1.address,
                     type: 'edge',
                     label: toString(t.amount) + ' COMAI',
                     from_id: a0.address,

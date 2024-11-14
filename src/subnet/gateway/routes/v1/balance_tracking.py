@@ -33,7 +33,7 @@ def validate_date_format(date_str: str) -> datetime:
         )
 
 
-@balance_tracking_router.get("/{network}/deltas")
+@balance_tracking_router.get("/{network}/deltas", response_model_exclude_none=True)
 async def get_balance_deltas(
         network: str,
         addresses: List[str] = Query(None, description="List of addresses to track"),
@@ -66,7 +66,7 @@ async def get_balance_deltas(
     return data
 
 
-@balance_tracking_router.get("/{network}/timestamps")
+@balance_tracking_router.get("/{network}/timestamps", response_model_exclude_none=True)
 async def get_timestamps(
         network: str,
         start_date: Optional[str] = Query(

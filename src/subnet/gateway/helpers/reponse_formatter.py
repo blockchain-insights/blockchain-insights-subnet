@@ -20,9 +20,9 @@ def format_response(data: dict, response_type: ResponseType):
     # Recursively walk through the data and convert datetime to string
     def process_data(data):
         if isinstance(data, dict):
-            return {key: process_data(value) for key, value in data.items()}
+            return {key: process_data(value) for key, value in data.items() if value is not None}
         elif isinstance(data, list):
-            return [process_data(item) for item in data]
+            return [process_data(item) for item in data if item is not None]
         else:
             return serialize_datetime(data)
 
