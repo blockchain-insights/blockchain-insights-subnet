@@ -145,7 +145,7 @@ class BitcoinFundsFlowQueryApi(FundsFlowQueryApi):
         data = await self._execute_query(query)
         return data if data else []
 
-    async def get_blocks_around_transaction(self, tx_id: str) -> dict:
+    async def get_transaction_by_tx_id(self, tx_id: str) -> dict:
         """Retrieve the transaction, its vins/vouts, and related paths within the specified hops."""
 
         query = """

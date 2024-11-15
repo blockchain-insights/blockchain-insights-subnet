@@ -47,7 +47,7 @@ async def get_transaction_by_tx_id(
     api_key: str = Depends(api_key_auth),
 ):
     query_api = select_query_api(network, validator)
-    data = await query_api.get_blocks_around_transaction(tx_id)
+    data = await query_api.get_transaction_by_tx_id(tx_id)
 
     return format_response(data, response_type)
 

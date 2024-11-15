@@ -127,14 +127,10 @@ class CommuneFundsFlowQueryApi(FundsFlowQueryApi):
         # Start building the query with outgoing and incoming transactions
         query = """
             MATCH (a:Address {address: '%s'})
-            OPTIONAL MATCH (a)-[t1:TRANSACTION]->(a2:Address)  // Outgoing transactions
-            OPTIONAL MATCH (a3:Address)-[t2:TRANSACTION]->(a)  // Incoming transactions
-            
-            
-            MATCH (a0:Address)-[t:TRANSACTION {id: '%s'}]->(a1:Address)
+            OPTIONAL MATCH (a)-[t1:TRANSACTION]->(a2:Address)
+            OPTIONAL MATCH (a3:Address)-[t2:TRANSACTION]->(a)
             WITH DISTINCT a, t1, a2, a3, t2
             WITH 
-            
                 COLLECT({
                     id: a.address,
                     type: 'node',
@@ -152,23 +148,23 @@ class CommuneFundsFlowQueryApi(FundsFlowQueryApi):
                     from_id: a.address,
                     to_id: a2.address,
                     amount: toFloat(t1.amount/1000000000)
-                }) AS edges_t1
+                } END) AS edges_t1,
                 
-                COLLECT(CASE WHEN a2 IS NOT NULL THEN{
+                COLLECT(CASE WHEN a2 IS NOT NULL THEN {
                     id: a2.address,
                     type: 'node',
                     label: 'address',
                     address: a2.address
-                }) AS right_address,
+                } END) AS right_address,
                 
                 COLLECT(CASE WHEN a3 IS NOT NULL THEN {
                     id: a3.address,
                     type: 'node',
                     label: 'address',
                     address: a3.address
-                }) AS left_address,
+                } END) AS left_address,
             
-                COLLECT(CASE WHEN t2 IS NOT NULL THEN{
+                COLLECT(CASE WHEN t2 IS NOT NULL THEN {
                     id: t2.id,
                     type: 'edge',
                     block_height: t2.block_height,
@@ -178,9 +174,9 @@ class CommuneFundsFlowQueryApi(FundsFlowQueryApi):
                     from_id: a3.address,
                     to_id: a.address,
                     amount: toFloat(t2.amount/1000000000)
-                }) AS edges_t2
+                } END) AS edges_t2
             
-            WITH center_address + edges_t1 + right_address + left_address + edges_t2
+            WITH center_address + edges_t1 + right_address + left_address + edges_t2 AS elements
             UNWIND elements AS element
             RETURN 
                 element.id AS id,
