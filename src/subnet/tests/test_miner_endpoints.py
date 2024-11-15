@@ -1,6 +1,8 @@
 import pytest
 import time  # don't remove this import
 
+from substrateinterface import Keypair
+
 from src.subnet import VERSION
 from src.subnet.miner._config import MinerSettings
 from src.subnet.miner.miner import Miner
@@ -36,7 +38,8 @@ async def setup_miner_with_node():
         GRAPH_DATABASE_PASSWORD="test_password",
         GRAPH_DATABASE_URL="bolt://localhost:7687"
     )
-    miner = Miner(settings=settings)
+    keypair = Keypair.create_from_mnemonic(Keypair.generate_mnemonic())
+    miner = Miner(keypair=keypair, settings=settings)
     node = NodeFactory.create_node('bitcoin')
     await db_manager.init(settings.DATABASE_URL)
     return miner, node, settings
