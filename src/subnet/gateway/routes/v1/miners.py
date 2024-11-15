@@ -2,7 +2,6 @@ from typing import Optional
 from fastapi import Depends, APIRouter, HTTPException
 from pydantic import BaseModel
 from substrateinterface import Keypair
-
 from src.subnet.validator.validator import Validator
 from src.subnet.gateway import get_validator, api_key_auth, get_receipt_sync_worker
 

@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional
 from fastapi import Depends, APIRouter, Query, HTTPException
 from pydantic import BaseModel
 from src.subnet.protocol import NETWORK_BITCOIN, NETWORK_COMMUNE

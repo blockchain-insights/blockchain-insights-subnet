@@ -1,4 +1,3 @@
-import signal
 from datetime import datetime
 from communex._common import get_node_url
 from communex.client import CommuneClient
@@ -8,7 +7,6 @@ from keylimiter import TokenBucketLimiter
 from loguru import logger
 from starlette.middleware.cors import CORSMiddleware
 from substrateinterface import Keypair
-
 from src.subnet import VERSION
 from src.subnet.encryption import generate_hash
 from src.subnet.miner._config import MinerSettings, load_environment

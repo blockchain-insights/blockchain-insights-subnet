@@ -3,12 +3,10 @@ from communex._common import get_node_url
 from communex.client import CommuneClient
 from communex.compat.key import classic_load_key
 import sys
-
 from fastapi import Security, HTTPException
 from fastapi.security import APIKeyHeader
 from loguru import logger
 from substrateinterface import Keypair
-
 from src.subnet.validator.database.models.api_key import ApiKeyManager
 from src.subnet.validator.database.models.challenge_balance_tracking import ChallengeBalanceTrackingManager
 from src.subnet.validator.database.models.challenge_funds_flow import ChallengeFundsFlowManager

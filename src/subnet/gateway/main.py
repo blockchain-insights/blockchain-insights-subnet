@@ -1,8 +1,4 @@
-import asyncio
-import signal
-from asyncio import CancelledError
 from contextlib import asynccontextmanager
-
 import uvicorn
 from fastapi import FastAPI
 from loguru import logger
@@ -69,7 +65,6 @@ if __name__ == "__main__":
     if len(sys.argv) != 2:
         print("Usage: python -m subnet.validator.gateway <environment> ; where <environment> is 'testnet' or 'mainnet'")
         sys.exit(1)
-
     try:
         uvicorn.run("main:app", host="0.0.0.0", port=settings.PORT, workers=settings.WORKERS)
     except KeyboardInterrupt as e:
