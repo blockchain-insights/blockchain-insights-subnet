@@ -22,7 +22,8 @@ async def setup_miner():
         GRAPH_DATABASE_PASSWORD="test_password",
         GRAPH_DATABASE_URL="bolt://localhost:7687"
     )
-    miner = Miner(settings=settings)
+    keypair = Keypair.create_from_mnemonic(Keypair.generate_mnemonic())
+    miner = Miner(keypair=keypair, settings=settings)
     return miner, settings
 
 
