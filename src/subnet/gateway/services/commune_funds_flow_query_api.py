@@ -72,48 +72,44 @@ class CommuneFundsFlowQueryApi(FundsFlowQueryApi):
 
         query = """
             MATCH (a0:Address)-[t:TRANSACTION {id: '%s'}]->(a1:Address)
-                        WITH 
-                COLLECT(DISTINCT {
+            WITH DISTINCT a0, a1, t
+            WITH 
+                COLLECT({
                     id: a0.address,
                     type: 'node',
                     label: 'address',
                     address: a0.address
                 }) AS source_addresses,
                 
-                COLLECT(DISTINCT {
+                COLLECT({
                     id: a1.address,
                     type: 'node',
                     label: 'address',
                     address: a1.address
                 }) AS target_addresses,
-                
-                COLLECT(DISTINCT {
+                 
+                COLLECT({
                     id: t.id,
-                    type: 'node',
-                    label: 'transaction',
-                    amount: t.amount,
-                    timestamp: t.timestamp,
-                    block_height: t.block_height
-                }) AS transactions,
-                
-                COLLECT(DISTINCT {
-                    id: t.id + '-' + a1.address,
                     type: 'edge',
-                    label: toString(t.amount) + ' COMAI',
+                    block_height: t.block_height,
+                    transaction_type: t.type,
+                    timestamp: toString(t.timestamp),
+                    label: toString(t.amount/1000000000) + ' COMAI',
                     from_id: a0.address,
                     to_id: a1.address,
-                    amount: t.amount
+                    amount: toFloat(t.amount/1000000000)
                 }) AS edges
             
-            WITH source_addresses + target_addresses + transactions + edges AS elements
+            WITH source_addresses + target_addresses + edges AS elements
             UNWIND elements AS element
-            RETURN DISTINCT 
+            RETURN 
                 element.id AS id,
                 element.type AS type,
                 element.label AS label,
                 element.amount AS amount,
                 element.timestamp AS timestamp,
                 element.block_height AS block_height,
+                element.transaction_type as transaction_type,
                 element.address AS address,
                 element.from_id AS from_id,
                 element.to_id AS to_id
@@ -129,11 +125,75 @@ class CommuneFundsFlowQueryApi(FundsFlowQueryApi):
         """
 
         # Start building the query with outgoing and incoming transactions
-        query = f"""
-            MATCH (a:Address {{address: '{address}'}})
+        query = """
+            MATCH (a:Address {address: '%s'})
             OPTIONAL MATCH (a)-[t1:TRANSACTION]->(a2:Address)  // Outgoing transactions
             OPTIONAL MATCH (a3:Address)-[t2:TRANSACTION]->(a)  // Incoming transactions
-        """
+            
+            
+            MATCH (a0:Address)-[t:TRANSACTION {id: '%s'}]->(a1:Address)
+            WITH DISTINCT a, t1, a2, a3, t2
+            WITH 
+            
+                COLLECT({
+                    id: a.address,
+                    type: 'node',
+                    label: 'address',
+                    address: a.address
+                }) AS center_address,
+                
+                COLLECT(CASE WHEN t1 IS NOT NULL THEN {
+                    id: t1.id,
+                    type: 'edge',
+                    block_height: t1.block_height,
+                    transaction_type: t1.type,
+                    timestamp: toString(t1.timestamp),
+                    label: toString(t1.amount/1000000000) + ' COMAI',
+                    from_id: a.address,
+                    to_id: a2.address,
+                    amount: toFloat(t1.amount/1000000000)
+                }) AS edges_t1
+                
+                COLLECT(CASE WHEN a2 IS NOT NULL THEN{
+                    id: a2.address,
+                    type: 'node',
+                    label: 'address',
+                    address: a2.address
+                }) AS right_address,
+                
+                COLLECT(CASE WHEN a3 IS NOT NULL THEN {
+                    id: a3.address,
+                    type: 'node',
+                    label: 'address',
+                    address: a3.address
+                }) AS left_address,
+            
+                COLLECT(CASE WHEN t2 IS NOT NULL THEN{
+                    id: t2.id,
+                    type: 'edge',
+                    block_height: t2.block_height,
+                    transaction_type: t2.type,
+                    timestamp: toString(t2.timestamp),
+                    label: toString(t2.amount/1000000000) + ' COMAI',
+                    from_id: a3.address,
+                    to_id: a.address,
+                    amount: toFloat(t2.amount/1000000000)
+                }) AS edges_t2
+            
+            WITH center_address + edges_t1 + right_address + left_address + edges_t2
+            UNWIND elements AS element
+            RETURN 
+                element.id AS id,
+                element.type AS type,
+                element.label AS label,
+                element.amount AS amount,
+                element.timestamp AS timestamp,
+                element.block_height AS block_height,
+                element.transaction_type as transaction_type,
+                element.address AS address,
+                element.from_id AS from_id,
+                element.to_id AS to_id
+        """ % address
 
         data = await self._execute_query(query)
         return data
