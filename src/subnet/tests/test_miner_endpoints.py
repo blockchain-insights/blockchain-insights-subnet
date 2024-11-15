@@ -1,6 +1,8 @@
 import pytest
 import time  # don't remove this import
 
+from substrateinterface import Keypair
+
 from src.subnet import VERSION
 from src.subnet.miner._config import MinerSettings
 from src.subnet.miner.miner import Miner
@@ -20,7 +22,8 @@ async def setup_miner():
         GRAPH_DATABASE_PASSWORD="test_password",
         GRAPH_DATABASE_URL="bolt://localhost:7687"
     )
-    miner = Miner(settings=settings)
+    keypair = Keypair.create_from_mnemonic(Keypair.generate_mnemonic())
+    miner = Miner(keypair=keypair, settings=settings)
     return miner, settings
 
 
@@ -36,28 +39,11 @@ async def setup_miner_with_node():
         GRAPH_DATABASE_PASSWORD="test_password",
         GRAPH_DATABASE_URL="bolt://localhost:7687"
     )
-    miner = Miner(settings=settings)
+    keypair = Keypair.create_from_mnemonic(Keypair.generate_mnemonic())
+    miner = Miner(keypair=keypair, settings=settings)
     node = NodeFactory.create_node('bitcoin')
     await db_manager.init(settings.DATABASE_URL)
     return miner, node, settings
-
-
-@pytest.mark.asyncio
-async def test_bitcoin_funds_flow_challenge(setup_miner_with_node):
-    #miner, node, settings = await setup_miner_with_node
-    #funds_flow_challenge, tx_id = node.create_funds_flow_challenge(0, 500)
-    #result = await miner.challenge(funds_flow_challenge.model_dump())
-    #assert result.output['tx_id'] == tx_id
-    pass
-
-
-@pytest.mark.asyncio
-async def test_bitcoin_balance_tracking_challenge(setup_miner_with_node):
-    #miner, node, settings = await setup_miner_with_node  # Await the fixture
-    #balance_tracking_challenge, balance_tracking_expected_response = node.create_balance_tracking_challenge(500)
-    #result = await miner.challenge(balance_tracking_challenge.model_dump())
-    #assert result.output['balance'] == balance_tracking_expected_response
-    pass
 
 
 @pytest.mark.asyncio

@@ -22,7 +22,7 @@ class MinerDiscovery(OrmBase):
     miner_key = Column(String, nullable=False, unique=True)
     miner_address = Column(String, nullable=False, default='0.0.0.0')
     miner_ip_port = Column(String, nullable=False, default='0')
-    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
+    timestamp = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
     network = Column(String, nullable=False)
     rank = Column(Float, nullable=False, default=0.0)
     failed_challenges = Column(Integer, nullable=False, default=0)
@@ -146,8 +146,7 @@ class MinerDiscoveryManager:
                     md.miner_key,
                     CAST(md.timestamp AS VARCHAR) AS timestamp,
                     md.rank,
-                    COALESCE(COUNT(mr.id), 0) AS total_receipts,
-                    COALESCE(SUM(CASE WHEN mr.accepted THEN 1 ELSE 0 END), 0) AS accepted_receipts
+                    COALESCE(COUNT(mr.id), 0) AS total_receipts
                 FROM 
                     miner_discoveries AS md
                 LEFT JOIN 
@@ -169,8 +168,7 @@ class MinerDiscoveryManager:
                     md.network,
                     CAST(md.timestamp AS VARCHAR) AS timestamp,
                     md.rank,
-                    COALESCE(COUNT(mr.id), 0) AS total_receipts,
-                    COALESCE(SUM(CASE WHEN mr.accepted THEN 1 ELSE 0 END), 0) AS accepted_receipts
+                    COALESCE(COUNT(mr.id), 0) AS total_receipts
                 FROM 
                     miner_discoveries AS md
                 LEFT JOIN 

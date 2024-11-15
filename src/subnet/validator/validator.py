@@ -1,6 +1,4 @@
 import asyncio
-import json
-import random
 import threading
 import time
 import traceback
@@ -21,13 +19,13 @@ from ._config import ValidatorSettings, load_base_weights
 
 from .database.models.challenge_balance_tracking import ChallengeBalanceTrackingManager
 from .database.models.challenge_funds_flow import ChallengeFundsFlowManager
-from .encryption import generate_hash
+from src.subnet.encryption import generate_hash
 from .helpers import raise_exception_if_not_registered, get_ip_port, cut_to_max_allowed_weights
+from .receipt_sync import ReceiptSyncWorker
 from .weights_storage import WeightsStorage
 from src.subnet.validator.database.models.miner_discovery import MinerDiscoveryManager
 from src.subnet.validator.database.models.miner_receipt import MinerReceiptManager
-from src.subnet.protocol import Challenge, ChallengesResponse, ChallengeMinerResponse, Discovery, NETWORK_BITCOIN, \
-    NETWORK_COMMUNE
+from src.subnet.protocol import Challenge, ChallengesResponse, ChallengeMinerResponse, Discovery
 from .. import VERSION
 
 
@@ -216,6 +214,8 @@ class Validator(Module):
 
         multiplier = min(1.0, receipt_miner_multiplier)
         score = score + (0.7 * multiplier)
+
+        # TODO: fraud detection: if given miner loves too much certain valdiator, it's a fraud
 
         return score
 
@@ -410,6 +410,7 @@ class Validator(Module):
                     "request_id": request_id,
                     "timestamp": timestamp,
                     "miner_keys": None,
+                    "network": network,
                     "query_hash": query_hash,
                     "response_hash": None,
                     "verified": False,
@@ -420,21 +421,13 @@ class Validator(Module):
                 }
 
             response = await self._query_miner(miner, model_kind, query)
-            if response:  # Simplified validation as per your version
+            if response:
                 response_hash = generate_hash(str(response))
-                await self.miner_receipt_manager.store_miner_receipt(
-                    request_id,
-                    miner_key,
-                    model_kind,
-                    network,
-                    query_hash,
-                    timestamp,
-                    response_hash
-                )
                 return {
                     "request_id": request_id,
                     "timestamp": timestamp,
                     "miner_keys": [miner_key],
+                    "network": network,
                     "query_hash": query_hash,
                     "response_hash": response_hash,
                     "verified": False,
@@ -448,6 +441,7 @@ class Validator(Module):
                 "request_id": request_id,
                 "timestamp": timestamp,
                 "miner_keys": [miner_key],
+                "network": network,
                 "query_hash": query_hash,
                 "response_hash": None,
                 "verified": False,
@@ -462,10 +456,33 @@ class Validator(Module):
         sample_size = 16
 
         miners = await self.miner_discovery_manager.get_miners_by_network(network)
-        if len(miners) < 3:
+        if 3 > len(miners) > 0:
             top_miners = miners
+        if len(miners) == 0:
+            return {
+                "request_id": request_id,
+                "timestamp": timestamp,
+                "miner_keys": [],
+                "network": network,
+                "query_hash": query_hash,
+                "response_hash": None,
+                "verified": False,
+                "verifying_miners": [],
+                "model_kind": model_kind,
+                "query": query,
+                "response": None
+            }
         else:
-            top_miners = sample(miners[:sample_size], select_count)
+            top_miners = miners if len(miners) <= select_count else sample(miners, select_count)
+
+        #WE KEEP IT HERE FOR DEBUGGING PURPOSES
+        #m = top_miners[0]
+        #m.update({'miner_key': '5GE8x7wN7hpyEZPWsE9wRpqZ9fyX367aDEzGCfSkqsP6GHqV'})
+        #m.update({'miner_address': '127.0.0.1'})
+        #m.update({'miner_ip_port': 9962})
+        #top_miners = [m]  # For now, we only query the top miner
+        #top_miners = top_miners
+        #"""
 
         query_tasks = {
             asyncio.create_task(self._query_miner(miner, model_kind, query)): miner
@@ -502,6 +519,17 @@ class Validator(Module):
                         if not response:
                             continue
 
+                        result_hash = response['response']['result_hash']
+                        result_hash_signature = response['response']["result_hash_signature"]
+
+                        miner_key = current_miner['miner_key']
+                        miner_key_pair = Keypair(ss58_address=miner_key)
+                        result_hash_signature_bytes = bytes.fromhex(result_hash_signature)
+
+                        if not miner_key_pair.verify(result_hash.encode('utf-8'), signature=result_hash_signature_bytes):
+                            logger.warning(f"Invalid result hash signature", miner_key=miner_key, validator_key=self.key.ss58_address)
+                            continue
+
                         # Hash the response for comparison
                         response_hash = generate_hash(str(response))
 
@@ -513,21 +541,18 @@ class Validator(Module):
 
                             # Store receipts for both miners
                             first_miner = existing_miners[0]
-                            for miner in [first_miner, current_miner]:
-                                await self.miner_receipt_manager.store_miner_receipt(
-                                    request_id,
-                                    miner['miner_key'],
-                                    model_kind,
-                                    network,
-                                    query_hash,
-                                    timestamp,
-                                    response_hash
-                                )
 
-                            # Accept receipt only for the first miner that provided this response
-                            await self.miner_receipt_manager.accept_miner_receipt(
+                            await self.miner_receipt_manager.store_miner_receipt(
+                                self.key.ss58_address,
                                 request_id,
-                                first_miner['miner_key']
+                                first_miner['miner_key'],
+                                model_kind,
+                                network,
+                                query_hash,
+                                timestamp,
+                                response_hash,
+                                result_hash,
+                                result_hash_signature
                             )
 
                             # Cancel remaining tasks
@@ -538,6 +563,7 @@ class Validator(Module):
                                 "request_id": request_id,
                                 "timestamp": timestamp,
                                 "miner_keys": [miner['miner_key'] for miner in top_miners],
+                                "network": network,
                                 "query_hash": query_hash,
                                 "response_hash": response_hash,
                                 "verified": True,
@@ -554,42 +580,41 @@ class Validator(Module):
                         logger.error(f"Error querying miner", error=e)
                         continue
 
-            # If we get here, either timeout occurred or no matching responses were found
-            # Find the response from the most reputable miner or the fastest one
-            if responses:
-                # For now, we'll just take the first response we got
-                first_response_hash = next(iter(responses))
-                response, miners = responses[first_response_hash]
-                first_miner = miners[0]
-
+            # get the first response
+            for response_hash, (response, miners) in responses.items():
                 await self.miner_receipt_manager.store_miner_receipt(
+                    self.key.ss58_address,
                     request_id,
-                    first_miner['miner_key'],
+                    miners[0]['miner_key'],
                     model_kind,
                     network,
                     query_hash,
                     timestamp,
-                    first_response_hash
+                    response_hash,
+                    response['response']['result_hash'],
+                    response['response']['result_hash_signature']
                 )
 
                 return {
                     "request_id": request_id,
                     "timestamp": timestamp,
-                    "miner_keys": [miner['miner_key'] for miner in top_miners],
+                    "miner_keys": [miners[0]['miner_key']],
+                    "network": network,
                     "query_hash": query_hash,
-                    "response_hash": first_response_hash,
+                    "response_hash": response_hash,
                     "verified": False,
-                    "verifying_miners": [first_miner['miner_key']],
+                    "verifying_miners": [],
                     "model_kind": model_kind,
                     "query": query,
                     **response
                 }
 
-            # No valid responses at all
+            # No valid responses at all, returning empty response
             return {
                 "request_id": request_id,
                 "timestamp": timestamp,
                 "miner_keys": [miner['miner_key'] for miner in top_miners],
+                "network": network,
                 "query_hash": query_hash,
                 "response_hash": None,
                 "verified": False,

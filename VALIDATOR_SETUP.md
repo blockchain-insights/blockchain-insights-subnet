@@ -7,9 +7,9 @@
     - [Clone Repository](#clone-repository)
     - [Env configuration](#env-configuration)
     - [Validator wallet creation](#validator-wallet-creation)
+    - [Validator metadata configuration](#validator-metadata-configuration)
     - [Running the validator and monitoring](#running-the-validator-and-monitoring)
-    - [Running the validator api](#running-the-gateway)
-    - [Running the miner leaderboard](#running-the-miner-leaderboard)
+    - [Running the validator api gateway](#running-the-validator-api-gateway)
 
 ## Setup
 
@@ -92,7 +92,28 @@ comx key list
 comx module register validator validator 20 --port 9900
 # stake COMAI to your validator wallet
 ```
- 
+
+#### Validator metadata configuration
+
+For validators participating in organic query support (running a gateway), it's necessary to register or update the validator with specific metadata. This metadata includes the gateway endpoint information that other validators will use to sync receipts with your validator.
+
+If you're registering a new validator with metadata:
+```shell
+comx module register validator validator_name 20 --metadata '{"gateway":"http://your-validator-gateway-ip:9907"}'
+```
+
+If you need to update the metadata for an existing validator:
+```shell
+comx module update validator_name 20 --metadata '{"gateway":"http://your-validator-gateway-ip:9907"}'
+```
+
+Replace `validator_name` with your validator's name and adjust the gateway URL to match your validator's actual endpoint. The gateway URL should be accessible from the internet if you want other nodes to be able to query your validator.
+
+Important considerations:
+- Make sure your firewall allows incoming connections to your gateway port
+- Use HTTPS if possible for production environments
+- Ensure the gateway URL is stable and persistent
+- The metadata update is required for participation in the organic query network
 
 ### Running the validator and monitoring
 
@@ -110,7 +131,7 @@ pm2 start ./scripts/run_validator.sh --name validator
 pm2 save
 ```
 
-### Running the gateway
+### Running the validator api gateway
 
 ```shell
 cd ~/validator1

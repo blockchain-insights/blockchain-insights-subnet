@@ -4,7 +4,7 @@ from src.subnet.miner._config import MinerSettings
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from loguru import logger
-from neo4j import READ_ACCESS, GraphDatabase
+from neo4j import READ_ACCESS, GraphDatabase, WRITE_ACCESS
 from neo4j.exceptions import Neo4jError
 
 
@@ -22,7 +22,7 @@ class GraphSearch:
         )
 
     def execute_query(self, query: str):
-        with self.driver.session(default_access_mode=READ_ACCESS) as session:
+        with self.driver.session(default_access_mode=WRITE_ACCESS) as session:
             try:
                 result = session.run(query)
 
@@ -71,7 +71,8 @@ class GraphSearch:
                 return results_data
 
             except Neo4jError as e:
-                raise ValueError("Query attempted to modify data, which is not allowed.") from e
+                logger.error("Failed to execute query", error=e, query=query)
+                raise ValueError("Failed to execute query") from e
 
     def solve_challenge(self, in_total_amount: int, out_total_amount: int, tx_id_last_6_chars: str) -> str:
         """Solve a challenge and return the result."""

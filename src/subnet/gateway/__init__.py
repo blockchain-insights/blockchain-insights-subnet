@@ -3,12 +3,10 @@ from communex._common import get_node_url
 from communex.client import CommuneClient
 from communex.compat.key import classic_load_key
 import sys
-
 from fastapi import Security, HTTPException
 from fastapi.security import APIKeyHeader
 from loguru import logger
 from substrateinterface import Keypair
-
 from src.subnet.validator.database.models.api_key import ApiKeyManager
 from src.subnet.validator.database.models.challenge_balance_tracking import ChallengeBalanceTrackingManager
 from src.subnet.validator.database.models.challenge_funds_flow import ChallengeFundsFlowManager
@@ -17,6 +15,8 @@ from src.subnet.validator.database.models.miner_receipt import MinerReceiptManag
 from src.subnet.validator._config import load_environment, SettingsManager
 from src.subnet.validator.database.session_manager import DatabaseSessionManager
 from src.subnet.gateway.rate_limiter import RateLimiterMiddleware
+from src.subnet.validator.receipt_sync import ReceiptSyncWorker
+from src.subnet.validator.receipt_sync_fetch_thread import ReceiptSyncFetchThread
 from src.subnet.validator.validator import Validator
 from src.subnet.validator.weights_storage import WeightsStorage
 
@@ -47,6 +47,7 @@ def patch_record(record):
 
     return True
 
+
 c_client = CommuneClient(get_node_url(use_testnet=use_testnet))
 weights_storage = WeightsStorage(settings.WEIGHTS_FILE_NAME)
 
@@ -56,9 +57,10 @@ miner_discovery_manager = MinerDiscoveryManager(session_manager)
 miner_receipt_manager = MinerReceiptManager(session_manager)
 challenge_funds_flow_manager = ChallengeFundsFlowManager(session_manager)
 challenge_balance_tracking_manager = ChallengeBalanceTrackingManager(session_manager)
+receipt_sync_worker = ReceiptSyncWorker(keypair, settings.NET_UID, c_client, miner_receipt_manager)
 
+global api_key_manager, validator, receipt_sync_fetch_thread
 
-global api_key_manager
 api_key_manager = ApiKeyManager(session_manager)
 
 validator = Validator(
@@ -74,11 +76,22 @@ validator = Validator(
     challenge_timeout=settings.CHALLENGE_TIMEOUT,
 )
 
+receipt_sync_fetch_thread = ReceiptSyncFetchThread(
+    keypair=keypair,
+    settings=settings,
+    receipt_sync_worker=receipt_sync_worker,
+    frequency=settings.RECEIPT_SYNC_FREQUENCY,
+    terminate_event=validator.terminate_event
+)
+
 
 def get_validator():
     return validator
 
-api_key_header = APIKeyHeader(name='x-api-key', auto_error = False)
+def get_receipt_sync_worker():
+    return receipt_sync_worker
+
+api_key_header = APIKeyHeader(name='x-api-key', auto_error=False)
 
 
 async def api_key_auth(api_key: str = Security(api_key_header)):
@@ -88,3 +101,6 @@ async def api_key_auth(api_key: str = Security(api_key_header)):
     has_access = await api_key_manager.validate_api_key(api_key)
     if not has_access:
         raise HTTPException(status_code=401, detail="Missing or Invalid Gateway API key")
+
+
+

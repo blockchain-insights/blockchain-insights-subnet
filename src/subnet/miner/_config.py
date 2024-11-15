@@ -24,8 +24,6 @@ class MinerSettings(BaseSettings):
     NETWORK: str
 
     PORT: int = 9962
-    WORKERS: int = 4
-
     DATABASE_URL: str
 
     GRAPH_DB_TYPE: str = "neo4j"

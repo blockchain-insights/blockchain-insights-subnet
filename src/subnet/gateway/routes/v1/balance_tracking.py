@@ -33,7 +33,7 @@ def validate_date_format(date_str: str) -> datetime:
         )
 
 
-@balance_tracking_router.get("/{network}/deltas")
+@balance_tracking_router.get("/{network}/deltas", response_model_exclude_none=True)
 async def get_balance_deltas(
         network: str,
         addresses: List[str] = Query(None, description="List of addresses to track"),
@@ -66,7 +66,7 @@ async def get_balance_deltas(
     return data
 
 
-@balance_tracking_router.get("/{network}/timestamps")
+@balance_tracking_router.get("/{network}/timestamps", response_model_exclude_none=True)
 async def get_timestamps(
         network: str,
         start_date: Optional[str] = Query(
@@ -82,7 +82,6 @@ async def get_timestamps(
         page_size: int = Query(100, ge=1, le=1000, description="Items per page"),
         api_key: str = Depends(api_key_auth),
 ):
-    # Validate date formats if provided
     if start_date and not validate_date_format(start_date):
         raise HTTPException(
             status_code=400,
@@ -95,7 +94,6 @@ async def get_timestamps(
             detail="end_date must be in YYYY-MM-DD format (UTC)"
         )
 
-    # Validate date range if both dates are provided
     if start_date and end_date:
         start = datetime.strptime(start_date, '%Y-%m-%d')
         end = datetime.strptime(end_date, '%Y-%m-%d')
