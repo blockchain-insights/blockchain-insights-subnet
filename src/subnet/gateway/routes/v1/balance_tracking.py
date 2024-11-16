@@ -36,10 +36,10 @@ def validate_date_format(date_str: str) -> datetime:
 @balance_tracking_router.get("/{network}/deltas", response_model_exclude_none=True)
 async def get_balance_deltas(
         network: str,
-        addresses: List[str] = Query(None, description="List of addresses to track"),
-        validator: Validator = Depends(get_validator),
+        addresses: List[str] = Query([], description="List of addresses to track", ),
         page: int = Query(1, ge=1, description="Page number"),
         page_size: int = Query(100, ge=1, le=1000, description="Items per page"),
+        validator: Validator = Depends(get_validator),
         api_key: str = Depends(api_key_auth),
 ):
 

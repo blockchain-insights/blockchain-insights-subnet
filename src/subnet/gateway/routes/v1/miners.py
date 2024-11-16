@@ -21,10 +21,11 @@ async def get_metadata(network: Optional[str] = None,
 
 
 @miner_router.get("/receipts")
-async def get_receipts(miner_key: str, page: int = 1, page_size: int = 10,
+async def get_receipts(miner_key: Optional[str] = None,
+                       validator_key: Optional[str] = None, page: int = 1, page_size: int = 10,
                        validator: Validator = Depends(get_validator),
                        api_key: str = Depends(api_key_auth)):
-    results = await validator.miner_receipt_manager.get_receipts_by_miner_key(miner_key, page, page_size)
+    results = await validator.miner_receipt_manager.get_receipts_by_miner_key(miner_key, validator_key, page, page_size)
     return results
 
 

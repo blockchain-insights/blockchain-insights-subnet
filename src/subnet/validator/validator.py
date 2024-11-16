@@ -476,12 +476,12 @@ class Validator(Module):
             top_miners = miners if len(miners) <= select_count else sample(miners, select_count)
 
         #WE KEEP IT HERE FOR DEBUGGING PURPOSES
-        #m = top_miners[0]
-        #m.update({'miner_key': '5GE8x7wN7hpyEZPWsE9wRpqZ9fyX367aDEzGCfSkqsP6GHqV'})
-        #m.update({'miner_address': '127.0.0.1'})
-        #m.update({'miner_ip_port': 9962})
-        #top_miners = [m]  # For now, we only query the top miner
-        #top_miners = top_miners
+        m = top_miners[0]
+        m.update({'miner_key': '5GE8x7wN7hpyEZPWsE9wRpqZ9fyX367aDEzGCfSkqsP6GHqV'})
+        m.update({'miner_address': '127.0.0.1'})
+        m.update({'miner_ip_port': 9962})
+        top_miners = [m]  # For now, we only query the top miner
+        top_miners = top_miners
         #"""
 
         query_tasks = {
