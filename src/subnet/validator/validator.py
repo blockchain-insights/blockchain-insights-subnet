@@ -25,7 +25,8 @@ from .receipt_sync import ReceiptSyncWorker
 from .weights_storage import WeightsStorage
 from src.subnet.validator.database.models.miner_discovery import MinerDiscoveryManager
 from src.subnet.validator.database.models.miner_receipt import MinerReceiptManager
-from src.subnet.protocol import Challenge, ChallengesResponse, ChallengeMinerResponse, Discovery
+from src.subnet.protocol import Challenge, ChallengesResponse, ChallengeMinerResponse, Discovery, \
+    MODEL_KIND_BALANCE_TRACKING
 from .. import VERSION
 
 
@@ -645,31 +646,29 @@ class Validator(Module):
             if not query_result:
                 return None
 
-            return self.unpack_response(query_result)
+            return self.unpack_response(query_result, model_kind)
         except Exception as e:
             logger.warning(f"Failed to query miner", error=e, miner_key=miner_key)
             return None
 
     @staticmethod
-    def unpack_response(response):
-        if isinstance(response, list):
-            if not response:
-                raise IndexError("Cannot unpack an empty list")
-            if not isinstance(response[0], dict):
-                raise ValueError("First element of list must be a dictionary")
-            if len(response) > 0 and "response_json" in response[0]:
+    def unpack_response(response, model_kind):
+        if model_kind == MODEL_KIND_BALANCE_TRACKING:
+            response['result'] = response["result"][0]['response_json']
+            return {
+                "response": response
+            }
+        elif model_kind == "funds_flow":
+            if isinstance(response, dict):
+                response['result'] = {
+                    "data": response['result']
+                }
                 return {
-                    "response": response[0]["response_json"]
+                   "response": response
                 }
             else:
                 return {
                     "response": response
                 }
-        elif isinstance(response, dict):
-            if not response.get("response_json"):
-                return {
-                    "response": response
-                }
-            return response
-        else:
-            raise TypeError(f"Cannot unpack type {type(response)}. Must be list or dict")
+
+        raise ValueError(f"Invalid model type: {model_kind}")

@@ -3,6 +3,11 @@
 All notable changes to this project will be documented in this file.
 
 
+## [1.3.1] - 2024-11-17
+- Improved gateway funds flow and balance tracking performance.
+- Added balance endpoint.
+- Unified gateway response format.
+
 ## [1.3.0] - 2024-11-12
 - Added decentralized validator receipt sync mechanism.
 - Renamed validator api to gateway.

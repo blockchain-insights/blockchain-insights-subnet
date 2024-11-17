@@ -41,9 +41,9 @@ class BalanceTrackingQueryAPI:
             WITH result_set AS (
                 SELECT 
                     bc.address,
-                    bc.block as block_height,
-                    bc.d_balance as balance_delta,
-                    bc.block_timestamp as timestamp,
+                    bc.block_height,
+                    bc.balance_delta,
+                    bc.block_timestamp,
                     COUNT(*) OVER() as total_count
                 FROM balance_changes bc
                 {where_clause}
@@ -60,7 +60,60 @@ class BalanceTrackingQueryAPI:
                                 address,
                                 block_height,
                                 balance_delta,
-                                timestamp
+                                block_timestamp
+                            FROM result_set
+                        ) r
+                    ),
+                    'total_items', COALESCE((SELECT total_count FROM result_set LIMIT 1), 0),
+                    'total_pages', CEIL(COALESCE((SELECT total_count FROM result_set LIMIT 1), 0)::float / {page_size})
+                ) as response_json;
+        """
+
+        result = await self._execute_query(network, query, model_kind=MODEL_KIND_BALANCE_TRACKING)
+        return result
+
+    async def get_balances(self,
+                           network: str,
+                           addresses: Optional[list[str]] = None,
+                           page: int = 1,
+                           page_size: int = 100
+                           ) -> dict:
+
+        offset = (page - 1) * page_size
+        conditions = []
+
+        if addresses:
+            formatted_addresses = ', '.join(f"'{address}'" for address in addresses)
+            conditions.append(f"bc.address IN ({formatted_addresses})")
+
+        where_clause = " AND ".join(conditions)
+        if where_clause:
+            where_clause = f"WHERE {where_clause}"
+
+        query = f"""
+            WITH result_set AS (
+                SELECT 
+                    bc.address,
+                    bc.block_height,
+                    bc.balance,
+                    bc.block_timestamp,
+                    COUNT(*) OVER() as total_count
+                FROM balance_address_blocks bc
+                {where_clause}
+                ORDER BY bc.block_timestamp
+                LIMIT {page_size}
+                OFFSET {offset}
+            )
+            SELECT 
+                json_build_object(
+                    'data', (
+                        SELECT json_agg(row_to_json(r))
+                        FROM (
+                            SELECT 
+                                address,
+                                block_height,
+                                balance,
+                                block_timestamp
                             FROM result_set
                         ) r
                     ),
