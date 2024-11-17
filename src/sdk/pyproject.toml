@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chaininsights-sdk"
+version = "0.1.0"
+description = "ChainInsights Subnet SDK - Blockchain Analytics tools for Chain Insights Subnet"
+authors = [
+    { name = "Chain Insights" }
+]
+readme = "SDK.md"
+requires-python = ">=3.10.12"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Blockchain :: Analysis Tools",
+]
+dependencies = [
+    "requests>=2.25.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/blockchain-insights/blockchain-insights-subnet"
+Documentation = "https://github.com/blockchain-insights/blockchain-insights-subnet/SDK.md"

@@ -25,3 +25,4 @@ pytest
 pytest-asyncio
 pytest-cov
 pytest-mock
+black
