@@ -33,7 +33,7 @@ def validate_date_format(date_str: str) -> datetime:
         )
 
 
-@balance_tracking_router.get("/{network}/deltas", response_model_exclude_none=True)
+@balance_tracking_router.get("/{network}/deltas")
 async def get_balance_deltas(
         network: str,
         addresses: List[str] = Query([], description="List of addresses to track", ),
@@ -65,6 +65,37 @@ async def get_balance_deltas(
 
     return data
 
+@balance_tracking_router.get("/{network}")
+async def get_balances(
+        network: str,
+        addresses: List[str] = Query([], description="List of addresses to track", ),
+        page: int = Query(1, ge=1, description="Page number"),
+        page_size: int = Query(100, ge=1, le=1000, description="Items per page"),
+        validator: Validator = Depends(get_validator),
+        api_key: str = Depends(api_key_auth),
+):
+
+    if not addresses:
+        raise HTTPException(
+            status_code=400,
+            detail="At least one address must be provided"
+        )
+
+    if len(addresses) > 100:
+        raise HTTPException(
+            status_code=400,
+            detail="Maximum 1000 addresses can be provided"
+        )
+
+    query_api = BalanceTrackingQueryAPI(validator)
+    data = await query_api.get_balances(
+        network=network,
+        addresses=addresses,
+        page=page,
+        page_size=page_size,
+    )
+
+    return data
 
 @balance_tracking_router.get("/{network}/timestamps", response_model_exclude_none=True)
 async def get_timestamps(
