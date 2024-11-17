@@ -41,9 +41,9 @@ class BalanceTrackingQueryAPI:
             WITH result_set AS (
                 SELECT 
                     bc.address,
-                    bc.block as block_height,
-                    bc.d_balance as balance_delta,
-                    bc.block_timestamp as timestamp,
+                    bc.block_height,
+                    bc.balance_delta,
+                    bc.block_timestamp,
                     COUNT(*) OVER() as total_count
                 FROM balance_changes bc
                 {where_clause}
@@ -60,7 +60,7 @@ class BalanceTrackingQueryAPI:
                                 address,
                                 block_height,
                                 balance_delta,
-                                timestamp
+                                block_timestamp
                             FROM result_set
                         ) r
                     ),

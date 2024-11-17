@@ -71,7 +71,7 @@ class Miner(Module):
                 search = BalanceSearchFactory().create_balance_search(self.settings.NETWORK)
                 result = await search.execute_query(query)
                 response_hash = generate_hash(str(result))
-                result_hash_signature = self.keypair.sign(response_hash)
+                result_hash_signature = self.keypair.sign(response_hash).hex()
 
                 return {
                     "result": result,
