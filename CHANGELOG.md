@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.3.1] - 2024-11-18
+## [1.3.2] - 2024-11-18
 - Fixed data duplication in gateway funds flow endpoint.
 - Increased remote config sync interval to 4hrs.
 - Updated miner .env example file.
