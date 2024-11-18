@@ -24,7 +24,7 @@ class BitcoinFundsFlowQueryApi(FundsFlowQueryApi):
             MATCH (t1:Transaction {block_height:%d})-[s1:SENT]->(a1:Address)
             OPTIONAL MATCH (t0)-[s0:SENT]->(a0:Address)-[s2:SENT]->(t1)
             OPTIONAL MATCH (t1)-[s3:SENT]->(a2:Address)-[s4:SENT]->(t2)
-            
+            WITH DISTINCT t1, s1, a1, t0, s0, a0, s2, s3, a2, s4, t2
             WITH 
                 COLLECT({
                     id: t1.tx_id,
@@ -52,7 +52,7 @@ class BitcoinFundsFlowQueryApi(FundsFlowQueryApi):
                     address: a1.address 
                 }) AS addresses_a1,                                       
                                
-                COLLECT(DISTINCT CASE WHEN t0 IS NOT NULL THEN {
+                COLLECT(CASE WHEN t0 IS NOT NULL THEN {
                     id: t0.tx_id, 
                     type: 'node',
                     label: 'transaction', 
@@ -61,7 +61,7 @@ class BitcoinFundsFlowQueryApi(FundsFlowQueryApi):
                     block_height: t0.block_height 
                 } END) AS transactions_t0,
             
-                COLLECT(DISTINCT CASE WHEN s0 IS NOT NULL THEN {
+                COLLECT(CASE WHEN s0 IS NOT NULL THEN {
                     id: t0.tx_id + '-' + a0.address,
                     type: 'edge', 
                     label: toString(s0.value_satoshi/100000000.0) + ' BTC', 
@@ -71,14 +71,14 @@ class BitcoinFundsFlowQueryApi(FundsFlowQueryApi):
                     btc_value: s0.value_satoshi/100000000.0 
                 } END) AS edges_s0,
             
-                COLLECT(DISTINCT CASE WHEN a0 IS NOT NULL THEN {
+                COLLECT(CASE WHEN a0 IS NOT NULL THEN {
                     id: a0.address, 
                     type: 'node', 
                     label: 'address', 
                     address: a0.address 
                 } END) AS addresses_a0,
                 
-                COLLECT(DISTINCT CASE WHEN s2 IS NOT NULL THEN {
+                COLLECT(CASE WHEN s2 IS NOT NULL THEN {
                     id: a0.address + '-' + t1.tx_id, 
                     type: 'edge', 
                     label: toString(s2.value_satoshi/100000000.0) + ' BTC', 
@@ -88,7 +88,7 @@ class BitcoinFundsFlowQueryApi(FundsFlowQueryApi):
                     btc_value: s2.value_satoshi/100000000.0 
                 } END) AS edges_s2,
                 
-                COLLECT(DISTINCT CASE WHEN s3 IS NOT NULL THEN {
+                COLLECT(CASE WHEN s3 IS NOT NULL THEN {
                     id: t1.tx_id + '-' + a2.address,
                     type: 'edge',
                     label: toString(s3.value_satoshi/100000000.0) + ' BTC', 
@@ -98,14 +98,14 @@ class BitcoinFundsFlowQueryApi(FundsFlowQueryApi):
                     btc_value: s3.value_satoshi/100000000.0 
                 } END) AS edges_s3,    
                 
-                COLLECT(DISTINCT CASE WHEN a2 IS NOT NULL THEN {
+                COLLECT(CASE WHEN a2 IS NOT NULL THEN {
                     id: a2.address, 
                     type: 'node', 
                     label: 'address', 
                     address: a2.address 
                 } END) AS addresses_a2,
             
-                COLLECT(DISTINCT CASE WHEN s4 IS NOT NULL THEN {
+                COLLECT(CASE WHEN s4 IS NOT NULL THEN {
                     id: a2.address + '-' + t2.tx_id, 
                     type: 'edge', 
                     label: toString(s4.value_satoshi/100000000.0) + ' BTC', 
@@ -115,7 +115,7 @@ class BitcoinFundsFlowQueryApi(FundsFlowQueryApi):
                     btc_value: s4.value_satoshi/100000000.0 
                 } END) AS edges_s4,
                  
-                COLLECT(DISTINCT CASE WHEN t2 IS NOT NULL THEN {
+                COLLECT(CASE WHEN t2 IS NOT NULL THEN {
                     id: t2.tx_id, 
                     type: 'node', 
                     label: 'transaction', 
@@ -128,7 +128,7 @@ class BitcoinFundsFlowQueryApi(FundsFlowQueryApi):
                 + addresses_a0 + addresses_a1 + addresses_a2 
                 + edges_s0 + edges_s1 + edges_s2 + edges_s3 + edges_s4 AS elements
             UNWIND elements AS element
-            RETURN DISTINCT 
+            RETURN 
                 element.id AS id,
                 element.type AS type,
                 element.label AS label,
@@ -250,7 +250,7 @@ class BitcoinFundsFlowQueryApi(FundsFlowQueryApi):
                     timestamp: t1.timestamp,
                     block_height: t1.block_height
                 }) AS out_txs,
-                COLLECT(DISTINCT {
+                COLLECT({
                     id: t0.tx_id,
                     type: 'node',
                     label: 'transaction',
@@ -258,25 +258,25 @@ class BitcoinFundsFlowQueryApi(FundsFlowQueryApi):
                     timestamp: t0.timestamp,
                     block_height: t0.block_height
                 }) AS in_txs,
-                COLLECT(DISTINCT {
+                COLLECT({
                     id: a1.address,
                     type: 'node',
                     label: 'address',
                     address: a1.address
                 }) AS out_addresses,
-                COLLECT(DISTINCT {
+                COLLECT({
                     id: a3.address,
                     type: 'node',
                     label: 'address',
                     address: a3.address
                 }) AS in_addresses,
-                COLLECT(DISTINCT {
+                COLLECT({
                     id: a0.address,
                     type: 'node',
                     label: 'address',
                     address: a0.address
                 })[0] AS center_address,
-                COLLECT(DISTINCT {
+                COLLECT({
                     id: t1.tx_id + '-' + a1.address,
                     type: 'edge',
                     label: toString(s2.value_satoshi/100000000.0) + ' BTC',
@@ -286,7 +286,7 @@ class BitcoinFundsFlowQueryApi(FundsFlowQueryApi):
                     btc_value: s2.value_satoshi/100000000.0,
                     timestamp: t1.timestamp
                 }) AS out_edges1,
-                COLLECT(DISTINCT {
+                COLLECT({
                     id: a0.address + '-' + t1.tx_id,
                     type: 'edge',
                     label: toString(s1.value_satoshi/100000000.0) + ' BTC',
@@ -296,7 +296,7 @@ class BitcoinFundsFlowQueryApi(FundsFlowQueryApi):
                     btc_value: s1.value_satoshi/100000000.0,
                     timestamp: t1.timestamp
                 }) AS out_edges2,
-                COLLECT(DISTINCT {
+                COLLECT({
                     id: t0.tx_id + '-' + a0.address,
                     type: 'edge',
                     label: toString(s0.value_satoshi/100000000.0) + ' BTC',
@@ -306,7 +306,7 @@ class BitcoinFundsFlowQueryApi(FundsFlowQueryApi):
                     btc_value: s0.value_satoshi/100000000.0,
                     timestamp: t0.timestamp
                 }) AS in_edges1,
-                COLLECT(DISTINCT {
+                COLLECT({
                     id: a3.address + '-' + t0.tx_id,
                     type: 'edge',
                     label: toString(s3.value_satoshi/100000000.0) + ' BTC',
@@ -324,7 +324,7 @@ class BitcoinFundsFlowQueryApi(FundsFlowQueryApi):
             WITH element
             WHERE element.id IS NOT NULL
 
-            RETURN DISTINCT 
+            RETURN 
                 element.id AS id,
                 element.type AS type,
                 element.label AS label,
