@@ -99,12 +99,12 @@ For validators participating in organic query support (running a gateway), it's 
 
 If you're registering a new validator with metadata:
 ```shell
-comx module register validator validator_name 20 --metadata '{"gateway":"http://your-validator-gateway-ip:9907"}'
+comx module register validator validator_name 20 --metadata '{"gateway":"http://your-validator-gateway-ip:9900"}'
 ```
 
 If you need to update the metadata for an existing validator:
 ```shell
-comx module update validator_name 20 --metadata '{"gateway":"http://your-validator-gateway-ip:9907"}'
+comx module update validator_name 20 --metadata '{"gateway":"http://your-validator-gateway-ip:9900"}'
 ```
 
 Replace `validator_name` with your validator's name and adjust the gateway URL to match your validator's actual endpoint. The gateway URL should be accessible from the internet if you want other nodes to be able to query your validator.
