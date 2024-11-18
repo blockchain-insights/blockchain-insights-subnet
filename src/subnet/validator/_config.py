@@ -118,7 +118,7 @@ class SettingsManager:
             self._settings_lock = threading.Lock()
             self._settings = ValidatorSettings()
             self._stop_event = threading.Event()
-            self._reload_interval = 600
+            self._reload_interval = 14400
             self._thread = threading.Thread(target=self._background_reloader, daemon=True)
             self._thread.start()
             self._initialized = True
