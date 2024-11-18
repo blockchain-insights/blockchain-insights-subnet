@@ -23,21 +23,21 @@ class CommuneFundsFlowQueryApi(FundsFlowQueryApi):
             MATCH (a0:Address)-[t:TRANSACTION {block_height: %d}]->(a1:Address)
             WITH DISTINCT a0, a1, t
             WITH 
-                COLLECT({
+                COLLECT(DISTINCT {
                     id: a0.address,
                     type: 'node',
                     label: 'address',
                     address: a0.address
                 }) AS source_addresses,
                 
-                COLLECT({
+                COLLECT(DISTINCT {
                     id: a1.address,
                     type: 'node',
                     label: 'address',
                     address: a1.address
                 }) AS target_addresses,
                  
-                COLLECT({
+                COLLECT(DISTINCT {
                     id: t.id,
                     type: 'edge',
                     block_height: t.block_height,
@@ -51,7 +51,7 @@ class CommuneFundsFlowQueryApi(FundsFlowQueryApi):
             
             WITH source_addresses + target_addresses + edges AS elements
             UNWIND elements AS element
-            RETURN 
+            RETURN DISTINCT
                 element.id AS id,
                 element.type AS type,
                 element.label AS label,
@@ -74,21 +74,21 @@ class CommuneFundsFlowQueryApi(FundsFlowQueryApi):
             MATCH (a0:Address)-[t:TRANSACTION {id: '%s'}]->(a1:Address)
             WITH DISTINCT a0, a1, t
             WITH 
-                COLLECT({
+                COLLECT(DISTINCT {
                     id: a0.address,
                     type: 'node',
                     label: 'address',
                     address: a0.address
                 }) AS source_addresses,
                 
-                COLLECT({
+                COLLECT(DISTINCT {
                     id: a1.address,
                     type: 'node',
                     label: 'address',
                     address: a1.address
                 }) AS target_addresses,
                  
-                COLLECT({
+                COLLECT(DISTINCT {
                     id: t.id,
                     type: 'edge',
                     block_height: t.block_height,
@@ -102,7 +102,7 @@ class CommuneFundsFlowQueryApi(FundsFlowQueryApi):
             
             WITH source_addresses + target_addresses + edges AS elements
             UNWIND elements AS element
-            RETURN 
+            RETURN DISTINCT
                 element.id AS id,
                 element.type AS type,
                 element.label AS label,
@@ -131,14 +131,14 @@ class CommuneFundsFlowQueryApi(FundsFlowQueryApi):
             OPTIONAL MATCH (a3:Address)-[t2:TRANSACTION]->(a)
             WITH DISTINCT a, t1, a2, a3, t2
             WITH 
-                COLLECT({
+                COLLECT(DISTINCT {
                     id: a.address,
                     type: 'node',
                     label: 'address',
                     address: a.address
                 }) AS center_address,
                 
-                COLLECT(CASE WHEN t1 IS NOT NULL THEN {
+                COLLECT(DISTINCT CASE WHEN t1 IS NOT NULL THEN {
                     id: t1.id,
                     type: 'edge',
                     block_height: t1.block_height,
@@ -150,21 +150,21 @@ class CommuneFundsFlowQueryApi(FundsFlowQueryApi):
                     amount: toFloat(t1.amount/1000000000)
                 } END) AS edges_t1,
                 
-                COLLECT(CASE WHEN a2 IS NOT NULL THEN {
+                COLLECT(DISTINCT CASE WHEN a2 IS NOT NULL THEN {
                     id: a2.address,
                     type: 'node',
                     label: 'address',
                     address: a2.address
                 } END) AS right_address,
                 
-                COLLECT(CASE WHEN a3 IS NOT NULL THEN {
+                COLLECT(DISTINCT CASE WHEN a3 IS NOT NULL THEN {
                     id: a3.address,
                     type: 'node',
                     label: 'address',
                     address: a3.address
                 } END) AS left_address,
             
-                COLLECT(CASE WHEN t2 IS NOT NULL THEN {
+                COLLECT(DISTINCT CASE WHEN t2 IS NOT NULL THEN {
                     id: t2.id,
                     type: 'edge',
                     block_height: t2.block_height,
@@ -178,7 +178,7 @@ class CommuneFundsFlowQueryApi(FundsFlowQueryApi):
             
             WITH center_address + edges_t1 + right_address + left_address + edges_t2 AS elements
             UNWIND elements AS element
-            RETURN 
+            RETURN DISTINCT
                 element.id AS id,
                 element.type AS type,
                 element.label AS label,
