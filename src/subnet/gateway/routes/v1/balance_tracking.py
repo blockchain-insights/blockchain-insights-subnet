@@ -3,6 +3,8 @@ from datetime import datetime, timezone
 from typing import Optional, List
 from fastapi import Depends, APIRouter, Query, HTTPException
 from pydantic import BaseModel
+
+from src.subnet.gateway.helpers.reponse_formatter import ResponseType
 from src.subnet.validator.validator import Validator
 from src.subnet.gateway import get_validator, api_key_auth
 from src.subnet.gateway.services.balance_tracking_query_api import BalanceTrackingQueryAPI
@@ -39,9 +41,16 @@ async def get_balance_deltas(
         addresses: List[str] = Query([], description="List of addresses to track", ),
         page: int = Query(1, ge=1, description="Page number"),
         page_size: int = Query(100, ge=1, le=1000, description="Items per page"),
+        response_type: ResponseType = Query(ResponseType.json),
         validator: Validator = Depends(get_validator),
         api_key: str = Depends(api_key_auth),
 ):
+
+    if response_type not in [ResponseType.json, ResponseType.chart]:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid response type. Supported types: json, chart"
+        )
 
     if not addresses:
         raise HTTPException(
@@ -71,9 +80,15 @@ async def get_balances(
         addresses: List[str] = Query([], description="List of addresses to track", ),
         page: int = Query(1, ge=1, description="Page number"),
         page_size: int = Query(100, ge=1, le=1000, description="Items per page"),
+        response_type: ResponseType = Query(ResponseType.json),
         validator: Validator = Depends(get_validator),
         api_key: str = Depends(api_key_auth),
 ):
+    if response_type not in [ResponseType.json, ResponseType.chart]:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid response type. Supported types: json, chart"
+        )
 
     if not addresses:
         raise HTTPException(
@@ -108,11 +123,18 @@ async def get_timestamps(
             None,
             description="End date in YYYY-MM-DD format (UTC)",
         ),
-        validator: Validator = Depends(get_validator),
         page: int = Query(1, ge=1, description="Page number"),
         page_size: int = Query(100, ge=1, le=1000, description="Items per page"),
+        response_type: ResponseType = Query(ResponseType.json),
+        validator: Validator = Depends(get_validator),
         api_key: str = Depends(api_key_auth),
 ):
+    if response_type not in [ResponseType.json, ResponseType.chart]:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid response type. Supported types: json, chart"
+        )
+
     if start_date and not validate_date_format(start_date):
         raise HTTPException(
             status_code=400,

@@ -32,6 +32,12 @@ async def get_blocks(
     validator: Validator = Depends(get_validator),
     api_key: str = Depends(api_key_auth),
 ):
+    if response_type not in [ResponseType.json, ResponseType.graph]:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid response type. Supported types: json, graph"
+        )
+
     query_api = select_query_api(network, validator)
     data = await query_api.get_block(block_height)
 
@@ -46,6 +52,12 @@ async def get_transaction_by_tx_id(
     validator: Validator = Depends(get_validator),
     api_key: str = Depends(api_key_auth),
 ):
+    if response_type not in [ResponseType.json, ResponseType.graph]:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid response type. Supported types: json, graph"
+        )
+
     query_api = select_query_api(network, validator)
     data = await query_api.get_transaction_by_tx_id(tx_id)
 
@@ -60,6 +72,12 @@ async def get_address_transactions(
     validator: Validator = Depends(get_validator),
     api_key: str = Depends(api_key_auth),
 ):
+    if response_type not in [ResponseType.json, ResponseType.graph]:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid response type. Supported types: json, graph"
+        )
+
     query_api = select_query_api(network, validator)
     data = await query_api.get_address_transactions(
         address=address,

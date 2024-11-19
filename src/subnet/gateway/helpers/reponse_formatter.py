@@ -7,6 +7,7 @@ from datetime import datetime
 class ResponseType(str, Enum):
     json = "json"
     graph = "graph"
+    chart = "chart"
 
 
 def format_response(data: dict, response_type: ResponseType):
@@ -30,5 +31,8 @@ def format_response(data: dict, response_type: ResponseType):
 
     if response_type == ResponseType.graph:
         return JSONResponse(content=processed_data, media_type="application/vnd.graph+json")
+
+    if response_type == ResponseType.chart:
+        return JSONResponse(content=processed_data, media_type="application/vnd.chart+json")
 
     return JSONResponse(content=processed_data)
