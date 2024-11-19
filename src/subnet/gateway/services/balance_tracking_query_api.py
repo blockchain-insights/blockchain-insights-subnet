@@ -16,9 +16,6 @@ class BalanceTrackingQueryAPI:
         except Exception as e:
             raise Exception(f"Error executing query: {str(e)}")
 
-
-    # implement timeseries queries from: https://claude.ai/chat/7dcdbd19-cd80-46bf-a37d-ff9338598df4
-
     async def get_balance_deltas(self,
                                    network: str,
                                    addresses: Optional[list[str]] = None,
