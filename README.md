@@ -50,14 +50,15 @@ It focuses on tracking and analyzing the movement of cryptocurrency funds and ch
 - [X] **Migration from Bittensor**: Transition the subnet from the Bittensor ecosystem to a Commune AI ecosystem.
 - [x] **Validator Receipt System**: Develop a decentralized validator receipt sync mechanism.
 - [ ] **Gateway API**
-- - [ ] **Funds Flow API**: Develop a funds flow API that provides detailed insights into cryptocurrency fund flows.
-  - [ ] **Balance Tracking API**: Create a balance API that tracks changes in cryptocurrency balances.
+- - [X] **Funds Flow API**: Develop a funds flow API that provides detailed insights into cryptocurrency fund flows.
+  - [X] **Balance Tracking API**: Create a balance API that tracks changes in cryptocurrency balances.
   - [ ] **Advance Cyper Algos API** Create Analysis Advance Algorithm APIs
+  - [ ] **Advance Timeseries Algos API** Create Analysis Advance Algorithm APIs
 - [ ] **Data Visualization SDK**: Implement data visualization tools to present insights in a user-friendly format.
 - [ ] **Chains Integrations**: Ongoing miner developments of blockchain indexers for various blockchain networks.
   - [x] **Bitcoin**
-    - [x] Funds Flow v1.1.0 Improvment
-    - [ ] Balance Tracking v1.1.0 Improvment
+    - [x] Funds Flow v1.1.0 Improvement
+    - [x] Balance Tracking v1.1.0 Improvement
   - [ ] **Commune AI ($COMAI)**
     - [x] Funds Flow
     - [ ] Balance Tracking
