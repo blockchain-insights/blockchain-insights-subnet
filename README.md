@@ -57,8 +57,8 @@ It focuses on tracking and analyzing the movement of cryptocurrency funds and ch
 - [ ] **Data Visualization SDK**: Implement data visualization tools to present insights in a user-friendly format.
 - [ ] **Chains Integrations**: Ongoing miner developments of blockchain indexers for various blockchain networks.
   - [x] **Bitcoin**
-    - [x] Funds Flow v1.1.0 Improvement
-    - [x] Balance Tracking v1.1.0 Improvement
+    - [x] Funds Flow v1.3.3 Improvement
+    - [x] Balance Tracking v1.3.3 Improvement
   - [ ] **Commune AI ($COMAI)**
     - [x] Funds Flow
     - [ ] Balance Tracking
