@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.3] - 2024-11-19
+- Fixed gateway url sync
+- Fixed miner balance tracking challenge solver.
+
 ## [1.3.2] - 2024-11-18
 - Fixed data duplication in gateway funds flow endpoint.
 - Increased remote config sync interval to 4hrs.

@@ -104,17 +104,17 @@ class BalanceSearch:
         try:
             logger.info(f"Executing balance sum query for block heights: {block_heights}")
             async with db_manager.session() as session:
-                query = text("SELECT SUM(d_balance) FROM balance_changes WHERE block = ANY(:block_heights)")
+                query = text("SELECT SUM(balance_delta) FROM balance_changes WHERE block_height = ANY(:block_heights)")
                 query = await session.execute(query, {'block_heights': block_heights})
                 result = query.scalar()
                 if result:
-                    sum_d_balance = int(result)
+                    sum_balance_delta = int(result)
                 else:
-                    sum_d_balance = 0
+                    sum_balance_delta = 0
 
-                logger.info(f"Balance sum for block heights {block_heights}: {sum_d_balance}")
+                logger.info(f"Balance changes sum for block heights {block_heights}: {sum_balance_delta}")
 
-                return sum_d_balance
+                return sum_balance_delta
 
         except SQLAlchemyError as e:
             logger.error(f"An error occurred: {str(e)}")

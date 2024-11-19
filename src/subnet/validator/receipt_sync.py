@@ -56,8 +56,9 @@ class ReceiptSyncWorker:
                 if gateway_url is None:
                     continue
                 uid = next((_uid for _uid, k in uid_to_key.items() if k == key), None)
-                if uid and sum(uid_to_incentive[uid]) > 0 and sum(uid_to_dividend[uid]) > 0:
-                    yield key, gateway_url
+                if uid_to_incentive.get(uid) and uid_to_dividend.get(uid):
+                    if uid and sum(uid_to_incentive[uid]) > 0 and sum(uid_to_dividend[uid]) > 0:
+                        yield key, gateway_url
             except (json.JSONDecodeError, KeyError) as e:
                 logger.warning(f"Error parsing metadata for key {key}: {e}")
                 continue
