@@ -1,3 +1,6 @@
+import time
+from random import random, randint
+
 from locust import HttpUser, TaskSet, task, between, events
 from neo4j import GraphDatabase
 import configparser
@@ -34,7 +37,9 @@ class GraphDatabaseClient:
         """Executes a Cypher query and returns the result."""
         with self.driver.session() as session:
             result = session.run(query)
-            return result.single()[0]
+            record = result.single()  # Get the first record, or None if no results
+            if not record:
+                print("No results found")
 
 
 class UserBehavior(TaskSet):
@@ -51,32 +56,54 @@ class UserBehavior(TaskSet):
         # Determine which task to run based on --test-case argument
         self.selected_task = self.user.environment.parsed_options.test_case
 
-    def _execute_task(self, query, test_name):
-        """Executes the specified query."""
+    def _execute_task(self, query, test_name, *args):
+
+        start_time = time.time()
         try:
+            print(f"Executing test-case: {test_name} {args}")
             result = self.user.db_client.execute_query(query)
-            print(f"{test_name} Result: {result}")
+            response_time = (time.time() - start_time) * 1000
+            print(f"Response time: {response_time}")
+            events.request.fire(
+                request_type="cypher",
+                name=test_name,
+                response_time=response_time,
+                response_length=len(result) if result else 0,
+                context=self.user,
+                exception=None,
+            )
         except Exception as e:
-            print(f"{test_name} Failed: {e}")
+            print(f"Failed to execute cypher query: {e}")
+            response_time = (time.time() - start_time) * 1000
+            events.request.fire(
+                request_type="cypher",
+                name=test_name,
+                response_time=response_time,
+                response_length=0,
+                context=self.user,
+                exception=e,
+            )
 
     @task
-    def test_case_return_1(self):
-        """Executes RETURN 1."""
-        if self.selected_task == "test_case_return_1":
-            self._execute_task("RETURN 1", "Test Case: RETURN 1")
+    def test_case(self):
 
-    @task
-    def test_case_node_count(self):
-        """Executes MATCH (n) RETURN COUNT(n)."""
-        if self.selected_task == "test_case_node_count":
-            self._execute_task("MATCH (n) RETURN COUNT(n)", "Test Case: Node Count")
+        if self.selected_task == "test_case_get_block_750000_850000":
+            block_height = randint(750000, 850000)
+            query = """MATCH (t1:Transaction {block_height:%d})-[s1:SENT]->(a1:Address)
+            OPTIONAL MATCH (t0)-[s0:SENT]->(a0:Address)-[s2:SENT]->(t1)
+            OPTIONAL MATCH (t1)-[s3:SENT]->(a2:Address)-[s4:SENT]->(t2)
+            WITH DISTINCT t1, s1, a1, t0, s0, a0, s2, s3, a2, s4, t2 
+            RETURN *""" % block_height
+            self._execute_task(query, self.selected_task, block_height)
 
-    @task
-    def test_case_relationship_count(self):
-        """Executes MATCH (n)-[r]->(m) RETURN COUNT(r)."""
-        if self.selected_task == "test_case_relationship_count":
-            self._execute_task("MATCH (n)-[r]->(m) RETURN COUNT(r)", "Test Case: Relationship Count")
-
+        if self.selected_task == "test_case_get_block_500000_750000":
+            block_height = randint(500000, 750000)
+            query = """MATCH (t1:Transaction {block_height:%d})-[s1:SENT]->(a1:Address)
+                   OPTIONAL MATCH (t0)-[s0:SENT]->(a0:Address)-[s2:SENT]->(t1)
+                   OPTIONAL MATCH (t1)-[s3:SENT]->(a2:Address)-[s4:SENT]->(t2)
+                   WITH DISTINCT t1, s1, a1, t0, s0, a0, s2, s3, a2, s4, t2 
+                   RETURN *""" % block_height
+            self._execute_task(query, self.selected_task, block_height)
 
 class GraphUser(HttpUser):
     """Defines user behavior and test setup."""
@@ -103,7 +130,7 @@ def add_custom_arguments(parser):
         '--test-case',
         type=str,
         default=None,
-        help="Manually select a test case to run (e.g., test_case_return_1)"
+        help="Manually select a test case to run"
     )
 
 
