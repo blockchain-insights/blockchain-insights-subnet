@@ -4,7 +4,7 @@ from typing import Optional, List
 from fastapi import Depends, APIRouter, Query, HTTPException
 from pydantic import BaseModel
 
-from src.subnet.gateway.helpers.reponse_formatter import ResponseType
+from src.subnet.gateway.helpers.reponse_formatter import ResponseType, format_response
 from src.subnet.validator.validator import Validator
 from src.subnet.gateway import get_validator, api_key_auth
 from src.subnet.gateway.services.balance_tracking_query_api import BalanceTrackingQueryAPI
@@ -72,7 +72,7 @@ async def get_balance_deltas(
         page_size=page_size,
     )
 
-    return data
+    return format_response(data, response_type)
 
 @balance_tracking_router.get("/{network}")
 async def get_balances(
@@ -110,7 +110,7 @@ async def get_balances(
         page_size=page_size,
     )
 
-    return data
+    return format_response(data, response_type)
 
 @balance_tracking_router.get("/{network}/timestamps", response_model_exclude_none=True)
 async def get_timestamps(
@@ -165,4 +165,4 @@ async def get_timestamps(
         page_size=page_size,
     )
 
-    return data
+    return format_response(data, response_type)
