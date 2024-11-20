@@ -1,0 +1,19 @@
+[bitcoin.memgraph]
+GRAPH_DATABASE_URL = memgraph://localhost:7687
+GRAPH_DATABASE_USER = memgraph_bitcoin_user
+GRAPH_DATABASE_PASSWORD = memgraph_bitcoin_password
+
+[bitcoin.neo4j]
+GRAPH_DATABASE_URL = bolt://localhost:7688
+GRAPH_DATABASE_USER = neo4j_bitcoin_user
+GRAPH_DATABASE_PASSWORD = neo4j_bitcoin_password
+
+[commune.memgraph]
+GRAPH_DATABASE_URL = memgraph://localhost:7687
+GRAPH_DATABASE_USER = memgraph_bitcoin_user
+GRAPH_DATABASE_PASSWORD = memgraph_bitcoin_password
+
+[commune.neo4j]
+GRAPH_DATABASE_URL = bolt://localhost:7688
+GRAPH_DATABASE_USER = neo4j_bitcoin_user
+GRAPH_DATABASE_PASSWORD = neo4j_bitcoin_password
