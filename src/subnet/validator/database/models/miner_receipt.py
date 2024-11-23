@@ -3,7 +3,7 @@ from typing import List, Optional, Dict, Union
 from dateutil import parser
 from pydantic import BaseModel
 from sqlalchemy import Column, String, DateTime, update, insert, BigInteger, Boolean, UniqueConstraint, Text, select, \
-    func, text, Index
+    func, text, Index, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.dialects.postgresql import insert, TIMESTAMP
 from datetime import datetime
@@ -22,10 +22,11 @@ class MinerReceipt(OrmBase):
     model_kind = Column(String, nullable=False)
     network = Column(String, nullable=False)
     query_hash = Column(Text, nullable=False)
-    response_hash = Column(Text, nullable=False)
+    query = Column(Text, nullable=True)
     result_hash = Column(Text, nullable=False)
     result_hash_signature = Column(Text, nullable=False)
-    timestamp = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+    timestamp = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=True)
+    response_time = Column(Float, nullable=False)
 
     __table_args__ = (
         UniqueConstraint('miner_key', 'request_id', name='uq_miner_key_request_id'),
@@ -53,7 +54,7 @@ class MinerReceiptManager:
     def __init__(self, session_manager: DatabaseSessionManager):
         self.session_manager = session_manager
 
-    async def store_miner_receipt(self, validator_key: str, request_id: str, miner_key: str, model_kind: str, network: str, query_hash: str, timestamp: datetime, response_hash: str, result_hash: str, result_hash_signature: str):
+    async def store_miner_receipt(self, validator_key: str, request_id: str, miner_key: str, model_kind: str, network: str, query: str, query_hash: str, response_time: float, timestamp: str, result_hash: str, result_hash_signature: str):
         async with self.session_manager.session() as session:
             async with session.begin():
                 stmt = insert(MinerReceipt).values(
@@ -62,11 +63,12 @@ class MinerReceiptManager:
                     model_kind=model_kind,
                     query_hash=query_hash,
                     network=network,
-                    timestamp=timestamp,
-                    response_hash=response_hash,
+                    timestamp=datetime.fromisoformat(timestamp),
                     result_hash=result_hash,
                     result_hash_signature=result_hash_signature,
-                    validator_key=validator_key
+                    validator_key=validator_key,
+                    query=query,
+                    response_time=response_time,
                 )
                 await session.execute(stmt)
 

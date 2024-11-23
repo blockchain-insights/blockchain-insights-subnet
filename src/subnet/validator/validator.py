@@ -1,4 +1,5 @@
 import asyncio
+import json
 import threading
 import time
 import traceback
@@ -7,6 +8,7 @@ from datetime import datetime
 from random import sample
 from typing import cast, Dict, Optional
 
+from aioredis import Redis
 from communex.client import CommuneClient  # type: ignore
 from communex.errors import NetworkTimeoutError
 from communex.misc import get_map_modules
@@ -42,6 +44,7 @@ class Validator(Module):
             challenge_funds_flow_manager: ChallengeFundsFlowManager,
             challenge_balance_tracking_manager: ChallengeBalanceTrackingManager,
             miner_receipt_manager: MinerReceiptManager,
+            redis_client: Redis,
             query_timeout: int = 60,
             challenge_timeout: int = 60,
 
@@ -59,6 +62,7 @@ class Validator(Module):
         self.terminate_event = threading.Event()
         self.challenge_funds_flow_manager = challenge_funds_flow_manager
         self.challenge_balance_tracking_manager = challenge_balance_tracking_manager
+        self.redis_client = redis_client
 
     @staticmethod
     def get_addresses(client: CommuneClient, netuid: int) -> dict[int, str]:
@@ -412,29 +416,18 @@ class Validator(Module):
                     "timestamp": timestamp,
                     "miner_keys": None,
                     "network": network,
-                    "query_hash": query_hash,
-                    "response_hash": None,
-                    "verified": False,
-                    "verifying_miners": [],
                     "model_kind": model_kind,
-                    "query": query,
                     "response": []
                 }
 
             response = await self._query_miner(miner, model_kind, query)
             if response:
-                response_hash = generate_hash(str(response))
                 return {
                     "request_id": request_id,
                     "timestamp": timestamp,
                     "miner_keys": [miner_key],
                     "network": network,
-                    "query_hash": query_hash,
-                    "response_hash": response_hash,
-                    "verified": False,
-                    "verifying_miners": [miner_key],
                     "model_kind": model_kind,
-                    "query": query,
                     **response
 
                 }
@@ -443,12 +436,7 @@ class Validator(Module):
                 "timestamp": timestamp,
                 "miner_keys": [miner_key],
                 "network": network,
-                "query_hash": query_hash,
-                "response_hash": None,
-                "verified": False,
-                "verifying_miners": [miner_key],
                 "model_kind": model_kind,
-                "query": query,
                 "response": None
             }
 
@@ -465,33 +453,34 @@ class Validator(Module):
                 "timestamp": timestamp,
                 "miner_keys": [],
                 "network": network,
-                "query_hash": query_hash,
-                "response_hash": None,
-                "verified": False,
-                "verifying_miners": [],
                 "model_kind": model_kind,
-                "query": query,
                 "response": None
             }
         else:
             top_miners = miners if len(miners) <= select_count else sample(miners, select_count)
 
         #WE KEEP IT HERE FOR DEBUGGING PURPOSES
-        #m = top_miners[0]
-        #m.update({'miner_key': '5GE8x7wN7hpyEZPWsE9wRpqZ9fyX367aDEzGCfSkqsP6GHqV'})
-        #m.update({'miner_address': '127.0.0.1'})
-        #m.update({'miner_ip_port': 9962})
-        #top_miners = [m]  # For now, we only query the top miner
+        ## 5DvXP65LQe5SfePQ2Bge6RmxV3pWehNmv7nt1fEvMFeHifkU","5G4mWAWB8ZKo4sYfu69Fpeg6aGkWE8ZzeXXTjUT8G4TPFaTE","5HpXG24woTs38cpykk8EsjvuCFaz2hM3vu9fdnMEXLGaq3pt
+        #m1 = top_miners[0]
+        #m1.update({'miner_key': '5GE8x7wN7hpyEZPWsE9wRpqZ9fyX367aDEzGCfSkqsP6GHqV'})
+        #m1.update({'miner_address': '127.0.0.1'})
+        #m1.update({'miner_ip_port': 9962})
+
+        #m2 = top_miners[0]
+        #m2.update({'miner_key': '5DvXP65LQe5SfePQ2Bge6RmxV3pWehNmv7nt1fEvMFeHifkU'})
+        #m2.update({'miner_address': '66.248.206.106'})
+        #m2.update({'miner_ip_port': 32214})
+
+        #top_miners = [m1, m2]  # For now, we only query the top miner
         #top_miners = top_miners
         #"""
 
+        responses = {}
+
         query_tasks = {
-            asyncio.create_task(self._query_miner(miner, model_kind, query)): miner
+            asyncio.create_task(self._query_miner(miner, model_kind, query)): (miner, time.time())
             for miner in top_miners
         }
-
-        # Track responses by their hash
-        responses = {}  # {response_hash: (response, [miners])}
 
         try:
             pending = set(query_tasks.keys())
@@ -515,7 +504,8 @@ class Validator(Module):
                 for completed_task in done:
                     try:
                         response = await completed_task
-                        current_miner = query_tasks[completed_task]
+                        current_miner, start_time = query_tasks[completed_task]
+                        response_time = round(time.time() - start_time, 3)
 
                         if not response:
                             continue
@@ -531,30 +521,30 @@ class Validator(Module):
                             logger.warning(f"Invalid result hash signature", miner_key=miner_key, validator_key=self.key.ss58_address)
                             continue
 
-                        # Hash the response for comparison
-                        response_hash = generate_hash(str(response))
-
                         # Add to or update our response tracking
-                        if response_hash in responses:
+                        if result_hash in responses:
                             # We found a match!
-                            existing_response, existing_miners = responses[response_hash]
+                            existing_response, existing_miners = responses[result_hash]
                             existing_miners.append(current_miner)
 
                             # Store receipts for both miners
                             first_miner = existing_miners[0]
 
-                            await self.miner_receipt_manager.store_miner_receipt(
-                                self.key.ss58_address,
-                                request_id,
-                                first_miner['miner_key'],
-                                model_kind,
-                                network,
-                                query_hash,
-                                timestamp,
-                                response_hash,
-                                result_hash,
-                                result_hash_signature
-                            )
+                            receipt = {
+                                "validator_key": self.key.ss58_address,
+                                "request_id": request_id,
+                                "miner_key": first_miner['miner_key'],
+                                "model_kind": model_kind,
+                                "network": network,
+                                "query": query,
+                                "query_hash": query_hash,
+                                "response_time": response_time,
+                                "timestamp": timestamp.isoformat(),
+                                "result_hash": result_hash,
+                                "result_hash_signature": result_hash_signature
+                            }
+
+                            await self.redis_client.lpush('receipts', json.dumps(receipt))
 
                             # Cancel remaining tasks
                             for task in pending:
@@ -565,63 +555,23 @@ class Validator(Module):
                                 "timestamp": timestamp,
                                 "miner_keys": [miner['miner_key'] for miner in top_miners],
                                 "network": network,
-                                "query_hash": query_hash,
-                                "response_hash": response_hash,
-                                "verified": True,
-                                "verifying_miners": [m['miner_key'] for m in existing_miners],
                                 "model_kind": model_kind,
-                                "query": query,
                                 **existing_response
                             }
                         else:
                             # First time seeing this response, store it
-                            responses[response_hash] = (response, [current_miner])
-
+                            responses[result_hash] = (response, [current_miner])
                     except Exception as e:
                         logger.error(f"Error querying miner", error=e)
                         continue
-
-            # get the first response
-            for response_hash, (response, miners) in responses.items():
-                await self.miner_receipt_manager.store_miner_receipt(
-                    self.key.ss58_address,
-                    request_id,
-                    miners[0]['miner_key'],
-                    model_kind,
-                    network,
-                    query_hash,
-                    timestamp,
-                    response_hash,
-                    response['response']['result_hash'],
-                    response['response']['result_hash_signature']
-                )
-
-                return {
-                    "request_id": request_id,
-                    "timestamp": timestamp,
-                    "miner_keys": [miners[0]['miner_key']],
-                    "network": network,
-                    "query_hash": query_hash,
-                    "response_hash": response_hash,
-                    "verified": False,
-                    "verifying_miners": [],
-                    "model_kind": model_kind,
-                    "query": query,
-                    **response
-                }
 
             # No valid responses at all, returning empty response
             return {
                 "request_id": request_id,
                 "timestamp": timestamp,
-                "miner_keys": [miner['miner_key'] for miner in top_miners],
+                "miner_keys": [],
                 "network": network,
-                "query_hash": query_hash,
-                "response_hash": None,
-                "verified": False,
-                "verifying_miners": [],
                 "model_kind": model_kind,
-                "query": query,
                 "response": None,
             }
 

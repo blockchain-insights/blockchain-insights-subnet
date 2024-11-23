@@ -1,4 +1,6 @@
 from datetime import datetime
+
+from aioredis import Redis
 from communex._common import get_node_url
 from communex.client import CommuneClient
 from communex.compat.key import classic_load_key
@@ -58,6 +60,7 @@ miner_receipt_manager = MinerReceiptManager(session_manager)
 challenge_funds_flow_manager = ChallengeFundsFlowManager(session_manager)
 challenge_balance_tracking_manager = ChallengeBalanceTrackingManager(session_manager)
 receipt_sync_worker = ReceiptSyncWorker(keypair, settings.NET_UID, c_client, miner_receipt_manager)
+redis_client = Redis.from_url(settings.REDIS_URL)
 
 global api_key_manager, validator, receipt_sync_fetch_thread
 
@@ -72,6 +75,7 @@ validator = Validator(
     challenge_funds_flow_manager,
     challenge_balance_tracking_manager,
     miner_receipt_manager,
+    redis_client=redis_client,
     query_timeout=settings.QUERY_TIMEOUT,
     challenge_timeout=settings.CHALLENGE_TIMEOUT,
 )

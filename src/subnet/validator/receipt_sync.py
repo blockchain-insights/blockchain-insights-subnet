@@ -1,4 +1,6 @@
 import json
+import traceback
+from sre_constants import error
 from typing import Any, Dict, List, Optional, Tuple
 import asyncio
 import aiohttp
@@ -173,6 +175,10 @@ class ReceiptSyncWorker:
     async def sync_single_gateway(self, validator_key: str, gateway_url: str):
         """Synchronize receipts from a single gateway."""
         timestamp_result = await self.miner_receipt_manager.get_last_receipt_timestamp_for_validator_key(validator_key)
+        if not timestamp_result:
+            logger.warning(f"Failed to get timestamp for {validator_key}")
+            return
+
         timestamp = timestamp_result['timestamp'] or self.DEFAULT_TIMESTAMP
         first_page_result = await self.fetch_page(gateway_url, timestamp)
 
@@ -220,8 +226,7 @@ class ReceiptSyncWorker:
             await asyncio.gather(*tasks)
 
         except Exception as e:
-            logger.error(f"Error during receipt synchronization: {e}")
+            logger.error(f"Error during receipt synchronization", error=e, tb=traceback.format_exc(), validator_key=self.keypair.ss58_address)
             raise
         finally:
-            # Cleanup session at the end of each sync
             await self.cleanup()
