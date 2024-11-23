@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.4] - 2024-11-23
+- Added response time, query fields to the receipt entity.
+- Improved gateway miner querying.
+- Introduced receipt processing worker.
+- Fixed receipt sync issue.
+
 ## [1.3.3] - 2024-11-19
 - Fixed gateway url sync
 - Fixed miner balance tracking challenge solver.
