@@ -14,13 +14,13 @@ All notable changes to this project will be documented in this file.
 - Added chart response type for gateway balance tracking endpoints
 
 ## [1.3.2] - 2024-11-18
-- Fixed data duplication in gateway funds flow endpoint.
+- Fixed data duplication in gateway money flow endpoint.
 - Increased remote config sync interval to 4hrs.
 - Updated miner .env example file.
 - Updated validator setup guide.
 
 ## [1.3.1] - 2024-11-17
-- Improved gateway funds flow and balance tracking performance.
+- Improved gateway money flow and balance tracking performance.
 - Added balance endpoint.
 - Unified gateway response format.
 

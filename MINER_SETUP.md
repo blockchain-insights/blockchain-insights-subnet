@@ -37,7 +37,7 @@
 - 8vCPU/ 1GB RAM / 1TB NVMe
 - Alternative You can use a JSON-RPC provider
 
-> Funds Flow database engines
+> Money Flow database engines
 
 - Neo4j: 8vCPU/128GB RAM with 2TB NVMe
   - Recommended 16vCPU/1.5TB RAM with 3TB NVMe
@@ -68,7 +68,7 @@ or
 
 
 - Commune Archive Node: 2vCPU/64GB RAM / 1TB NVMe
-- Funds Flow
+- Money Flow
   - Neo4j: 16vCPU/128GB RAM / 1TB NVMe
   - Or
   - Memgraph: 16vCPU/784GB RAM / 2TB NVMe (2 Snapshots)
@@ -76,9 +76,9 @@ or
   - Postgres: 8vCPU/128GB RAM / 1TB NVMe
 - Indexers (When lastblock is indexed)
   - Substrate: 1 vCPU/1GB RAM
-  - SubQuery Funds Flow: 1vCPU/1GB RAM
+  - SubQuery Money Flow: 1vCPU/1GB RAM
   - SubQuery Balance Tracking: 1vCPU/1GB RAM
-  - Indexer-rs Funds Flow: 8vCPU/16GB RAM
+  - Indexer-rs Money Flow: 8vCPU/16GB RAM
   - Indexer-rs Balance Tracking 1vCPU/8GB RAM
 - Miner (per miner)
   - 1vCPU/1GB RAM

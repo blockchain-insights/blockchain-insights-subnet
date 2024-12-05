@@ -1,14 +1,14 @@
-from src.subnet.protocol import NETWORK_COMMUNE, MODEL_KIND_FUNDS_FLOW
+from src.subnet.protocol import NETWORK_COMMUNE, MODEL_KIND_MONEY_FLOW
 from src.subnet.validator.validator import Validator
-from src.subnet.gateway.services import FundsFlowQueryApi
+from src.subnet.gateway.services import MoneyFlowQueryApi
 
 
-class CommuneFundsFlowQueryApi(FundsFlowQueryApi):
+class CommuneMoneyFlowQueryApi(MoneyFlowQueryApi):
     def __init__(self, validator: Validator):
         super().__init__()
         self.validator = validator
 
-    async def _execute_query(self, query: str, model_kind=MODEL_KIND_FUNDS_FLOW) -> dict:
+    async def _execute_query(self, query: str, model_kind=MODEL_KIND_MONEY_FLOW) -> dict:
         try:
             data = await self.validator.query_miner(NETWORK_COMMUNE, model_kind, query, miner_key=None)
             return data

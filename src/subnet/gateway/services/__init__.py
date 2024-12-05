@@ -1,4 +1,4 @@
-class FundsFlowQueryApi:
+class MoneyFlowQueryApi:
 
     async def get_block(self, block_height: int) -> dict:
         pass

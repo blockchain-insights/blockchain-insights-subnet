@@ -1,10 +1,9 @@
 import json
-
 from loguru import logger
 from src.subnet.protocol import NETWORK_BITCOIN
 from src.subnet.validator.challenges import ChallengeGenerator
-from src.subnet.validator.database.models.challenge_funds_flow import ChallengeFundsFlowManager
-from src.subnet.validator.nodes.bitcoin.node import BitcoinNode
+from src.subnet.validator.database.models.challenge_money_flow import ChallengeMoneyFlowManager
+from src.subnet.validator.nodes.bitcoin.node import ChallengeBitcoinNode
 from src.subnet.validator.database.models.challenge_balance_tracking import ChallengeBalanceTrackingManager
 from src.subnet.validator.nodes.random_block import select_block
 
@@ -12,18 +11,18 @@ from src.subnet.validator.nodes.random_block import select_block
 class BitcoinChallengeGenerator(ChallengeGenerator):
     def __init__(self, settings, terminate_event):
         super().__init__(settings, terminate_event)
-        self.node = BitcoinNode()
+        self.node = ChallengeBitcoinNode()
         self.network = NETWORK_BITCOIN
 
-    async def funds_flow_generate_and_store(self, challenge_manager: ChallengeFundsFlowManager, threshold: int):
+    async def money_flow_generate_and_store(self, challenge_manager: ChallengeMoneyFlowManager, threshold: int):
         last_block_height = self.node.get_current_block_height() - 6
 
-        funds_flow_challenge, tx_id = self.node.create_funds_flow_challenge(last_block_height, self.terminate_event)
-        if funds_flow_challenge is None:
+        money_flow_challenge, tx_id = self.node.create_money_flow_challenge(last_block_height, self.terminate_event)
+        if money_flow_challenge is None:
             return
 
-        challenge_json = json.dumps(funds_flow_challenge.model_dump())
-        logger.debug(f"Generated Funds Flow Challenge", network=self.network, challenge=funds_flow_challenge.model_dump())
+        challenge_json = json.dumps(money_flow_challenge.model_dump())
+        logger.debug(f"Generated Money Flow Challenge", network=self.network, challenge=money_flow_challenge.model_dump())
 
         current_challenge_count = await challenge_manager.get_challenge_count(self.network)
         if current_challenge_count >= threshold:

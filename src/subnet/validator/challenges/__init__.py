@@ -2,7 +2,7 @@ import threading
 from abc import ABC, abstractmethod
 from src.subnet.validator._config import ValidatorSettings
 from src.subnet.validator.database.models.challenge_balance_tracking import ChallengeBalanceTrackingManager
-from src.subnet.validator.database.models.challenge_funds_flow import ChallengeFundsFlowManager
+from src.subnet.validator.database.models.challenge_money_flow import ChallengeMoneyFlowManager
 
 
 class ChallengeGenerator(ABC):
@@ -11,7 +11,7 @@ class ChallengeGenerator(ABC):
         self.terminate_event = terminate_event
 
     @abstractmethod
-    async def funds_flow_generate_and_store(self, challenge_manager: ChallengeFundsFlowManager, threshold: int):
+    async def money_flow_generate_and_store(self, challenge_manager: ChallengeMoneyFlowManager, threshold: int):
         """
         This method should be implemented by all subclasses to generate challenges specific to a network and model type.
         """

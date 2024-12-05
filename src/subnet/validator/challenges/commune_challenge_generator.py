@@ -5,7 +5,7 @@ from src.subnet.protocol import NETWORK_COMMUNE
 from src.subnet.validator._config import ValidatorSettings
 from src.subnet.validator.challenges import ChallengeGenerator
 from src.subnet.validator.database.models.challenge_balance_tracking import ChallengeBalanceTrackingManager
-from src.subnet.validator.database.models.challenge_funds_flow import ChallengeFundsFlowManager
+from src.subnet.validator.database.models.challenge_money_flow import ChallengeMoneyFlowManager
 from random import randint
 from loguru import logger
 
@@ -18,26 +18,26 @@ class CommuneChallengeGenerator(ChallengeGenerator):
         self.network = NETWORK_COMMUNE
         self.node = CommuneNode(settings)
 
-    async def funds_flow_generate_and_store(self, challenge_manager: ChallengeFundsFlowManager, threshold: int):
+    async def money_flow_generate_and_store(self, challenge_manager: ChallengeMoneyFlowManager, threshold: int):
         try:
             last_block_height = self.node.get_current_block_height()
         except NotImplementedError as e:
             logger.error(f"Failed to fetch block height, skipping")
             return
 
-        funds_flow_challenge, tx_id = self.node.create_funds_flow_challenge(last_block_height, self.terminate_event)
-        if funds_flow_challenge is None:
+        money_flow_challenge, tx_id = self.node.create_money_flow_challenge(last_block_height, self.terminate_event)
+        if money_flow_challenge is None:
             return
 
-        challenge_json = json.dumps(funds_flow_challenge.model_dump())
+        challenge_json = json.dumps(money_flow_challenge.model_dump())
         current_challenge_count = await challenge_manager.get_challenge_count(self.network)
-        logger.debug(f"Generated Funds Flow Challenge", network=self.network, challenge=funds_flow_challenge.model_dump())
+        logger.debug(f"Generated Money Flow Challenge", network=self.network, challenge=money_flow_challenge.model_dump())
 
         if current_challenge_count >= threshold:
             await challenge_manager.try_delete_oldest_challenge(self.network)
 
         await challenge_manager.store_challenge(challenge_json, tx_id, self.network)
-        logger.info(f"Funds Flow Challenge stored in the database successfully.", network=self.network)
+        logger.info(f"Money Flow Challenge stored in the database successfully.", network=self.network)
 
     async def balance_tracking_generate_and_store(self, challenge_manager: ChallengeBalanceTrackingManager, threshold: int):
         try:

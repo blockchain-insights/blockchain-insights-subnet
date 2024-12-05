@@ -20,10 +20,9 @@ from substrateinterface import Keypair  # type: ignore
 from ._config import ValidatorSettings, load_base_weights
 
 from .database.models.challenge_balance_tracking import ChallengeBalanceTrackingManager
-from .database.models.challenge_funds_flow import ChallengeFundsFlowManager
+from .database.models.challenge_money_flow import ChallengeMoneyFlowManager
 from src.subnet.encryption import generate_hash
 from .helpers import raise_exception_if_not_registered, get_ip_port, cut_to_max_allowed_weights
-from .receipt_sync import ReceiptSyncWorker
 from .weights_storage import WeightsStorage
 from src.subnet.validator.database.models.miner_discovery import MinerDiscoveryManager
 from src.subnet.validator.database.models.miner_receipt import MinerReceiptManager
@@ -41,7 +40,7 @@ class Validator(Module):
             client: CommuneClient,
             weights_storage: WeightsStorage,
             miner_discovery_manager: MinerDiscoveryManager,
-            challenge_funds_flow_manager: ChallengeFundsFlowManager,
+            challenge_money_flow_manager: ChallengeMoneyFlowManager,
             challenge_balance_tracking_manager: ChallengeBalanceTrackingManager,
             miner_receipt_manager: MinerReceiptManager,
             redis_client: Redis,
@@ -60,7 +59,7 @@ class Validator(Module):
         self.weights_storage = weights_storage
         self.miner_discovery_manager = miner_discovery_manager
         self.terminate_event = threading.Event()
-        self.challenge_funds_flow_manager = challenge_funds_flow_manager
+        self.challenge_money_flow_manager = challenge_money_flow_manager
         self.challenge_balance_tracking_manager = challenge_balance_tracking_manager
         self.redis_client = redis_client
 
@@ -100,8 +99,8 @@ class Validator(Module):
                 version=discovery.version,
                 graph_db=discovery.graph_db,
                 network=discovery.network,
-                funds_flow_challenge_actual=challenge_response.funds_flow_challenge_actual,
-                funds_flow_challenge_expected=challenge_response.funds_flow_challenge_expected,
+                money_flow_challenge_actual=challenge_response.money_flow_challenge_actual,
+                money_flow_challenge_expected=challenge_response.money_flow_challenge_expected,
                 balance_tracking_challenge_actual=challenge_response.balance_tracking_challenge_actual,
                 balance_tracking_challenge_expected=challenge_response.balance_tracking_challenge_expected,
             )
@@ -129,29 +128,29 @@ class Validator(Module):
 
     async def _perform_challenges(self, client, miner_key, discovery) -> ChallengesResponse | None:
 
-        async def execute_funds_flow_challenge(funds_flow_challenge):
-            funds_flow_challenge_actual = "0x"
+        async def execute_money_flow_challenge(money_flow_challenge):
+            money_flow_challenge_actual = "0x"
             try:
-                funds_flow_challenge = Challenge.model_validate_json(funds_flow_challenge)
-                funds_flow_challenge = await client.call(
+                money_flow_challenge = Challenge.model_validate_json(money_flow_challenge)
+                money_flow_challenge = await client.call(
                     "challenge",
                     miner_key,
-                    {"challenge": funds_flow_challenge.model_dump(), "validator_key": self.key.ss58_address},
+                    {"challenge": money_flow_challenge.model_dump(), "validator_key": self.key.ss58_address},
                     timeout=self.challenge_timeout,
                 )
 
-                if funds_flow_challenge is not None:
-                    funds_flow_challenge = Challenge(**funds_flow_challenge)
-                    funds_flow_challenge_actual = funds_flow_challenge.output['tx_id']
-                    logger.debug(f"Funds flow challenge result", funds_flow_challenge_output=funds_flow_challenge.output, miner_key=miner_key)
-                return funds_flow_challenge_actual
+                if money_flow_challenge is not None:
+                    money_flow_challenge = Challenge(**money_flow_challenge)
+                    money_flow_challenge_actual = money_flow_challenge.output['tx_id']
+                    logger.debug(f"Money flow challenge result", money_flow_challenge_output=money_flow_challenge.output, miner_key=miner_key)
+                return money_flow_challenge_actual
 
             except NetworkTimeoutError:
                 logger.error(f"Miner failed to perform challenges - timeout", miner_key=miner_key)
             except Exception as e:
                 logger.error(f"Miner failed to perform challenges", error=e, miner_key=miner_key, traceback=traceback.format_exc())
             finally:
-                return funds_flow_challenge_actual
+                return money_flow_challenge_actual
 
         async def execute_balance_tracking_challenge(balance_tracking_challenge):
             balance_tracking_challenge_actual = 0
@@ -176,11 +175,11 @@ class Validator(Module):
                 return balance_tracking_challenge_actual
 
         try:
-            funds_flow_challenge, tx_id = await self.challenge_funds_flow_manager.get_random_challenge(discovery.network)
-            if funds_flow_challenge is None:
-                logger.warning(f"Failed to get funds flow challenge", miner_key=miner_key)
+            money_flow_challenge, tx_id = await self.challenge_money_flow_manager.get_random_challenge(discovery.network)
+            if money_flow_challenge is None:
+                logger.warning(f"Failed to get money flow challenge", miner_key=miner_key)
                 return None
-            funds_flow_challenge_actual = await execute_funds_flow_challenge(funds_flow_challenge)
+            money_flow_challenge_actual = await execute_money_flow_challenge(money_flow_challenge)
 
             balance_tracking_challenge, balance_tracking_expected_response = await self.challenge_balance_tracking_manager.get_random_challenge(discovery.network)
             if balance_tracking_challenge is None:
@@ -189,8 +188,8 @@ class Validator(Module):
             balance_tracking_challenge_actual = await execute_balance_tracking_challenge(balance_tracking_challenge)
 
             return ChallengesResponse(
-                funds_flow_challenge_actual=funds_flow_challenge_actual,
-                funds_flow_challenge_expected=tx_id,
+                money_flow_challenge_actual=money_flow_challenge_actual,
+                money_flow_challenge_expected=tx_id,
                 balance_tracking_challenge_actual=balance_tracking_challenge_actual,
                 balance_tracking_challenge_expected=balance_tracking_expected_response,
             )
@@ -608,7 +607,7 @@ class Validator(Module):
             return {
                 "response": response
             }
-        elif model_kind == "funds_flow":
+        elif model_kind == MONEY_FLOW_MODEL_TYPE:
             if isinstance(response, dict):
                 response['result'] = {
                     "data": response['result']

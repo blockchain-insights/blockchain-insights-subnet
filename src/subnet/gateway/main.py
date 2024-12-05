@@ -7,7 +7,7 @@ import sys
 from src.subnet.gateway import patch_record, settings, receipt_sync_fetch_thread, validator
 from src.subnet.gateway.rate_limiter import RateLimiterMiddleware
 from src.subnet.gateway.routes.v1.balance_tracking import balance_tracking_router
-from src.subnet.gateway.routes.v1.funds_flow import funds_flow_router
+from src.subnet.gateway.routes.v1.money_flow import money_flow_router
 from src.subnet.gateway.routes.v1.miners import miner_router
 
 logger.remove()
@@ -46,7 +46,7 @@ app = FastAPI(
     version="0.1.0"
 )
 
-app.include_router(funds_flow_router)
+app.include_router(money_flow_router)
 app.include_router(balance_tracking_router)
 app.include_router(miner_router)
 app.add_middleware(RateLimiterMiddleware, redis_url=settings.REDIS_URL, max_requests=settings.API_RATE_LIMIT,

@@ -11,7 +11,7 @@ from src.subnet import VERSION
 from src.subnet.encryption import generate_hash
 from src.subnet.miner._config import MinerSettings, load_environment
 from src.subnet.miner.blockchain.search import GraphSearchFactory, BalanceSearchFactory
-from src.subnet.protocol import Challenge, MODEL_KIND_FUNDS_FLOW, MODEL_KIND_BALANCE_TRACKING
+from src.subnet.protocol import Challenge, MODEL_KIND_MONEY_FLOW, MODEL_KIND_BALANCE_TRACKING
 from src.subnet.validator.database import db_manager
 
 
@@ -55,7 +55,7 @@ class Miner(Module):
         logger.debug(f"Received query request from {validator_key}", validator_key=validator_key)
 
         try:
-            if model_kind == MODEL_KIND_FUNDS_FLOW:
+            if model_kind == MODEL_KIND_MONEY_FLOW:
                 search = GraphSearchFactory().create_graph_search(self.settings)
                 result = search.execute_query(query)
                 response_hash = generate_hash(str(result))
@@ -91,7 +91,7 @@ class Miner(Module):
         Args:
             validator_key:
             challenge: {
-                "model_kind": "funds_flow",
+                "model_kind": "money_flow",
                 "in_total_amount": 0.0,
                 "out_total_amount": 0.0,
                 "tx_id_last_6_chars": "string",
@@ -111,7 +111,7 @@ class Miner(Module):
 
         challenge = Challenge(**challenge)
 
-        if challenge.model_kind == MODEL_KIND_FUNDS_FLOW:
+        if challenge.model_kind == MODEL_KIND_MONEY_FLOW:
             search = GraphSearchFactory().create_graph_search(self.settings)
             tx_id = search.solve_challenge(
                 in_total_amount=challenge.in_total_amount,

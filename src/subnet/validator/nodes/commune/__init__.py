@@ -3,7 +3,7 @@ from threading import Event
 from Crypto.Hash import SHA256
 from loguru import logger
 from substrateinterface import SubstrateInterface
-from src.subnet.protocol import Challenge, MODEL_KIND_FUNDS_FLOW, MODEL_KIND_BALANCE_TRACKING
+from src.subnet.protocol import Challenge, MODEL_KIND_MONEY_FLOW, MODEL_KIND_BALANCE_TRACKING
 from src.subnet.validator._config import ValidatorSettings
 from src.subnet.validator.nodes.abstract_node import Node
 from src.subnet.validator.nodes.random_block import select_block
@@ -50,7 +50,7 @@ class CommuneNode(Node):
             logger.error(f"Error fetching block at height {block_height}: {e}", block_height=block_height, error=e)
             return None
 
-    def create_funds_flow_challenge(self, end_block: int, terminate_event: Event):
+    def create_money_flow_challenge(self, end_block: int, terminate_event: Event):
         if terminate_event.is_set():
             return None, None
 
@@ -70,7 +70,7 @@ class CommuneNode(Node):
             checksum = calculate_checksum(tx_hash, block_hash, sender, receiver)
 
             challenge = Challenge(
-                model_kind=MODEL_KIND_FUNDS_FLOW,
+                model_kind=MODEL_KIND_MONEY_FLOW,
                 in_total_amount=None,
                 out_total_amount=None,
                 tx_id_last_6_chars=tx_hash[-6:],

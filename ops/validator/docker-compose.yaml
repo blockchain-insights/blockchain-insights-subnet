@@ -28,7 +28,7 @@ services:
     container_name: postgres-sn20-miner
     image: postgres:16.3-alpine3.20
     ports:
-      - "5430:5432"
+      - "5460:5432"
     volumes:
       - "postgres-data-miner:/var/lib/postgresql/data"
       - "./init.sql:/docker-entrypoint-initdb.d/init.sql"
@@ -43,7 +43,7 @@ services:
     container_name: postgres-sn20
     image: postgres:16.3-alpine3.20
     ports:
-      - "5432:5432"
+      - "5452:5432"
     volumes:
       - "postgres-data-validator:/var/lib/postgresql/data"
       - "./init.sql:/docker-entrypoint-initdb.d/init.sql"

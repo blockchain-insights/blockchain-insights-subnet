@@ -1,14 +1,13 @@
 import asyncio
 import threading
 import traceback
-
 from loguru import logger
 from src.subnet.protocol import get_networks, NETWORK_BITCOIN, NETWORK_COMMUNE
 from src.subnet.validator.challenges import ChallengeGenerator
 from src.subnet.validator.challenges.bitcoin_challenge_generator import BitcoinChallengeGenerator
 from src.subnet.validator.challenges.commune_challenge_generator import CommuneChallengeGenerator
 from src.subnet.validator.database.models.challenge_balance_tracking import ChallengeBalanceTrackingManager
-from src.subnet.validator.database.models.challenge_funds_flow import ChallengeFundsFlowManager
+from src.subnet.validator.database.models.challenge_money_flow import ChallengeMoneyFlowManager
 from src.subnet.validator.database.session_manager import DatabaseSessionManager
 
 
@@ -40,7 +39,7 @@ class ChallengeGeneratorThread(threading.Thread):
         networks = get_networks()
         session_manager = DatabaseSessionManager()
         session_manager.init(self.settings.DATABASE_URL)
-        funds_flow_challenge_manager = ChallengeFundsFlowManager(session_manager)
+        money_flow_challenge_manager = ChallengeMoneyFlowManager(session_manager)
         balance_tracking_challenge_manager = ChallengeBalanceTrackingManager(session_manager)
 
         try:
@@ -53,7 +52,7 @@ class ChallengeGeneratorThread(threading.Thread):
                         generator = factory.create_challenge_generator(network, self.settings, self.terminate_event)
                         if self.terminate_event.is_set():
                             break
-                        await generator.funds_flow_generate_and_store(funds_flow_challenge_manager, self.threshold)
+                        await generator.money_flow_generate_and_store(money_flow_challenge_manager, self.threshold)
                         if self.terminate_event.is_set():
                             break
                         await generator.balance_tracking_generate_and_store(balance_tracking_challenge_manager, self.threshold)

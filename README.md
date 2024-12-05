@@ -14,7 +14,7 @@
     - [Scoring Model](#scoring-model)
     - [\_score\_miner Method](#_score_miner-method)
 - [Challenges](#challenges)
-  - [Funds Flow Challenge](#funds-flow-challenge)
+  - [Money Flow Challenge](#money-flow-challenge)
   - [Balance Tracking Challenge](#balance-tracking-challenge)
 - [Organic Usage](#organic-usage)
 - [Installation Documentations](#installation-documentations)
@@ -34,33 +34,33 @@
   
 ### Subnet Vision
 
-The Subnet aims to deliver comprehensive insights into cryptocurrency fund flows and balance changes, presented in a user-friendly manner. It is designed to:
+The Subnet aims to deliver comprehensive insights into cryptocurrency money flows and balance changes, presented in a user-friendly manner. It is designed to:
 
-- **Provide Funds Flow and Balance Insights**: Offer detailed tracking and analysis of cryptocurrency movements and balances.
+- **Provide Money Flow and Balance Insights**: Offer detailed tracking and analysis of cryptocurrency movements and balances.
 - **Detect Anomalies**: Identify suspicious activities and irregularities that may indicate fraud, scams, rug pulls, or money laundering.
 - **Combat Financial Crimes**: Assist in the early detection and prevention of financial crimes, including money laundering, fraud, and other illicit activities within the cryptocurrency ecosystem.
 
 This subnet continues the legacy of the blockchain data insights subnet from the Bittensor ecosystem, but with its root vision from 25th October 2023.
 
-The **Chain Insights Subnet** introduces a new category of software, known as a *Funds Flow Explorer*.
-It focuses on tracking and analyzing the movement of cryptocurrency funds and changes in balances. Unlike traditional blockchain explorers or node providers, Chain Insights offers deep, actionable insights into the ecosystem, helping detect anomalies and combat financial crimes, while empowering users with a comprehensive understanding of cryptocurrency flows.
+The **Chain Insights Subnet** introduces a new category of software, known as a *Money Flow Explorer*.
+It focuses on tracking and analyzing the movement of cryptocurrency money and changes in balances. Unlike traditional blockchain explorers or node providers, Chain Insights offers deep, actionable insights into the ecosystem, helping detect anomalies and combat financial crimes, while empowering users with a comprehensive understanding of cryptocurrency flows.
  
 ### Roadmap
 
 - [X] **Migration from Bittensor**: Transition the subnet from the Bittensor ecosystem to a Commune AI ecosystem.
 - [x] **Validator Receipt System**: Develop a decentralized validator receipt sync mechanism.
 - [ ] **Gateway API**
-- - [X] **Funds Flow API**: Develop a funds flow API that provides detailed insights into cryptocurrency fund flows.
+- - [X] **Money Flow API**: Develop a money flow API that provides detailed insights into cryptocurrency money flows.
   - [X] **Balance Tracking API**: Create a balance API that tracks changes in cryptocurrency balances.
   - [ ] **Advance Cyper Algos API** Create Analysis Advance Algorithm APIs
   - [ ] **Advance Timeseries Algos API** Create Analysis Advance Algorithm APIs
 - [ ] **Data Visualization SDK**: Implement data visualization tools to present insights in a user-friendly format.
 - [ ] **Chains Integrations**: Ongoing miner developments of blockchain indexers for various blockchain networks.
   - [x] **Bitcoin**
-    - [x] Funds Flow v1.3.3 Improvement
+    - [x] Money Flow v1.3.3 Improvement
     - [x] Balance Tracking v1.3.3 Improvement
   - [ ] **Commune AI ($COMAI)**
-    - [x] Funds Flow
+    - [x] Money Flow
     - [ ] Balance Tracking
   - [ ] **Bittensor $TAO**
   - [ ] **Ethereum $ETH**
@@ -68,7 +68,7 @@ It focuses on tracking and analyzing the movement of cryptocurrency funds and ch
   - [ ] **Arbitrum $ARB**
   - [ ] **Polygon $POL**
 - [ ] **App Development Program**: Launch an app development program to encourage the creation of applications that leverage chain insights.
-  - [ ] **Blockchain monitoring**: Use miners with AI/ML models to analyze blockchain data in real time to detect anomalies funds flow patterns.
+  - [ ] **Blockchain monitoring**: Use miners with AI/ML models to analyze blockchain data in real time to detect anomalies money flow patterns.
 - [ ] **Chat Chain GPT Application**: Modify Chat Chain GPT application to work with Commune Subnet 20.
 
 ### Overview
@@ -116,7 +116,7 @@ This method calculates layered miner scores based on:
 
 Challenges assess miner data integrity and correctness and influence their scores.
 
-### Funds Flow Challenge
+### Money Flow Challenge
 
 - **Objective:** Validate transaction integrity.
 - **Impact:** Success increases the score, while failure results in a reduction.
@@ -147,7 +147,7 @@ The Validator module continuously assesses miners, recalculating scores based on
 
 #### Formation and Launch
 
-Chain Insights Subnet officially launched on the Bittensor network on October 25, 2023, becoming fully operational in early December 2023. Founded by aphex5, a respected figure in the community, Chain Insights was created to deliver powerful, in-depth analytics for tracking and analyzing cryptocurrency fund flows and balance changes. The goal has always been to provide valuable insights into the cryptocurrency ecosystem, enhance anomaly detection, and contribute to the fight against financial crimes.
+Chain Insights Subnet officially launched on the Bittensor network on October 25, 2023, becoming fully operational in early December 2023. Founded by aphex5, a respected figure in the community, Chain Insights was created to deliver powerful, in-depth analytics for tracking and analyzing cryptocurrency money flows and balance changes. The goal has always been to provide valuable insights into the cryptocurrency ecosystem, enhance anomaly detection, and contribute to the fight against financial crimes.
 
 #### Early Growth and Team Expansion
 
@@ -165,7 +165,7 @@ While the constantly evolving requirements from the OTF posed challenges, they a
 
 #### Transition to Commune AI
 
-In August 2024, Chain Insights made a strategic decision to transition to Commune AI, an independent platform that allows the team to pursue their vision without external constraints. This move enables the team to continue refining the Chain Insights Subnet and deliver on its promise of providing advanced, cutting-edge analytics for cryptocurrency fund flows and balance changes.
+In August 2024, Chain Insights made a strategic decision to transition to Commune AI, an independent platform that allows the team to pursue their vision without external constraints. This move enables the team to continue refining the Chain Insights Subnet and deliver on its promise of providing advanced, cutting-edge analytics for cryptocurrency money flows and balance changes.
 
 #### Current Vision
 

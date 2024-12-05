@@ -15,7 +15,7 @@ class Node(ABC):
         ...
 
     @abstractmethod
-    def create_funds_flow_challenge(self, last_block_height, terminate_event: Event):
+    def create_money_flow_challenge(self, last_block_height, terminate_event: Event):
         ...
 
     @abstractmethod

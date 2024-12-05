@@ -11,7 +11,7 @@ from loguru import logger
 from substrateinterface import Keypair
 from src.subnet.validator.database.models.api_key import ApiKeyManager
 from src.subnet.validator.database.models.challenge_balance_tracking import ChallengeBalanceTrackingManager
-from src.subnet.validator.database.models.challenge_funds_flow import ChallengeFundsFlowManager
+from src.subnet.validator.database.models.challenge_money_flow import ChallengeMoneyFlowManager
 from src.subnet.validator.database.models.miner_discovery import MinerDiscoveryManager
 from src.subnet.validator.database.models.miner_receipt import MinerReceiptManager
 from src.subnet.validator._config import load_environment, SettingsManager
@@ -57,7 +57,7 @@ session_manager = DatabaseSessionManager()
 session_manager.init(settings.DATABASE_URL)
 miner_discovery_manager = MinerDiscoveryManager(session_manager)
 miner_receipt_manager = MinerReceiptManager(session_manager)
-challenge_funds_flow_manager = ChallengeFundsFlowManager(session_manager)
+challenge_money_flow_manager = ChallengeMoneyFlowManager(session_manager)
 challenge_balance_tracking_manager = ChallengeBalanceTrackingManager(session_manager)
 receipt_sync_worker = ReceiptSyncWorker(keypair, settings.NET_UID, c_client, miner_receipt_manager)
 redis_client = Redis.from_url(settings.REDIS_URL)
@@ -72,7 +72,7 @@ validator = Validator(
     c_client,
     weights_storage,
     miner_discovery_manager,
-    challenge_funds_flow_manager,
+    challenge_money_flow_manager,
     challenge_balance_tracking_manager,
     miner_receipt_manager,
     redis_client=redis_client,
