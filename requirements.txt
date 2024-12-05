@@ -9,7 +9,7 @@ sqlalchemy
 psycopg2-binary
 asyncpg
 aioredis
-neo4j
+neo4j-rust-ext
 langchain
 langchain-openai
 langchain_community

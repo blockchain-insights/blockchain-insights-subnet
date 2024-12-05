@@ -2,6 +2,28 @@ version: '3.8'
 
 services:
 
+  blockchain-bitcoin:
+    image: dobtc/bitcoin:28.0
+    command:
+      -rpcuser=${BITCOIN_NODE_RPC_USER}
+      -rpcpassword=${BITCOIN_NODE_RPC_PASSWORD}
+      -rpcallowip=${BITCOIN_NODE_RPC_ALLOW_IP:-0.0.0.0/0}
+      -rpcbind=${BITCOIN_NODE_RPC_BIND:-0.0.0.0}
+      -maxconnections=${BITCOIN_NODE_MAX_CONNECTIONS:-512}
+      -printtoconsole
+      -rpcworkqueue=4086
+      -server=1
+      -rest=1
+      -txindex=1
+      -dbcache=${BITCOIN_NODE_DB_CACHE:-4096}
+      -par=${BITCOIN_NODE_PARALLEL_BLOCKS:-2}
+    ports:
+      - "8332:8332"
+      - "8333:8333"
+    volumes:
+      - blockchain-bitcoin-data:/home/bitcoin/.bitcoin
+    restart: unless-stopped
+
   postgres-miner:
     container_name: postgres-sn20-miner
     image: postgres:16.3-alpine3.20
@@ -52,5 +74,9 @@ services:
     restart: unless-stopped
 
 volumes:
+  blockchain-bitcoin-data:
+    name: blockchain-bitcoin-data
   postgres-data-validator:
+    name: postgres-data-validator
   postgres-data-miner:
+    name: postgres-data-miner
