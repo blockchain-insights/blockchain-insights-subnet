@@ -18,6 +18,7 @@ class Discovery(BaseModel):
 # Model types
 MODEL_KIND_MONEY_FLOW = "money_flow"
 MODEL_KIND_BALANCE_TRACKING = "balance_tracking"
+MODEL_KIND_TRANSACTION_STREAM = "transaction_stream"
 
 
 def get_model_kinds():

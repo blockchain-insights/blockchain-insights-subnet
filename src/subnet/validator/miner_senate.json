@@ -1,0 +1,18 @@
+{
+  "senate": {
+    "bitcoin": {
+      "enabled": true,
+      "miners": [
+        "5FWkkAEuBdUUE1hf1XakKJs9GaAgCPosZGNrbUB7Q124k54L",
+        "5Gh1463iwah7pbZpmznDDvPFMQwgedQgJ3f7QHPDC9qrsfQ5"
+      ]
+    },
+    "commune": {
+      "enabled": true,
+      "miners": [
+        "5FWkkAEuBdUUE1hf1XakKJs9GaAgCPosZGNrbUB7Q124k54L",
+        "5Gh1463iwah7pbZpmznDDvPFMQwgedQgJ3f7QHPDC9qrsfQ5"
+      ]
+    }
+  }
+}

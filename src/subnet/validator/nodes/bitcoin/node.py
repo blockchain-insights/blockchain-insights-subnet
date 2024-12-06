@@ -10,7 +10,7 @@ from bitcoin.rpc import Proxy, InvalidAddressOrKeyError
 from ..abstract_node import Node
 from ..random_block import select_block
 from decimal import Decimal
-from bitcoin.core import b2lx
+from bitcoin.core import b2lx, lx
 from loguru import logger
 from .node_utils import (
     pubkey_to_address,
@@ -126,8 +126,8 @@ class BitcoinNode(Node):
     def get_txn_data_by_id(self, txn_id: str):
         proxy = Proxy(service_url=self.node_rpc_url)
         try:
-            result = proxy.getrawtransaction(txn_id, 1)
-            return result
+            result = proxy.getrawtransaction(lx(txn_id), True)
+            return result['tx']
         except Exception as e:
             logger.error(f"RPC Provider with Error", error=str(e))
             return None
@@ -363,7 +363,7 @@ class ChallengeBitcoinNode(BitcoinNode):
         if txn_data is None:
             return False
 
-        tx = self.create_in_memory_txn(txn_data)
+        tx = self.create_in_memory_txn(txn_data['tx'])
 
         *_, in_total_amount, out_total_amount = self.process_in_memory_txn_for_indexing(tx)
         return challenge.in_total_amount == in_total_amount and challenge.out_total_amount == out_total_amount

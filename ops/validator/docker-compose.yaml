@@ -24,28 +24,13 @@ services:
       - blockchain-bitcoin-data:/home/bitcoin/.bitcoin
     restart: unless-stopped
 
-  postgres-miner:
-    container_name: postgres-sn20-miner
+  validator-postgres:
+    container_name: validator-postgres
     image: postgres:16.3-alpine3.20
     ports:
-      - "5460:5432"
+      - "5450:5432"
     volumes:
-      - "postgres-data-miner:/var/lib/postgresql/data"
-      - "./init.sql:/docker-entrypoint-initdb.d/init.sql"
-    environment:
-      - POSTGRES_DB=${POSTGRES_DB:-miner}
-      - POSTGRES_USER=${POSTGRES_USER:-postgres}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeit456$}
-    restart: unless-stopped
-
-
-  postgres:
-    container_name: postgres-sn20
-    image: postgres:16.3-alpine3.20
-    ports:
-      - "5452:5432"
-    volumes:
-      - "postgres-data-validator:/var/lib/postgresql/data"
+      - "validator-postgres-data:/var/lib/postgresql/data"
       - "./init.sql:/docker-entrypoint-initdb.d/init.sql"
     environment:
       - POSTGRES_DB=${POSTGRES_DB:-validator}
@@ -53,18 +38,18 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeit456$}
     restart: unless-stopped
 
-  postgres_backup:
+  validator-postgres-backup:
     image: postgres:16.3-alpine3.20
     container_name: postgres_backup-sn20
     depends_on:
-      - postgres
+      - validator-postgres
     environment:
       - POSTGRES_DB=${POSTGRES_DB:-validator}
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeit456$}
     volumes:
       - ./backup:/backup # Mounting backup directory on host
-    entrypoint: [ "sh", "-c", "PGPASSWORD=$${POSTGRES_PASSWORD} pg_dump --dbname=postgresql://$${POSTGRES_USER}@postgres-sn20:5432/$${POSTGRES_DB} > /backup/backup_$$(date +\"%Y-%m-%d_%H-%M-%S\").sql" ]
+    entrypoint: [ "sh", "-c", "PGPASSWORD=$${POSTGRES_PASSWORD} pg_dump --dbname=postgresql://$${POSTGRES_USER}@validator-postgres:5432/$${POSTGRES_DB} > /backup/backup_$$(date +\"%Y-%m-%d_%H-%M-%S\").sql" ]
 
   redis:
     image: redis:alpine
@@ -76,7 +61,5 @@ services:
 volumes:
   blockchain-bitcoin-data:
     name: blockchain-bitcoin-data
-  postgres-data-validator:
-    name: postgres-data-validator
-  postgres-data-miner:
-    name: postgres-data-miner
+  validator-postgres-data:
+    name: validator-postgres-data
