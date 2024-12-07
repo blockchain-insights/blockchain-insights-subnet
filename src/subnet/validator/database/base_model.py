@@ -1,5 +1,5 @@
 from sqlalchemy import MetaData
-from sqlalchemy.orm import DeclarativeBase, DeclarativeMeta
+from sqlalchemy.orm import DeclarativeBase
 
 # Default naming convention for all indexes and constraints
 # See why this is important and how it would save your time:

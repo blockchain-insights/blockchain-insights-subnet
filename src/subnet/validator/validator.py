@@ -2,16 +2,13 @@ import asyncio
 import json
 import threading
 import time
-import traceback
 import uuid
 from datetime import datetime
 from random import sample
 from typing import cast, Dict, Optional
 
 from aioredis import Redis
-from communex.cli.network import last_block
 from communex.client import CommuneClient  # type: ignore
-from communex.errors import NetworkTimeoutError
 from communex.misc import get_map_modules
 from communex.module.client import ModuleClient  # type: ignore
 from communex.module.module import Module  # type: ignore
@@ -19,17 +16,14 @@ from communex.types import Ss58Address  # type: ignore
 from loguru import logger
 from substrateinterface import Keypair  # type: ignore
 from ._config import ValidatorSettings, load_base_weights
-
-from .database.models.challenge_balance_tracking import ChallengeBalanceTrackingManager
-from .database.models.challenge_money_flow import ChallengeMoneyFlowManager
 from src.subnet.encryption import generate_hash
 from .helpers import raise_exception_if_not_registered, get_ip_port, cut_to_max_allowed_weights
 from .nodes.random_block import select_block
 from .weights_storage import WeightsStorage
 from src.subnet.validator.database.models.miner_discovery import MinerDiscoveryManager
 from src.subnet.validator.database.models.miner_receipt import MinerReceiptManager
-from src.subnet.protocol import Challenge, ChallengesResponse, ChallengeMinerResponse, Discovery, \
-    MODEL_KIND_BALANCE_TRACKING, MODEL_KIND_MONEY_FLOW, MODEL_KIND_TRANSACTION_STREAM, NETWORK_BITCOIN, get_networks
+from src.subnet.protocol import Discovery, MODEL_KIND_BALANCE_TRACKING, MODEL_KIND_MONEY_FLOW, \
+    MODEL_KIND_TRANSACTION_STREAM, NETWORK_BITCOIN, get_networks, NETWORK_COMMUNE
 from .. import VERSION
 
 
@@ -42,8 +36,6 @@ class Validator(Module):
             client: CommuneClient,
             weights_storage: WeightsStorage,
             miner_discovery_manager: MinerDiscoveryManager,
-            challenge_money_flow_manager: ChallengeMoneyFlowManager,
-            challenge_balance_tracking_manager: ChallengeBalanceTrackingManager,
             miner_receipt_manager: MinerReceiptManager,
             redis_client: Redis,
             query_timeout: int = 60,
@@ -61,8 +53,6 @@ class Validator(Module):
         self.weights_storage = weights_storage
         self.miner_discovery_manager = miner_discovery_manager
         self.terminate_event = threading.Event()
-        self.challenge_money_flow_manager = challenge_money_flow_manager
-        self.challenge_balance_tracking_manager = challenge_balance_tracking_manager
         self.redis_client = redis_client
 
     @staticmethod
@@ -75,19 +65,57 @@ class Validator(Module):
         logger.debug(f"Got modules addresses", modules_adresses=modules_adresses)
         return modules_adresses
 
-    async def _get_discovery(self, client, miner_key) -> Discovery:
+    async def _get_discovery(self, client, miner_key) -> Optional[Discovery]:
         try:
-            discovery = await client.call(
+            discovery_data = await client.call(
                 "discovery",
                 miner_key,
                 {"validator_version": str(VERSION), "validator_key": self.key.ss58_address},
                 timeout=self.challenge_timeout,
             )
 
-            return Discovery(**discovery)
+            if not self._is_valid_discovery(discovery_data):
+                logger.warning(
+                    "Invalid discovery data received",
+                    miner_key=miner_key,
+                    discovery_data=discovery_data
+                )
+                return None
+
+            return Discovery(**discovery_data)
         except Exception as e:
             logger.info(f"Miner failed to get discovery", miner_key=miner_key, error=e)
             return None
+
+    def _is_valid_discovery(self, discovery: dict) -> bool:
+        try:
+            if not all(key in discovery for key in ['network', 'version']):
+                return False
+
+            valid_networks = get_networks()
+            if discovery['network'] not in valid_networks:
+                logger.warning(
+                    f"Invalid network in discovery data. Got {discovery['network']}, "
+                    f"expected one of {valid_networks}"
+                )
+                return False
+
+            try:
+                version = int(discovery['version'])
+                if version <= 0:
+                    logger.warning(f"Invalid version number: {version}. Must be greater than 0")
+                    return False
+            except (ValueError, TypeError):
+                logger.warning(
+                    f"Version must be a valid integer, got {discovery['version']}"
+                )
+                return False
+
+            return True
+
+        except Exception as e:
+            logger.warning(f"Error validating discovery data: {e}")
+            return False
 
     async def get_discovery(self, miner_info) -> Discovery:
         connection, miner_metadata = miner_info
@@ -97,18 +125,13 @@ class Validator(Module):
         return await self._get_discovery(client, miner_key)
 
     @staticmethod
-    def _score_miner(response: ChallengeMinerResponse, receipt_miner_multiplier: float) -> float:
+    def _score_miner(response: dict, receipt_miner_multiplier: float) -> float:
 
         if not response:
             logger.debug(f"Skipping empty response")
             return 0
 
-        failed_challenges = response.get_failed_challenges()
-        if failed_challenges > 0:
-            if failed_challenges == 2:
-                return 0
-            else:
-                return 0.15
+       # here we need to check if for given model kind consensus is reached
 
         score = 0.3
 
@@ -160,6 +183,7 @@ class Validator(Module):
 
     async def validate_step(self, netuid: int, settings: ValidatorSettings) -> None:
 
+        validation_timestamp = datetime.utcnow()
         score_dict: dict[int, float] = {}
         miners_module_info = {}
 
@@ -185,13 +209,40 @@ class Validator(Module):
         discovery_responses: list[Discovery] = await asyncio.gather(*discovery_tasks)
 
         for uid, miner_info, discovery_response in zip(miners_module_info.keys(), miners_module_info.values(), discovery_responses):
-            miner_metadata = miner_info[1]
-            miner_key = miner_metadata['key']
-            miner_ip = miner_info[0][0]
-            miner_port = miner_info[0][1]
-            miner_network = discovery_response.network
-            miner_version = discovery_response.version
-            await self.miner_discovery_manager.store_miner_metadata(uid, miner_key, miner_ip, miner_port, miner_network, miner_version)
+            try:
+                miner_metadata = miner_info[1]
+                miner_key = miner_metadata['key']
+                miner_ip = miner_info[0][0]
+                miner_port = miner_info[0][1]
+
+                if discovery_response is None:
+                    logger.warning(
+                        "Skipping miner due to failed discovery",
+                        uid=uid,
+                        miner_key=miner_key,
+                        miner_ip=miner_ip,
+                        miner_port=miner_port
+                    )
+                    continue
+
+                miner_network = discovery_response.network
+                miner_version = discovery_response.version
+
+                await self.miner_discovery_manager.store_miner_metadata(
+                    uid=uid,
+                    miner_key=miner_key,
+                    miner_address=miner_ip,
+                    miner_ip_port=miner_port,
+                    network=miner_network,
+                    version=miner_version,
+                    timestamp=validation_timestamp)
+
+            except Exception as e:
+                logger.error(
+                    "Error processing miner metadata",
+                    uid=uid,
+                    error=str(e)
+                )
 
         # Updating miners rank from previous validation step
         for _, miner_metadata in miners_module_info.values():
@@ -200,6 +251,7 @@ class Validator(Module):
         challenge_miners_tasks = {}
         for network in get_networks():
             challenge_miners_tasks[network] = self.challenge_miners(network)
+
         challenge_miners_responses = await asyncio.gather(*challenge_miners_tasks.values())
         challenge_miners_responses_grouped = {network: response for network, response in zip(challenge_miners_tasks.keys(), challenge_miners_responses)}
 
@@ -316,6 +368,8 @@ class Validator(Module):
         return last_block
 
     async def get_transaction_stream_challenge_query(self, network: str, block_height: int):
+        if network == NETWORK_COMMUNE:
+            return "SELECT 1 as result;"
         if network == NETWORK_BITCOIN:
             return f"""
             WITH block_inputs AS (
@@ -343,6 +397,8 @@ class Validator(Module):
         raise NotImplementedError(f"Unsupported network: {network}")
 
     def get_balance_tracking_challenge_query(self, network: str, block_height: int):
+        if network == NETWORK_COMMUNE:
+            return "SELECT 1 as result;"
         if network == NETWORK_BITCOIN:
             return f"""
                 WITH address_balances AS (
@@ -370,6 +426,8 @@ class Validator(Module):
         raise NotImplementedError(f"Unsupported network: {network}")
 
     async def get_money_flow_challenge_query(self, network: str, block_height: int) -> str:
+        if network == NETWORK_COMMUNE:
+            return "RETURN 1"
         if network == NETWORK_BITCOIN:
             return f"""
             WITH {block_height} as height
@@ -396,11 +454,9 @@ class Validator(Module):
 
     async def challenge_miners(self, network: str) -> dict:
         start_time = time.time()
-        challenge_results = await self._challenge_miners(network)
-
-        # Get all miners upfront
-        all_miners = await self.miner_discovery_manager.get_miners_by_network(network)
-        all_miner_keys = {miner['miner_key'] for miner in all_miners}
+        miners = await self.miner_discovery_manager.get_miners_by_network(network)
+        challenge_results = await self._challenge_miners(network, miners)
+        miner_keys = {miner['miner_key'] for miner in miners}
 
         with open('subnet/validator/miner_senate.json', 'r') as file:
             miner_senate = json.load(file)
@@ -416,7 +472,7 @@ class Validator(Module):
             'consensus_mode': None,
             'model_kinds': {},
             'metrics': {
-                'total_miners': len(all_miners),
+                'total_miners': len(miner_keys),
                 'total_senate': len(miner_senate['senate'][network]['miners']),
                 'responding_miners': 0
             }
@@ -503,7 +559,7 @@ class Validator(Module):
             })
 
             # Validate all miners against consensus hash
-            for miner_key in all_miner_keys:
+            for miner_key in miner_keys:
                 if miner_key in challenge_results[model_kind]:
                     is_valid = challenge_results[model_kind][miner_key] == consensus_hash
                     results['model_kinds'][model_kind]['miners'][miner_key] = {
@@ -544,9 +600,9 @@ class Validator(Module):
 
         return results
 
-    async def _challenge_miners(self, network: str) -> dict:
+    async def _challenge_miners(self, network: str, miners: list[dict]) -> dict:
 
-        last_block = self.get_last_block(network)
+        last_block = await self.get_last_block(network)
         block_height = select_block(1, last_block, 39)
 
         queries = {
@@ -556,7 +612,6 @@ class Validator(Module):
         }
 
         model_kinds = [MODEL_KIND_BALANCE_TRACKING, MODEL_KIND_TRANSACTION_STREAM, MODEL_KIND_MONEY_FLOW]
-        miners = await self.miner_discovery_manager.get_miners_by_network(network)
 
         query_tasks = {}
         for model_kind in model_kinds:

@@ -2,17 +2,12 @@ import asyncio
 import signal
 import sys
 from datetime import datetime
-
 from aioredis import Redis
 from communex._common import get_node_url
 from communex.client import CommuneClient
 from communex.compat.key import classic_load_key
 from loguru import logger
 from substrateinterface import Keypair
-
-from src.subnet.validator.challenges.generator_thread import ChallengeGeneratorThread
-from src.subnet.validator.database.models.challenge_balance_tracking import ChallengeBalanceTrackingManager
-from src.subnet.validator.database.models.challenge_money_flow import ChallengeMoneyFlowManager
 from src.subnet.validator.database.models.miner_discovery import MinerDiscoveryManager
 from src.subnet.validator.database.models.miner_receipt import MinerReceiptManager
 from src.subnet.validator.database.session_manager import DatabaseSessionManager, run_migrations
@@ -79,8 +74,6 @@ if __name__ == "__main__":
 
     miner_discovery_manager = MinerDiscoveryManager(session_manager)
     miner_receipt_manager = MinerReceiptManager(session_manager)
-    challenge_money_flow_manager = ChallengeMoneyFlowManager(session_manager)
-    challenge_balance_tracking_manager = ChallengeBalanceTrackingManager(session_manager)
 
     receipt_sync_worker = ReceiptSyncWorker(keypair, settings.NET_UID, c_client, miner_receipt_manager)
     redis_client = Redis.from_url(settings.REDIS_URL)
@@ -91,8 +84,6 @@ if __name__ == "__main__":
         c_client,
         weights_storage,
         miner_discovery_manager,
-        challenge_money_flow_manager,
-        challenge_balance_tracking_manager,
         miner_receipt_manager,
         redis_client=redis_client,
         query_timeout=settings.QUERY_TIMEOUT,
@@ -126,14 +117,6 @@ if __name__ == "__main__":
     )
     receipt_sync_thread.start()
 
-    challenge_generator_thread = ChallengeGeneratorThread(
-        settings=settings,
-        environment=environment,
-        frequency=settings.CHALLENGE_FREQUENCY,
-        threshold=settings.CHALLENGE_THRESHOLD,
-        terminate_event=validator.terminate_event)
-    challenge_generator_thread.start()
-
     try:
         asyncio.run(validator.validation_loop(settings))
     except KeyboardInterrupt:
@@ -141,9 +124,6 @@ if __name__ == "__main__":
 
     receipt_sync_thread.join()
     logger.info(f"Receipt sync stopped successfully.")
-
-    challenge_generator_thread.join()
-    logger.info(f"Challenge generator stopped successfully.")
 
     receipt_consumer_thread.join()
     logger.info(f"Receipt consumer stopped successfully.")

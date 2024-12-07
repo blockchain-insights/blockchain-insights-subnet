@@ -12,8 +12,5 @@ from .models.miner_discovery import MinerDiscovery
 from .models.miner_receipt import MinerReceipt
 from .session_manager import db_manager, get_session
 from .models.api_key import ApiKey
-from .models.challenge_money_flow import ChallengeMoneyFlow
-from .models.challenge_balance_tracking import ChallengeBalanceTracking
 
-__all__ = ["OrmBase", "get_session", "db_manager", "MinerDiscovery", "MinerReceipt", "ApiKey",
-           "ChallengeMoneyFlow", "ChallengeBalanceTracking"]
+__all__ = ["OrmBase", "get_session", "db_manager", "MinerDiscovery", "MinerReceipt", "ApiKey"]

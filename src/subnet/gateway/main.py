@@ -5,7 +5,6 @@ from loguru import logger
 from starlette.middleware.cors import CORSMiddleware
 import sys
 from src.subnet.gateway import patch_record, settings, receipt_sync_fetch_thread, validator
-from src.subnet.gateway.rate_limiter import RateLimiterMiddleware
 from src.subnet.gateway.routes.v1.balance_tracking import balance_tracking_router
 from src.subnet.gateway.routes.v1.money_flow import money_flow_router
 from src.subnet.gateway.routes.v1.miners import miner_router
@@ -49,9 +48,6 @@ app = FastAPI(
 app.include_router(money_flow_router)
 app.include_router(balance_tracking_router)
 app.include_router(miner_router)
-app.add_middleware(RateLimiterMiddleware, redis_url=settings.REDIS_URL, max_requests=settings.API_RATE_LIMIT,
-                   window_seconds=60)
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

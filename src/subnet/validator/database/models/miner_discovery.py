@@ -25,17 +25,14 @@ class MinerDiscovery(OrmBase):
     timestamp = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
     network = Column(String, nullable=False)
     rank = Column(Float, nullable=False, default=0.0)
-    failed_challenges = Column(Integer, nullable=False, default=0) #TODO: remove
-    total_challenges = Column(Integer, nullable=False, default=0)  #TODO: remove
     version = Column(Float, nullable=False, default=1.0)
-    graph_db = Column(String, nullable=False, default='neo4j')  #TODO: remove
 
 
 class MinerDiscoveryManager:
     def __init__(self, session_manager: DatabaseSessionManager):
         self.session_manager = session_manager
 
-    async def store_miner_metadata(self, uid: int, miner_key: str, miner_address: str, miner_ip_port: str, network: str, version: float):
+    async def store_miner_metadata(self, uid: int, miner_key: str, miner_address: str, miner_ip_port: str, network: str, version: float, timestamp: datetime):
         async with self.session_manager.session() as session:
             async with session.begin():
                 stmt = insert(MinerDiscovery).values(
@@ -44,9 +41,8 @@ class MinerDiscoveryManager:
                     miner_address=miner_address,
                     miner_ip_port=miner_ip_port,
                     network=network,
-                    timestamp=datetime.utcnow(),
-                    version=version,
-                    graph_db='memgraph'
+                    timestamp=timestamp,
+                    version=version
                 ).on_conflict_do_update(
                     index_elements=['miner_key'],
                     set_={
@@ -55,8 +51,7 @@ class MinerDiscoveryManager:
                         'miner_ip_port': miner_ip_port,
                         'network': network,
                         'version': version,
-                        'graph_db': 'memgraph',
-                        'timestamp': datetime.utcnow()
+                        'timestamp': timestamp
                     }
                 )
                 await session.execute(stmt)
@@ -110,17 +105,6 @@ class MinerDiscoveryManager:
                 stmt = update(MinerDiscovery).where(
                     MinerDiscovery.miner_key == miner_key
                 ).values(rank=new_rank)
-                await session.execute(stmt)
-
-    async def update_miner_challenges(self, miner_key: str, failed_challenges_inc: int, total_challenges_inc: int = 2):
-        async with self.session_manager.session() as session:
-            async with session.begin():
-                stmt = update(MinerDiscovery).where(
-                    MinerDiscovery.miner_key == miner_key
-                ).values(
-                    failed_challenges=MinerDiscovery.failed_challenges + failed_challenges_inc,
-                    total_challenges=MinerDiscovery.total_challenges + total_challenges_inc
-                )
                 await session.execute(stmt)
 
     async def remove_all_records(self):

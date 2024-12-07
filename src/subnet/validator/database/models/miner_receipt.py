@@ -1,11 +1,10 @@
 from typing import List, Optional, Dict, Union
-
 from dateutil import parser
 from pydantic import BaseModel
-from sqlalchemy import Column, String, DateTime, update, insert, BigInteger, Boolean, UniqueConstraint, Text, select, \
+from sqlalchemy import Column, String, DateTime, insert, BigInteger, UniqueConstraint, Text, select, \
     func, text, Index, Float
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.dialects.postgresql import insert, TIMESTAMP
+from sqlalchemy.dialects.postgresql import insert
 from datetime import datetime
 from src.subnet.validator.database import OrmBase
 from src.subnet.validator.database.session_manager import DatabaseSessionManager
