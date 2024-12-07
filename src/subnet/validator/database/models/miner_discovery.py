@@ -1,4 +1,3 @@
-import random
 from typing import Optional
 
 from sqlalchemy import Column, Integer, String, Float, DateTime, update, insert, func, text

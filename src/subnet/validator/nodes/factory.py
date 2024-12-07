@@ -1,5 +1,6 @@
-from src.subnet.protocol import NETWORK_BITCOIN
-from src.subnet.validator.nodes.bitcoin.node import BitcoinNode
+from src.subnet.protocol import NETWORK_BITCOIN, NETWORK_COMMUNE
+from src.subnet.validator.nodes.bitcoin_node import BitcoinNode
+from src.subnet.validator.nodes.commune_node import CommuneNode
 
 
 class NodeFactory:
@@ -7,6 +8,7 @@ class NodeFactory:
     def create_node(cls, network: str):
         node_class = {
             NETWORK_BITCOIN: BitcoinNode,
+            NETWORK_COMMUNE: CommuneNode,
             # Add other networks and their corresponding classes as needed
         }.get(network)
 
