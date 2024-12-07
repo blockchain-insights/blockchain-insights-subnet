@@ -25,17 +25,17 @@ class MinerDiscovery(OrmBase):
     timestamp = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
     network = Column(String, nullable=False)
     rank = Column(Float, nullable=False, default=0.0)
-    failed_challenges = Column(Integer, nullable=False, default=0)
-    total_challenges = Column(Integer, nullable=False, default=0)
+    failed_challenges = Column(Integer, nullable=False, default=0) #TODO: remove
+    total_challenges = Column(Integer, nullable=False, default=0)  #TODO: remove
     version = Column(Float, nullable=False, default=1.0)
-    graph_db = Column(String, nullable=False, default='neo4j')
+    graph_db = Column(String, nullable=False, default='neo4j')  #TODO: remove
 
 
 class MinerDiscoveryManager:
     def __init__(self, session_manager: DatabaseSessionManager):
         self.session_manager = session_manager
 
-    async def store_miner_metadata(self, uid: int, miner_key: str, miner_address: str, miner_ip_port: str, network: str, version: float, graph_db: str):
+    async def store_miner_metadata(self, uid: int, miner_key: str, miner_address: str, miner_ip_port: str, network: str, version: float):
         async with self.session_manager.session() as session:
             async with session.begin():
                 stmt = insert(MinerDiscovery).values(
@@ -46,7 +46,7 @@ class MinerDiscoveryManager:
                     network=network,
                     timestamp=datetime.utcnow(),
                     version=version,
-                    graph_db=graph_db
+                    graph_db='memgraph'
                 ).on_conflict_do_update(
                     index_elements=['miner_key'],
                     set_={
@@ -55,7 +55,7 @@ class MinerDiscoveryManager:
                         'miner_ip_port': miner_ip_port,
                         'network': network,
                         'version': version,
-                        'graph_db': graph_db,
+                        'graph_db': 'memgraph',
                         'timestamp': datetime.utcnow()
                     }
                 )

@@ -29,7 +29,7 @@ from .weights_storage import WeightsStorage
 from src.subnet.validator.database.models.miner_discovery import MinerDiscoveryManager
 from src.subnet.validator.database.models.miner_receipt import MinerReceiptManager
 from src.subnet.protocol import Challenge, ChallengesResponse, ChallengeMinerResponse, Discovery, \
-    MODEL_KIND_BALANCE_TRACKING, MODEL_KIND_MONEY_FLOW, MODEL_KIND_TRANSACTION_STREAM, NETWORK_BITCOIN
+    MODEL_KIND_BALANCE_TRACKING, MODEL_KIND_MONEY_FLOW, MODEL_KIND_TRANSACTION_STREAM, NETWORK_BITCOIN, get_networks
 from .. import VERSION
 
 
@@ -75,45 +75,6 @@ class Validator(Module):
         logger.debug(f"Got modules addresses", modules_adresses=modules_adresses)
         return modules_adresses
 
-    async def _challenge_miner(self, miner_info):
-        start_time = time.time()
-        try:
-            connection, miner_metadata = miner_info
-            module_ip, module_port = connection
-            miner_key = miner_metadata['key']
-            client = ModuleClient(module_ip, int(module_port), self.key)
-
-            logger.info(f"Challenging miner", miner_key=miner_key)
-
-            # Discovery Phase
-            discovery = await self._get_discovery(client, miner_key)
-            if not discovery:
-                return None
-
-            logger.debug(f"Got discovery for miner", miner_key=miner_key)
-
-            # Challenge Phase
-            challenge_response = await self._perform_challenges(client, miner_key, discovery)
-            if not challenge_response:
-                return None
-
-            return ChallengeMinerResponse(
-                version=discovery.version,
-                graph_db=discovery.graph_db,
-                network=discovery.network,
-                money_flow_challenge_actual=challenge_response.money_flow_challenge_actual,
-                money_flow_challenge_expected=challenge_response.money_flow_challenge_expected,
-                balance_tracking_challenge_actual=challenge_response.balance_tracking_challenge_actual,
-                balance_tracking_challenge_expected=challenge_response.balance_tracking_challenge_expected,
-            )
-        except Exception as e:
-            logger.error(f"Failed to challenge miner", error=e, miner_key=miner_key)
-            return None
-        finally:
-            end_time = time.time()
-            execution_time = end_time - start_time
-            logger.info(f"Execution time for challenge_miner", execution_time=execution_time, miner_key=miner_key)
-
     async def _get_discovery(self, client, miner_key) -> Discovery:
         try:
             discovery = await client.call(
@@ -128,79 +89,12 @@ class Validator(Module):
             logger.info(f"Miner failed to get discovery", miner_key=miner_key, error=e)
             return None
 
-    async def _perform_challenges(self, client, miner_key, discovery) -> ChallengesResponse | None:
-
-        async def execute_money_flow_challenge(money_flow_challenge):
-            money_flow_challenge_actual = "0x"
-            try:
-                money_flow_challenge = Challenge.model_validate_json(money_flow_challenge)
-                money_flow_challenge = await client.call(
-                    "challenge",
-                    miner_key,
-                    {"challenge": money_flow_challenge.model_dump(), "validator_key": self.key.ss58_address},
-                    timeout=self.challenge_timeout,
-                )
-
-                if money_flow_challenge is not None:
-                    money_flow_challenge = Challenge(**money_flow_challenge)
-                    money_flow_challenge_actual = money_flow_challenge.output['tx_id']
-                    logger.debug(f"Money flow challenge result", money_flow_challenge_output=money_flow_challenge.output, miner_key=miner_key)
-                return money_flow_challenge_actual
-
-            except NetworkTimeoutError:
-                logger.error(f"Miner failed to perform challenges - timeout", miner_key=miner_key)
-            except Exception as e:
-                logger.error(f"Miner failed to perform challenges", error=e, miner_key=miner_key, traceback=traceback.format_exc())
-            finally:
-                return money_flow_challenge_actual
-
-        async def execute_balance_tracking_challenge(balance_tracking_challenge):
-            balance_tracking_challenge_actual = 0
-            try:
-                balance_tracking_challenge = Challenge.model_validate_json(balance_tracking_challenge)
-                balance_tracking_challenge = await client.call(
-                    "challenge",
-                    miner_key,
-                    {"challenge": balance_tracking_challenge.model_dump(), "validator_key": self.key.ss58_address},
-                    timeout=self.challenge_timeout,
-                )
-
-                if balance_tracking_challenge is not None:
-                    balance_tracking_challenge = Challenge(**balance_tracking_challenge)
-                    balance_tracking_challenge_actual = balance_tracking_challenge.output['balance']
-                    logger.debug(f"Balance tracking challenge result", balance_tracking_challenge_output=balance_tracking_challenge.output, miner_key=miner_key)
-            except NetworkTimeoutError:
-                logger.error(f"Miner failed to perform challenges - timeout", miner_key=miner_key)
-            except Exception as e:
-                logger.error(f"Miner failed to perform challenges", error=e, miner_key=miner_key, traceback=traceback.format_exc())
-            finally:
-                return balance_tracking_challenge_actual
-
-        try:
-            money_flow_challenge, tx_id = await self.challenge_money_flow_manager.get_random_challenge(discovery.network)
-            if money_flow_challenge is None:
-                logger.warning(f"Failed to get money flow challenge", miner_key=miner_key)
-                return None
-            money_flow_challenge_actual = await execute_money_flow_challenge(money_flow_challenge)
-
-            balance_tracking_challenge, balance_tracking_expected_response = await self.challenge_balance_tracking_manager.get_random_challenge(discovery.network)
-            if balance_tracking_challenge is None:
-                logger.warning(f"Failed to get balance tracking challenge", miner_key=miner_key)
-                return None
-            balance_tracking_challenge_actual = await execute_balance_tracking_challenge(balance_tracking_challenge)
-
-            return ChallengesResponse(
-                money_flow_challenge_actual=money_flow_challenge_actual,
-                money_flow_challenge_expected=tx_id,
-                balance_tracking_challenge_actual=balance_tracking_challenge_actual,
-                balance_tracking_challenge_expected=balance_tracking_expected_response,
-            )
-        except NetworkTimeoutError as e:
-            logger.error(f"Miner failed to perform challenges - timeout", error=e, miner_key=miner_key)
-            return None
-        except Exception as e:
-            logger.error(f"Miner failed to perform challenges", error=e, miner_key=miner_key, traceback=traceback.format_exc())
-            return None
+    async def get_discovery(self, miner_info) -> Discovery:
+        connection, miner_metadata = miner_info
+        module_ip, module_port = connection
+        miner_key = miner_metadata['key']
+        client = ModuleClient(module_ip, int(module_port), self.key)
+        return await self._get_discovery(client, miner_key)
 
     @staticmethod
     def _score_miner(response: ChallengeMinerResponse, receipt_miner_multiplier: float) -> float:
@@ -285,24 +179,39 @@ class Validator(Module):
 
         logger.info(f"Found miners", miners_module_info=miners_module_info.keys())
 
+        discovery_tasks = []
+        for uid, miner_info in miners_module_info.items():
+            discovery_tasks.append(self.get_discovery(miner_info))
+        discovery_responses: list[Discovery] = await asyncio.gather(*discovery_tasks)
+
+        for uid, miner_info, discovery_response in zip(miners_module_info.keys(), miners_module_info.values(), discovery_responses):
+            miner_metadata = miner_info[1]
+            miner_key = miner_metadata['key']
+            miner_ip = miner_info[0][0]
+            miner_port = miner_info[0][1]
+            miner_network = discovery_response.network
+            miner_version = discovery_response.version
+            await self.miner_discovery_manager.store_miner_metadata(uid, miner_key, miner_ip, miner_port, miner_network, miner_version)
+
+        # Updating miners rank from previous validation step
         for _, miner_metadata in miners_module_info.values():
             await self.miner_discovery_manager.update_miner_rank(miner_metadata['key'], miner_metadata['emission'])
 
-        challenge_tasks = []
-        for uid, miner_info in miners_module_info.items():
-            challenge_tasks.append(self._challenge_miner(miner_info))
+        challenge_miners_tasks = {}
+        for network in get_networks():
+            challenge_miners_tasks[network] = self.challenge_miners(network)
+        challenge_miners_responses = await asyncio.gather(*challenge_miners_tasks.values())
+        challenge_miners_responses_grouped = {network: response for network, response in zip(challenge_miners_tasks.keys(), challenge_miners_responses)}
 
-        responses: tuple[ChallengeMinerResponse] = await asyncio.gather(*challenge_tasks)
-
-        for uid, miner_info, response in zip(miners_module_info.keys(), miners_module_info.values(), responses):
-            if not response:
+        for uid, miner_info, discovery_response in zip(miners_module_info.keys(), miners_module_info.values(), discovery_responses):
+            if not discovery_response:
                 score_dict[uid] = 0
                 continue
 
-            if isinstance(response, ChallengeMinerResponse):
-                network = response.network
-                version = response.version
-                graph_db = response.graph_db
+            if isinstance(discovery_response, Discovery):
+                network = discovery_response.network
+                version = discovery_response.version
+                graph_db = discovery_response.graph_db #TODO: graph_db is not used
                 connection, miner_metadata = miner_info
                 miner_address, miner_ip_port = connection
                 miner_key = miner_metadata['key']
@@ -317,19 +226,19 @@ class Validator(Module):
                 else:
                     receipt_miner_multiplier = receipt_miner_multiplier_result[0]['multiplier']
 
-                score = self._score_miner(response, receipt_miner_multiplier)
+                score = self._score_miner(challenge_miners_responses_grouped, receipt_miner_multiplier)
 
                 weighted_score = 0
                 total_weight = sum(adjusted_weights.values())
-                weight = adjusted_weights[response.network]
+                weight = adjusted_weights[network]
                 network_influence = weight / total_weight
                 weighted_score += score * network_influence
 
                 assert weighted_score <= 1
                 score_dict[uid] = weighted_score
 
-                await self.miner_discovery_manager.store_miner_metadata(uid, miner_key, miner_address, miner_ip_port, network, version, graph_db)
-                await self.miner_discovery_manager.update_miner_challenges(miner_key, response.get_failed_challenges(), 2)
+                #await self.miner_discovery_manager.store_miner_metadata(uid, miner_key, miner_address, miner_ip_port, network, version, graph_db)
+                #await self.miner_discovery_manager.update_miner_challenges(miner_key, response.get_failed_challenges(), 2)
 
         if not score_dict:
             logger.info("No miner managed to give a valid answer")
