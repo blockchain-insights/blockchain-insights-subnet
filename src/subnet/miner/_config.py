@@ -24,12 +24,16 @@ class MinerSettings(BaseSettings):
     NETWORK: str
 
     PORT: int = 9962
-    DATABASE_URL: str
+    
+    TIMESERIES_DB_CONNECTION_STRING: str
 
-    GRAPH_DB_TYPE: str = "neo4j"
-    GRAPH_DATABASE_USER: str
-    GRAPH_DATABASE_PASSWORD: str
-    GRAPH_DATABASE_URL: str
+    MONEY_FLOW_MEMGRAPH_LIVE_USER: str
+    MONEY_FLOW_MEMGRAPH_LIVE_PASSWORD: str
+    MONEY_FLOW_MEMGRAPH_LIVE_URL: str
+
+    MONEY_FLOW_MEMGRAPH_ARCHIVE_USER: str
+    MONEY_FLOW_MEMGRAPH_ARCHIVE_PASSWORD: str
+    MONEY_FLOW_MEMGRAPH_ARCHIVE_URL: str
 
     class Config:
         extra = 'ignore'

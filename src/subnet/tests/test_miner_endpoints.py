@@ -42,7 +42,7 @@ async def setup_miner_with_node():
     keypair = Keypair.create_from_mnemonic(Keypair.generate_mnemonic())
     miner = Miner(keypair=keypair, settings=settings)
     node = NodeFactory.create_node('bitcoin')
-    await db_manager.init(settings.DATABASE_URL)
+    await db_manager.init(settings.TIMESERIES_DB_CONNECTION_STRING)
     return miner, node, settings
 
 

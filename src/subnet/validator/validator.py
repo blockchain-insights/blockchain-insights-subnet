@@ -125,15 +125,38 @@ class Validator(Module):
         return await self._get_discovery(client, miner_key)
 
     @staticmethod
-    def _score_miner(response: dict, receipt_miner_multiplier: float) -> float:
+    def _score_miner(miner_key: str, response: dict, receipt_miner_multiplier: float) -> float:
 
-        if not response:
-            logger.debug(f"Skipping empty response")
+        money_flow_consensus_hash = response['model_kinds']['money_flow']['consensus']['hash']
+        balance_tracking_consensus_hash = response['model_kinds']['balance_tracking']['consensus']['hash']
+        transaction_stream_consensus_hash = response['model_kinds']['transaction_stream']['consensus']['hash']
+
+        miner_money_flow_hash = None
+        miner_balance_tracking_hash = None
+        miner_transaction_stream_hash = None
+
+        score = 0
+
+        if miner_key in response['model_kinds']['money_flow']['miners']:
+            miner_money_flow_hash = response['model_kinds']['money_flow']['miners'][miner_key]['hash']
+
+        if miner_key in response['model_kinds']['balance_tracking']['miners']:
+            miner_balance_tracking_hash = response['model_kinds']['balance_tracking']['miners'][miner_key]['hash']
+
+        if miner_key in response['model_kinds']['transaction_stream']['miners']:
+            miner_transaction_stream_hash = response['model_kinds']['transaction_stream']['miners'][miner_key]['hash']
+
+        if miner_transaction_stream_hash is not None and transaction_stream_consensus_hash == miner_transaction_stream_hash:
+            score = score + 0.1
+
+        if miner_balance_tracking_hash is not None and balance_tracking_consensus_hash == miner_balance_tracking_hash:
+            score = score + 0.1
+
+        if miner_money_flow_hash is not None and money_flow_consensus_hash == miner_money_flow_hash:
+            score = score + 0.1
+
+        if score == 0:
             return 0
-
-       # here we need to check if for given model kind consensus is reached
-
-        score = 0.3
 
         multiplier = min(1.0, receipt_miner_multiplier)
         score = score + (0.7 * multiplier)
@@ -263,7 +286,6 @@ class Validator(Module):
             if isinstance(discovery_response, Discovery):
                 network = discovery_response.network
                 version = discovery_response.version
-                graph_db = discovery_response.graph_db #TODO: graph_db is not used
                 connection, miner_metadata = miner_info
                 miner_address, miner_ip_port = connection
                 miner_key = miner_metadata['key']
@@ -278,7 +300,7 @@ class Validator(Module):
                 else:
                     receipt_miner_multiplier = receipt_miner_multiplier_result[0]['multiplier']
 
-                score = self._score_miner(challenge_miners_responses_grouped, receipt_miner_multiplier)
+                score = self._score_miner(miner_key, challenge_miners_responses_grouped[network], receipt_miner_multiplier)
 
                 weighted_score = 0
                 total_weight = sum(adjusted_weights.values())

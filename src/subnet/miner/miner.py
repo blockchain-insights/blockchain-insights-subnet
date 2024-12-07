@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 from communex._common import get_node_url
 from communex.client import CommuneClient
 from communex.module import Module, endpoint
@@ -10,8 +11,10 @@ from substrateinterface import Keypair
 from src.subnet import VERSION
 from src.subnet.encryption import generate_hash
 from src.subnet.miner._config import MinerSettings, load_environment
-from src.subnet.miner.blockchain.search import GraphSearchFactory, BalanceSearchFactory
-from src.subnet.protocol import Challenge, MODEL_KIND_MONEY_FLOW, MODEL_KIND_BALANCE_TRACKING
+from src.subnet.miner.balance_search import BalanceSearch
+from src.subnet.miner.graph_search import GraphSearch
+from src.subnet.protocol import MODEL_KIND_MONEY_FLOW, MODEL_KIND_BALANCE_TRACKING, \
+    MODEL_KIND_TRANSACTION_STREAM, MODEL_KIND_MONEY_FLOW_TYPE_ARCHIVE, MODEL_KIND_MONEY_FLOW_TYPE_LIVE
 from src.subnet.validator.database import db_manager
 
 
@@ -21,22 +24,17 @@ class Miner(Module):
         super().__init__()
         self.keypair = keypair
         self.settings = settings
-        self.graph_search_factory = GraphSearchFactory()
-        self.balance_search_factory = BalanceSearchFactory()
+
+        self.graph_search_live = GraphSearch(graph_database_url=self.settings.MONEY_FLOW_MEMGRAPH_LIVE_URL,
+                                             graph_database_user=self.settings.MONEY_FLOW_MEMGRAPH_LIVE_USER,
+                                             graph_database_password=self.settings.MONEY_FLOW_MEMGRAPH_LIVE_PASSWORD)
+
+        self.graph_search_archive = GraphSearch(graph_database_url=self.settings.MONEY_FLOW_MEMGRAPH_ARCHIVE_URL,
+                                                graph_database_user=self.settings.MONEY_FLOW_MEMGRAPH_ARCHIVE_USER,
+                                                graph_database_password=self.settings.MONEY_FLOW_MEMGRAPH_ARCHIVE_PASSWORD)
 
     @endpoint
     async def discovery(self, validator_version: str, validator_key: str) -> dict:
-        """
-        Returns the network, version and graph database type of the miner
-        Returns:
-            dict: The network of the miner
-            {
-                "network": "bitcoin",
-                "version": 1.0,
-                "graph_db": "neo4j"
-            }
-        """
-
         logger.debug(f"Received discovery request from {validator_key}", validator_key=validator_key)
 
         if float(validator_version) != VERSION:
@@ -45,19 +43,23 @@ class Miner(Module):
 
         return {
             "network": self.settings.NETWORK,
-            "version": VERSION,
-            "graph_db": self.settings.GRAPH_DB_TYPE
+            "version": VERSION
         }
 
     @endpoint
-    async def query(self, model_kind: str, query: str, validator_key: str) -> dict:
+    async def query(self, model_kind: str, query: str, validator_key: str, args: Optional[str]) -> dict:
 
         logger.debug(f"Received query request from {validator_key}", validator_key=validator_key)
 
         try:
             if model_kind == MODEL_KIND_MONEY_FLOW:
-                search = GraphSearchFactory().create_graph_search(self.settings)
-                result = search.execute_query(query)
+                result = None
+
+                if args == MODEL_KIND_MONEY_FLOW_TYPE_ARCHIVE:
+                    result = self.graph_search_archive.execute_query(query)
+                elif args == MODEL_KIND_MONEY_FLOW_TYPE_LIVE:
+                    result = self.graph_search_live.execute_query(query)
+
                 response_hash = generate_hash(str(result))
                 result_hash_signature = self.keypair.sign(response_hash).hex()
 
@@ -67,8 +69,8 @@ class Miner(Module):
                     "result_hash": response_hash
                 }
 
-            elif model_kind == MODEL_KIND_BALANCE_TRACKING:
-                search = BalanceSearchFactory().create_balance_search(self.settings.NETWORK)
+            elif model_kind == MODEL_KIND_BALANCE_TRACKING or model_kind == MODEL_KIND_TRANSACTION_STREAM:
+                search = BalanceSearch()
                 result = await search.execute_query(query)
                 response_hash = generate_hash(str(result))
                 result_hash_signature = self.keypair.sign(response_hash).hex()
@@ -83,50 +85,6 @@ class Miner(Module):
         except Exception as e:
             logger.error(f"Error executing query: {e}")
             return {"error": str(e)}
-
-    @endpoint
-    async def challenge(self, challenge: Challenge, validator_key: str) -> Challenge:
-        """
-        Solves the challenge and returns the output
-        Args:
-            validator_key:
-            challenge: {
-                "model_kind": "money_flow",
-                "in_total_amount": 0.0,
-                "out_total_amount": 0.0,
-                "tx_id_last_6_chars": "string",
-                "checksum": "string",
-                "block_height": 0
-            }
-
-        Returns:
-            dict: The output of the challenge
-            {
-                "output": "tx_id|sum"
-            }
-
-        """
-
-        logger.debug(f"Received challenge request from {validator_key}", validator_key=validator_key)
-
-        challenge = Challenge(**challenge)
-
-        if challenge.model_kind == MODEL_KIND_MONEY_FLOW:
-            search = GraphSearchFactory().create_graph_search(self.settings)
-            tx_id = search.solve_challenge(
-                in_total_amount=challenge.in_total_amount,
-                out_total_amount=challenge.out_total_amount,
-                tx_id_last_6_chars=challenge.tx_id_last_6_chars
-            )
-
-            challenge.output = {'tx_id': tx_id}
-            return challenge
-        else:
-            search = BalanceSearchFactory().create_balance_search(self.settings.NETWORK)
-            challenge.output = {
-                'balance': await search.solve_challenge([challenge.block_height])
-            }
-            return challenge
 
 
 if __name__ == "__main__":
@@ -179,7 +137,7 @@ if __name__ == "__main__":
         time_func=time.time,
     )
     limiter = IpLimiterParams()
-    db_manager.init(settings.DATABASE_URL)
+    db_manager.init(settings.TIMESERIES_DB_CONNECTION_STRING)
 
     server = ModuleServer(miner,
                           keypair,
