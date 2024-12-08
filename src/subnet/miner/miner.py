@@ -14,7 +14,7 @@ from src.subnet.miner._config import MinerSettings, load_environment
 from src.subnet.miner.balance_search import BalanceSearch
 from src.subnet.miner.graph_search import GraphSearch
 from src.subnet.protocol import MODEL_KIND_MONEY_FLOW_LIVE, MODEL_KIND_MONEY_FLOW_ARCHIVE, MODEL_KIND_BALANCE_TRACKING, \
-    MODEL_KIND_TRANSACTION_STREAM, MODEL_KIND_MONEY_FLOW_TYPE_ARCHIVE, MODEL_KIND_MONEY_FLOW_TYPE_LIVE
+    MODEL_KIND_TRANSACTION_STREAM
 from src.subnet.validator.database import db_manager
 
 
@@ -64,7 +64,7 @@ class Miner(Module):
                     "result_hash": response_hash
                 }
 
-            if args == MODEL_KIND_MONEY_FLOW_TYPE_LIVE:
+            if args == MODEL_KIND_MONEY_FLOW_LIVE:
                 result = self.graph_search_live.execute_query(query)
                 response_hash = generate_hash(str(result))
                 result_hash_signature = self.keypair.sign(response_hash).hex()
