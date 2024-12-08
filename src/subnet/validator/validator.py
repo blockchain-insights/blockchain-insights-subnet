@@ -18,6 +18,7 @@ from substrateinterface import Keypair  # type: ignore
 from ._config import ValidatorSettings, load_base_weights
 from src.subnet.encryption import generate_hash
 from .helpers import raise_exception_if_not_registered, get_ip_port, cut_to_max_allowed_weights
+from .nodes.factory import NodeFactory
 from .nodes.random_block import select_block
 from .weights_storage import WeightsStorage
 from src.subnet.validator.database.models.miner_discovery import MinerDiscoveryManager
@@ -385,11 +386,13 @@ class Validator(Module):
         cleaned = cleaned.strip()
         return cleaned
 
-    async def get_last_block(self, network: str):
-        last_block = 52000
+    @staticmethod
+    async def get_last_block(network: str):
+        node = NodeFactory.create_node(network)
+        last_block = await node.get_last_block()
         return last_block
 
-    async def get_transaction_stream_challenge_query(self, network: str, block_height: int):
+    def get_transaction_stream_challenge_query(self, network: str, block_height: int):
         if network == NETWORK_COMMUNE:
             return "SELECT 1 as result;"
         if network == NETWORK_BITCOIN:
@@ -447,7 +450,7 @@ class Validator(Module):
                 """
         raise NotImplementedError(f"Unsupported network: {network}")
 
-    async def get_money_flow_challenge_query(self, network: str, block_height: int) -> str:
+    def get_money_flow_challenge_query(self, network: str, block_height: int) -> str:
         if network == NETWORK_COMMUNE:
             return "RETURN 1"
         if network == NETWORK_BITCOIN:

@@ -13,7 +13,7 @@ from src.subnet.encryption import generate_hash
 from src.subnet.miner._config import MinerSettings, load_environment
 from src.subnet.miner.balance_search import BalanceSearch
 from src.subnet.miner.graph_search import GraphSearch
-from src.subnet.protocol import MODEL_KIND_MONEY_FLOW, MODEL_KIND_BALANCE_TRACKING, \
+from src.subnet.protocol import MODEL_KIND_MONEY_FLOW_LIVE, MODEL_KIND_MONEY_FLOW_ARCHIVE, MODEL_KIND_BALANCE_TRACKING, \
     MODEL_KIND_TRANSACTION_STREAM, MODEL_KIND_MONEY_FLOW_TYPE_ARCHIVE, MODEL_KIND_MONEY_FLOW_TYPE_LIVE
 from src.subnet.validator.database import db_manager
 
@@ -52,17 +52,22 @@ class Miner(Module):
         logger.debug(f"Received query request from {validator_key}", validator_key=validator_key)
 
         try:
-            if model_kind == MODEL_KIND_MONEY_FLOW:
-                result = None
+            result = None
 
-                if args == MODEL_KIND_MONEY_FLOW_TYPE_ARCHIVE:
-                    result = self.graph_search_archive.execute_query(query)
-                elif args == MODEL_KIND_MONEY_FLOW_TYPE_LIVE:
-                    result = self.graph_search_live.execute_query(query)
-
+            if model_kind == MODEL_KIND_MONEY_FLOW_ARCHIVE:
+                result = self.graph_search_archive.execute_query(query)
                 response_hash = generate_hash(str(result))
                 result_hash_signature = self.keypair.sign(response_hash).hex()
+                return {
+                    "result": result,
+                    "result_hash_signature": result_hash_signature,
+                    "result_hash": response_hash
+                }
 
+            if args == MODEL_KIND_MONEY_FLOW_TYPE_LIVE:
+                result = self.graph_search_live.execute_query(query)
+                response_hash = generate_hash(str(result))
+                result_hash_signature = self.keypair.sign(response_hash).hex()
                 return {
                     "result": result,
                     "result_hash_signature": result_hash_signature,
