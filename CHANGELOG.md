@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.5] - 2024-12-18
+- Added Stake Limiter to the miner.
+
 ## [1.3.4] - 2024-11-23
 - Added response time, query fields to the receipt entity.
 - Improved gateway miner querying.

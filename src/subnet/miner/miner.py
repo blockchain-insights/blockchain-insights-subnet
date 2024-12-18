@@ -1,9 +1,10 @@
 from datetime import datetime
 from communex._common import get_node_url
+from communex.balance import to_nano
 from communex.client import CommuneClient
 from communex.module import Module, endpoint
-from communex.module._rate_limiters.limiters import IpLimiterParams
-from keylimiter import TokenBucketLimiter
+from communex.module._rate_limiters.limiters import StakeLimiterParams
+from communex.types import Ss58Address
 from loguru import logger
 from starlette.middleware.cors import CORSMiddleware
 from substrateinterface import Keypair
@@ -129,6 +130,25 @@ class Miner(Module):
             return challenge
 
 
+def stake_to_ratio(stake: int, multiplier: int = 1) -> float:
+    max_ratio = 4
+    base_ratio = 2
+    if multiplier <= 1/max_ratio:
+        raise ValueError(
+            f"Given multiplier {multiplier} would set 0 tokens for all stakes"
+        )
+
+    def mult_2(x: int) -> int:
+        return x * 2
+    match stake:
+        case _ if stake < to_nano(50_000):
+            return 0
+        case _ if stake < to_nano(500_000):
+            return base_ratio * multiplier
+        case _:
+            return mult_2(base_ratio) * multiplier
+
+
 if __name__ == "__main__":
     from communex.module.server import ModuleServer
     from communex.compat.key import classic_load_key
@@ -167,25 +187,25 @@ if __name__ == "__main__":
         sys.stdout,
         format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level}</level> | <blue>{message}</blue> | {extra}",
         level="DEBUG",
-        filter = patch_record
+        filter=patch_record
     )
 
     c_client = CommuneClient(get_node_url(use_testnet=use_testnet))
     miner = Miner(keypair=keypair, settings=settings)
-    refill_rate: float = 1 / 1000
-    bucket = TokenBucketLimiter(
-        refill_rate=refill_rate,
-        bucket_size=1000,
-        time_func=time.time,
+    stake_limiter = StakeLimiterParams(
+        epoch=800,
+        cache_age=600,
+        get_refill_per_epoch=stake_to_ratio,
     )
-    limiter = IpLimiterParams()
+
     db_manager.init(settings.DATABASE_URL)
 
     server = ModuleServer(miner,
                           keypair,
                           subnets_whitelist=[settings.NET_UID],
+                          whitelist=[Ss58Address("5GHjMgGkydmNStMAK6giDCjHB1pfHBh9N1N6ejTJ8C3YDqSP")],
                           use_testnet=use_testnet,
-                          limiter=limiter)
+                          limiter=stake_limiter)
 
     app = server.get_fastapi_app()
     app.add_middleware(
