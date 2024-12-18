@@ -5,7 +5,7 @@ from src.subnet.validator.nodes.commune_node import CommuneNode
 
 class NodeFactory:
     @classmethod
-    def create_node(cls, network: str):
+    def create_node(cls, node_rpc_urls: dict, network: str):
         node_class = {
             NETWORK_BITCOIN: BitcoinNode,
             NETWORK_COMMUNE: CommuneNode,
@@ -15,4 +15,4 @@ class NodeFactory:
         if node_class is None:
             raise ValueError(f"Unsupported network: {network}")
 
-        return node_class()
+        return node_class(node_rpc_urls[network])

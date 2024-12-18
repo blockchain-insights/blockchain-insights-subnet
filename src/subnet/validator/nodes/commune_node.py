@@ -1,14 +1,12 @@
 from substrateinterface import SubstrateInterface
-from src.subnet.validator._config import ValidatorSettings
 from src.subnet.validator.nodes.abstract_node import Node
 
 
 class CommuneNode(Node):
-    def __init__(self, settings: ValidatorSettings):
+    def __init__(self, node_rpc_url: str):
         super().__init__()
-        self.setting = settings
         self.substrate = SubstrateInterface(
-            url=settings.COMMUNE_NODE_RPC,
+            url=node_rpc_url,
             ss58_format=0,
         )
 

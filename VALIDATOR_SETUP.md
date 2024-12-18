@@ -74,7 +74,7 @@ POSTGRES_USER=postgres
 POSTGRES_PASSWORD=changeit456$
 
 BITCOIN_NODE_RPC_URL=http://{put_proper_value_here}:{put_proper_value_here}@{put_proper_value_here}:8332
-COMMUNE_NODE_RPC=wss://api.communeai.net
+COMMUNE_NODE_RPC_URL=wss://api.communeai.net
 
 DATABASE_URL=postgresql+asyncpg://postgres:changeit456$@localhost:5432/validator1
 REDIS_URL=redis://localhost:6379/0

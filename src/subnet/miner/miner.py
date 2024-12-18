@@ -47,7 +47,7 @@ class Miner(Module):
         }
 
     @endpoint
-    async def query(self, model_kind: str, query: str, validator_key: str, args: Optional[str]) -> dict:
+    async def query(self, model_kind: str, query: str, validator_key: str) -> dict:
 
         logger.debug(f"Received query request from {validator_key}", validator_key=validator_key)
 
@@ -64,7 +64,7 @@ class Miner(Module):
                     "result_hash": response_hash
                 }
 
-            if args == MODEL_KIND_MONEY_FLOW_LIVE:
+            if model_kind == MODEL_KIND_MONEY_FLOW_LIVE:
                 result = self.graph_search_live.execute_query(query)
                 response_hash = generate_hash(str(result))
                 result_hash_signature = self.keypair.sign(response_hash).hex()

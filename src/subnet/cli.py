@@ -8,6 +8,8 @@ from communex.client import CommuneClient
 from communex.compat.key import classic_load_key
 from loguru import logger
 from substrateinterface import Keypair
+
+from src.subnet.protocol import NETWORK_BITCOIN, NETWORK_COMMUNE
 from src.subnet.validator.database.models.miner_discovery import MinerDiscoveryManager
 from src.subnet.validator.database.models.miner_receipt import MinerReceiptManager
 from src.subnet.validator.database.session_manager import DatabaseSessionManager, run_migrations
@@ -78,6 +80,11 @@ if __name__ == "__main__":
     receipt_sync_worker = ReceiptSyncWorker(keypair, settings.NET_UID, c_client, miner_receipt_manager)
     redis_client = Redis.from_url(settings.REDIS_URL)
 
+    node_rpc_urls = {
+        NETWORK_BITCOIN: settings.BITCOIN_NODE_RPC_URL,
+        NETWORK_COMMUNE: settings.COMMUNE_NODE_RPC_URL
+    }
+
     validator = Validator(
         keypair,
         settings.NET_UID,
@@ -87,7 +94,8 @@ if __name__ == "__main__":
         miner_receipt_manager,
         redis_client=redis_client,
         query_timeout=settings.QUERY_TIMEOUT,
-        challenge_timeout=settings.CHALLENGE_TIMEOUT
+        challenge_timeout=settings.CHALLENGE_TIMEOUT,
+        node_rpc_urls=node_rpc_urls
     )
 
     def shutdown_handler(signal_num, frame):
