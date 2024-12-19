@@ -1,8 +1,14 @@
+import threading
 from datetime import datetime
+from typing import cast, Dict
+
 from communex._common import get_node_url
+from communex.balance import to_nano
 from communex.client import CommuneClient
+from communex.misc import get_map_modules
 from communex.module import Module, endpoint
-from communex.module._rate_limiters.limiters import IpLimiterParams
+from communex.module._rate_limiters.limiters import IpLimiterParams, StakeLimiterParams
+from communex.types import Ss58Address
 from keylimiter import TokenBucketLimiter
 from loguru import logger
 from starlette.middleware.cors import CORSMiddleware
@@ -172,20 +178,48 @@ if __name__ == "__main__":
 
     c_client = CommuneClient(get_node_url(use_testnet=use_testnet))
     miner = Miner(keypair=keypair, settings=settings)
-    refill_rate: float = 1 / 1000
-    bucket = TokenBucketLimiter(
-        refill_rate=refill_rate,
-        bucket_size=1000,
-        time_func=time.time,
-    )
-    limiter = IpLimiterParams()
+
     db_manager.init(settings.DATABASE_URL)
 
     server = ModuleServer(miner,
                           keypair,
                           subnets_whitelist=[settings.NET_UID],
                           use_testnet=use_testnet,
-                          limiter=limiter)
+                          limiter=IpLimiterParams())
+
+    stop_event = threading.Event()
+
+
+    def update_blacklist():
+        while not stop_event.is_set():
+            modules = cast(dict[str, Dict], get_map_modules(c_client, netuid=settings.NET_UID, include_balances=True))
+            miner_blacklist = [
+                Ss58Address(value["key"])
+                for key, value in modules.items()
+                if value.get("address") is not None and value.get("key") != keypair.ss58_address
+            ]
+
+            for key in miner_blacklist:
+                logger.debug(f"Adding miner module {key} to blacklist")
+
+            server.blacklist_ = miner_blacklist
+
+            low_stake_blacklist = [
+                Ss58Address(key)
+                for key, value in modules.items()
+                if value.get("stake", 0) < to_nano(100_000) and value.get("key") not in miner_blacklist and value.get("key") != keypair.ss58_address
+            ]
+
+            for key in low_stake_blacklist:
+                logger.debug(f"Adding low stake module {key} to blacklist")
+
+            blacklist = miner_blacklist + low_stake_blacklist
+            server.blacklist_ = blacklist
+
+            stop_event.wait(600)
+
+    blacklist_thread = threading.Thread(target=update_blacklist, daemon=True)
+    blacklist_thread.start()
 
     app = server.get_fastapi_app()
     app.add_middleware(
@@ -197,3 +231,6 @@ if __name__ == "__main__":
     )
 
     uvicorn.run(app, host="0.0.0.0", port=settings.PORT)
+
+    stop_event.set()
+    blacklist_thread.join()

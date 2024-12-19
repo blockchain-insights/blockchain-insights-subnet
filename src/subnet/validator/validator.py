@@ -338,6 +338,7 @@ class Validator(Module):
             self.set_weights(settings, score_dict, self.netuid, self.client, self.key)
         except Exception as e:
             logger.error(f"Failed to set weights", error=e)
+            self.terminate_event.set()
 
     def set_weights(self,
                     settings: ValidatorSettings,
